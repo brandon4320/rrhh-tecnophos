@@ -12,3 +12,11 @@ export function normalizeLoginIdentifier(value: string) {
   if (trimmed.includes('@')) return trimmed
   return usernameToInternalEmail(trimmed)
 }
+
+export function internalEmailToUsername(email: string) {
+  const normalized = email.trim().toLowerCase()
+  if (normalized.endsWith('@users.internal')) {
+    return normalized.slice(0, -'@users.internal'.length)
+  }
+  return normalized
+}
