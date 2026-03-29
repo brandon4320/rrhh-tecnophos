@@ -123,6 +123,7 @@ export default async function AdminUsuariosPage({
     const admin = createAdminClient()
 
     let createdUserId: string | null = null
+    let actionError: { code: string; detail?: string } | null = null
 
     try {
       const { data, error } = await admin.auth.admin.createUser({
@@ -137,27 +138,40 @@ export default async function AdminUsuariosPage({
       })
 
       if (error || !data.user) {
-        redirect(buildAdminUsersRedirect('create_user_failed', error?.message ?? 'Error desconocido al crear el usuario'))
-      }
+        actionError = {
+          code: 'create_user_failed',
+          detail: error?.message ?? 'Error desconocido al crear el usuario',
+        }
+      } else {
+        createdUserId = data.user.id
 
-      createdUserId = data.user.id
+        const { error: perfilError } = await supabase.from('perfiles').insert({
+          id: data.user.id,
+          nombre: nombrePerfil,
+          rol,
+          empresa_acceso: null,
+        })
 
-      const { error: perfilError } = await supabase.from('perfiles').insert({
-        id: data.user.id,
-        nombre: nombrePerfil,
-        rol,
-        empresa_acceso: null,
-      })
-
-      if (perfilError) {
-        redirect(buildAdminUsersRedirect('create_profile_failed', perfilError.message ?? 'No se pudo crear el perfil'))
+        if (perfilError) {
+          await admin.auth.admin.deleteUser(data.user.id)
+          actionError = {
+            code: 'create_profile_failed',
+            detail: perfilError.message ?? 'No se pudo crear el perfil',
+          }
+        }
       }
     } catch (error) {
       if (createdUserId) {
         await admin.auth.admin.deleteUser(createdUserId)
       }
-      const detail = error instanceof Error ? error.message : 'Error desconocido'
-      redirect(buildAdminUsersRedirect('create_user_failed', detail))
+      actionError = {
+        code: 'create_user_failed',
+        detail: error instanceof Error ? error.message : 'Error desconocido',
+      }
+    }
+
+    if (actionError) {
+      redirect(buildAdminUsersRedirect(actionError.code, actionError.detail))
     }
 
     redirect('/admin/usuarios?success=created')
@@ -187,20 +201,22 @@ export default async function AdminUsuariosPage({
     if (userId === user.id) redirect(buildAdminUsersRedirect('delete_failed', 'No podés eliminar tu propio usuario.'))
 
     const admin = createAdminClient()
+    let actionError: string | null = null
 
     try {
       const { error: perfilDeleteError } = await supabase.from('perfiles').delete().eq('id', userId)
       if (perfilDeleteError) {
-        redirect(buildAdminUsersRedirect('delete_failed', perfilDeleteError.message))
-      }
-
-      const { error } = await admin.auth.admin.deleteUser(userId)
-      if (error) {
-        redirect(buildAdminUsersRedirect('delete_failed', error.message))
+        actionError = perfilDeleteError.message
+      } else {
+        const { error } = await admin.auth.admin.deleteUser(userId)
+        if (error) actionError = error.message
       }
     } catch (error) {
-      const detail = error instanceof Error ? error.message : 'Error desconocido'
-      redirect(buildAdminUsersRedirect('delete_failed', detail))
+      actionError = error instanceof Error ? error.message : 'Error desconocido'
+    }
+
+    if (actionError) {
+      redirect(buildAdminUsersRedirect('delete_failed', actionError))
     }
 
     redirect('/admin/usuarios?success=deleted')
@@ -232,15 +248,18 @@ export default async function AdminUsuariosPage({
       redirect(buildAdminUsersRedirect('password_failed', 'La nueva contraseña debe tener al menos 6 caracteres.'))
     }
 
+    let actionError: string | null = null
+
     try {
       const admin = createAdminClient()
       const { error } = await admin.auth.admin.updateUserById(userId, { password: newPassword })
-      if (error) {
-        redirect(buildAdminUsersRedirect('password_failed', error.message))
-      }
+      if (error) actionError = error.message
     } catch (error) {
-      const detail = error instanceof Error ? error.message : 'Error desconocido'
-      redirect(buildAdminUsersRedirect('password_failed', detail))
+      actionError = error instanceof Error ? error.message : 'Error desconocido'
+    }
+
+    if (actionError) {
+      redirect(buildAdminUsersRedirect('password_failed', actionError))
     }
 
     redirect('/admin/usuarios?success=password_updated')
