@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { normalizeLoginIdentifier } from '@/lib/auth-helpers'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -17,7 +18,9 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const identifier = normalizeLoginIdentifier(email)
+
+    const { error } = await supabase.auth.signInWithPassword({ email: identifier, password })
 
     if (error) {
       setError('Credenciales incorrectas')
@@ -32,7 +35,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* Logo / Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 mb-4">
             <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -43,14 +45,13 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 mt-1">Tecnophos · ADC</p>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <h2 className="text-lg font-medium text-gray-900 mb-6">Iniciar sesión</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Usuario / Email
+                Usuario o email
               </label>
               <input
                 type="text"
@@ -58,7 +59,7 @@ export default function LoginPage() {
                 onChange={e => setEmail(e.target.value)}
                 required
                 className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                placeholder="admin@tecnophos.internal"
+                placeholder="usuario"
               />
             </div>
 
@@ -96,7 +97,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          Sistema interno — uso exclusivo autorizado
+          Sistema interno, uso exclusivo autorizado
         </p>
       </div>
     </div>
