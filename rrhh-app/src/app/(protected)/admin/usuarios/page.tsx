@@ -145,7 +145,7 @@ export default async function AdminUsuariosPage({
       } else {
         createdUserId = data.user.id
 
-        const { error: perfilError } = await supabase.from('perfiles').insert({
+        const { error: perfilError } = await admin.from('perfiles').insert({
           id: data.user.id,
           nombre: nombrePerfil,
           rol,
@@ -204,7 +204,7 @@ export default async function AdminUsuariosPage({
     let actionError: string | null = null
 
     try {
-      const { error: perfilDeleteError } = await supabase.from('perfiles').delete().eq('id', userId)
+      const { error: perfilDeleteError } = await admin.from('perfiles').delete().eq('id', userId)
       if (perfilDeleteError) {
         actionError = perfilDeleteError.message
       } else {
