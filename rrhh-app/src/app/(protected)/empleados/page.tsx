@@ -126,13 +126,14 @@ export default async function EmpleadosPage({
               const certs = emp.certificados ?? []
               const estado = peorEstado(certs)
               const slug = emp.empresa?.slug ?? ''
+              const nombreCompleto = [emp.nombre, emp.apellido].filter(Boolean).join(' ')
 
               return (
                 <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <span className={`w-2 h-2 rounded-full shrink-0 ${EMPRESA_DOT[slug] ?? 'bg-gray-300'}`} />
-                      <span className="font-medium text-gray-900">{emp.nombre}</span>
+                      <span className="font-medium text-gray-900">{nombreCompleto}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3.5 text-gray-600">{emp.empresa?.nombre ?? '—'}</td>

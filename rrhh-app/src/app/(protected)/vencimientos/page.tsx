@@ -25,27 +25,24 @@ export default async function VencimientosPage({
       .select(`
         *,
         tipo:tipos_certificado(id, nombre),
-        empleado:empleados(id, nombre, empresa_id, empresa:empresas(nombre, slug)),
+        empleado:empleados(id, nombre, apellido, empresa_id, empresa:empresas(nombre, slug)),
+        vehiculo:vehiculos(id, patente, empresa_id, empresa:empresas(nombre, slug)),
         empresa:empresas(nombre, slug)
       `)
       .not('fecha_vencimiento', 'is', null)
       .order('fecha_vencimiento', { ascending: true }),
     supabase.from('empresas').select('*').order('nombre'),
-    supabase
-      .from('tipos_certificado')
-      .select('id, nombre')
-      .eq('aplica_personal', true)
-      .order('orden'),
+    supabase.from('tipos_certificado').select('id, nombre').order('orden'),
   ])
 
   const hoy = new Date()
 
   const filtered = (certs ?? []).filter((c) => {
-    const empSlug = c.empleado?.empresa?.slug ?? c.empresa?.slug ?? ''
+    const entitySlug = c.empleado?.empresa?.slug ?? c.vehiculo?.empresa?.slug ?? c.empresa?.slug ?? ''
     const tipoId = c.tipo?.id ?? ''
     const est = getEstadoVencimiento(c.fecha_vencimiento)
 
-    if (empresa && empSlug !== empresa) return false
+    if (empresa && entitySlug !== empresa) return false
     if (tipo && tipoId !== tipo) return false
     if (estado && est !== estado) return false
     return true
@@ -76,7 +73,7 @@ export default async function VencimientosPage({
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left px-5 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">
-                  Empleado
+                  Referencia
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">
                   Empresa
@@ -97,13 +94,19 @@ export default async function VencimientosPage({
               {filtered.map((cert) => {
                 const estado_ = getEstadoVencimiento(cert.fecha_vencimiento)
                 const dias = differenceInDays(new Date(cert.fecha_vencimiento!), hoy)
-                const empSlug = cert.empleado?.empresa?.slug ?? cert.empresa?.slug ?? ''
-                const empNombre = cert.empleado?.empresa?.nombre ?? cert.empresa?.nombre ?? '—'
-                const nombre = cert.empleado?.nombre ?? '(empresa)'
+                const empSlug = cert.empleado?.empresa?.slug ?? cert.vehiculo?.empresa?.slug ?? cert.empresa?.slug ?? ''
+                const empNombre = cert.empleado?.empresa?.nombre ?? cert.vehiculo?.empresa?.nombre ?? cert.empresa?.nombre ?? '—'
+                const nombreEmpleado = [cert.empleado?.nombre, cert.empleado?.apellido].filter(Boolean).join(' ')
+                const referencia = cert.empleado
+                  ? nombreEmpleado
+                  : cert.vehiculo
+                    ? `Vehículo ${cert.vehiculo.patente}`
+                    : '(Empresa)'
+                const detailHref = cert.empleado?.id ? `/legajo/${cert.empleado.id}` : undefined
 
                 return (
                   <tr key={cert.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3.5 font-medium text-gray-900">{nombre}</td>
+                    <td className="px-5 py-3.5 font-medium text-gray-900">{referencia}</td>
                     <td className="px-4 py-3.5">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${
@@ -132,11 +135,8 @@ export default async function VencimientosPage({
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-right">
-                      {cert.empleado?.id && (
-                        <Link
-                          href={`/legajo/${cert.empleado.id}`}
-                          className="text-xs text-indigo-600 hover:underline"
-                        >
+                      {detailHref && (
+                        <Link href={detailHref} className="text-xs text-indigo-600 hover:underline">
                           Legajo →
                         </Link>
                       )}
