@@ -1,7 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { getEstadoVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
-import { format } from 'date-fns'
 import LegajoClient from './LegajoClient'
 
 export default async function LegajoPage({ params }: { params: Promise<{ id: string }> }) {
@@ -32,13 +30,17 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
     .eq('aplica_personal', true)
     .order('orden')
 
+  const { data: empresas } = await supabase
+    .from('empresas')
+    .select('*')
+    .order('nombre')
+
   const { data: perfil } = await supabase
     .from('perfiles')
     .select('rol')
     .eq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
     .single()
 
-  // Generar URLs firmadas para los archivos
   const certs = await Promise.all(
     (certificados ?? []).map(async cert => {
       const archivosConUrl = await Promise.all(
@@ -58,6 +60,7 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
       empleado={empleado}
       certificados={certs}
       tiposCertificado={tiposCert ?? []}
+      empresas={empresas ?? []}
       isAdmin={perfil?.rol === 'admin'}
     />
   )

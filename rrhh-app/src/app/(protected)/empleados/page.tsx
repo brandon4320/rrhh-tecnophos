@@ -3,10 +3,10 @@ import { getEstadoVencimiento, ESTADO_COLORS } from '@/types'
 import Link from 'next/link'
 
 const EMPRESA_DOT: Record<string, string> = {
-  'tecnophos-bb':      'bg-indigo-500',
+  'tecnophos-bb': 'bg-indigo-500',
   'tecnophos-rosario': 'bg-sky-500',
-  'tecnophos-necochea':'bg-emerald-500',
-  'adc':               'bg-amber-500',
+  'tecnophos-necochea': 'bg-emerald-500',
+  adc: 'bg-amber-500',
 }
 
 export default async function EmpleadosPage({
@@ -37,7 +37,7 @@ export default async function EmpleadosPage({
   const { data: empresas } = await supabase.from('empresas').select('*').order('nombre')
 
   function peorEstado(certs: { fecha_vencimiento?: string; alerta_dias?: number }[]) {
-    const estados = certs.map(c => getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias))
+    const estados = certs.map((c) => getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias))
     if (estados.includes('vencido')) return 'vencido'
     if (estados.includes('proximo')) return 'proximo'
     if (estados.includes('vigente')) return 'vigente'
@@ -53,12 +53,21 @@ export default async function EmpleadosPage({
         </div>
       </div>
 
-      {/* Filtros */}
       <div className="flex gap-3 mb-6">
-        <form className="flex-1 flex gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+        <form className="flex-1 flex gap-3 flex-wrap">
+          <div className="relative flex-1 max-w-sm min-w-[240px]">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+              />
             </svg>
             <input
               type="search"
@@ -68,32 +77,38 @@ export default async function EmpleadosPage({
               className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+
           <select
             name="empresa"
             defaultValue={empresa ?? ''}
             className="px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            onChange={e => {
-              const url = new URL(window.location.href)
-              if (e.target.value) url.searchParams.set('empresa', e.target.value)
-              else url.searchParams.delete('empresa')
-              window.location.href = url.toString()
-            }}
           >
             <option value="">Todas las empresas</option>
-            {(empresas ?? []).map(e => (
-              <option key={e.id} value={e.slug}>{e.nombre}</option>
+            {(empresas ?? []).map((e) => (
+              <option key={e.id} value={e.slug}>
+                {e.nombre}
+              </option>
             ))}
           </select>
+
           <button
             type="submit"
             className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
           >
             Buscar
           </button>
+
+          {(q || empresa) && (
+            <Link
+              href="/empleados"
+              className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Limpiar
+            </Link>
+          )}
         </form>
       </div>
 
-      {/* Tabla */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -107,17 +122,18 @@ export default async function EmpleadosPage({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {(empleados ?? []).map(emp => {
+            {(empleados ?? []).map((emp) => {
               const certs = emp.certificados ?? []
               const estado = peorEstado(certs)
               const slug = emp.empresa?.slug ?? ''
+              const nombreCompleto = [emp.nombre, emp.apellido].filter(Boolean).join(' ')
 
               return (
                 <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <span className={`w-2 h-2 rounded-full shrink-0 ${EMPRESA_DOT[slug] ?? 'bg-gray-300'}`} />
-                      <span className="font-medium text-gray-900">{emp.nombre}</span>
+                      <span className="font-medium text-gray-900">{nombreCompleto}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3.5 text-gray-600">{emp.empresa?.nombre ?? '—'}</td>
@@ -125,7 +141,13 @@ export default async function EmpleadosPage({
                   <td className="px-4 py-3.5 text-center text-gray-600">{certs.length}</td>
                   <td className="px-4 py-3.5 text-center">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${ESTADO_COLORS[estado]}`}>
-                      {estado === 'vigente' ? 'OK' : estado === 'vencido' ? 'Vencido' : estado === 'proximo' ? 'Por vencer' : 'Sin datos'}
+                      {estado === 'vigente'
+                        ? 'OK'
+                        : estado === 'vencido'
+                          ? 'Vencido'
+                          : estado === 'proximo'
+                            ? 'Por vencer'
+                            : 'Sin datos'}
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-right">
@@ -140,9 +162,7 @@ export default async function EmpleadosPage({
         </table>
 
         {(empleados?.length ?? 0) === 0 && (
-          <div className="text-center py-12 text-sm text-gray-400">
-            No se encontraron empleados
-          </div>
+          <div className="text-center py-12 text-sm text-gray-400">No se encontraron empleados</div>
         )}
       </div>
     </div>
