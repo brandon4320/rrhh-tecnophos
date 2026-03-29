@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { normalizeUsername, usernameToInternalEmail } from '@/lib/auth-helpers'
 import SubmitButton from './SubmitButton'
 
 export default async function AdminUsuariosPage({
@@ -31,8 +32,6 @@ export default async function AdminUsuariosPage({
     .eq('activo', true)
     .order('nombre')
 
-  const { data: empresas } = await supabase.from('empresas').select('id, nombre').order('nombre')
-
   async function crearUsuario(formData: FormData) {
     'use server'
 
@@ -52,12 +51,11 @@ export default async function AdminUsuariosPage({
     if (perfil?.rol !== 'admin') redirect('/dashboard')
 
     const empleadoId = String(formData.get('empleado_id') ?? '').trim()
-    const email = String(formData.get('email') ?? '').trim().toLowerCase()
+    const username = normalizeUsername(String(formData.get('username') ?? ''))
     const password = String(formData.get('password') ?? '').trim()
     const rol = String(formData.get('rol') ?? 'usuario').trim() as 'admin' | 'usuario'
-    const empresaAccesoForm = String(formData.get('empresa_acceso') ?? '').trim()
 
-    if (!empleadoId || !email || !password) {
+    if (!empleadoId || !username || !password) {
       redirect('/admin/usuarios?error=missing_fields')
     }
 
@@ -76,17 +74,18 @@ export default async function AdminUsuariosPage({
     }
 
     const nombrePerfil = [empleado.nombre, empleado.apellido].filter(Boolean).join(' ')
-    const empresaAcceso = rol === 'admin' ? null : empresaAccesoForm || empleado.empresa_id || null
+    const internalEmail = usernameToInternalEmail(username)
 
     try {
       const admin = createAdminClient()
       const { data, error } = await admin.auth.admin.createUser({
-        email,
+        email: internalEmail,
         password,
         email_confirm: true,
         user_metadata: {
           nombre: nombrePerfil,
           empleado_id: empleado.id,
+          username,
         },
       })
 
@@ -98,7 +97,7 @@ export default async function AdminUsuariosPage({
         id: data.user.id,
         nombre: nombrePerfil,
         rol,
-        empresa_acceso: empresaAcceso,
+        empresa_acceso: null,
       })
 
       if (perfilError) {
@@ -114,7 +113,7 @@ export default async function AdminUsuariosPage({
 
   const errorMessage =
     params.error === 'missing_fields'
-      ? 'Completá empleado, email y contraseña.'
+      ? 'Completá empleado, username y contraseña.'
       : params.error === 'missing_service_role'
         ? 'Falta configurar SUPABASE_SERVICE_ROLE_KEY en el entorno del proyecto.'
         : params.error === 'employee_not_found'
@@ -122,7 +121,7 @@ export default async function AdminUsuariosPage({
           : params.error === 'create_profile_failed'
             ? 'Se creó el usuario en Auth pero falló el perfil. La operación fue revertida.'
             : params.error === 'create_user_failed'
-              ? 'No se pudo crear el usuario. Revisá si el email ya existe o si falta configuración.'
+              ? 'No se pudo crear el usuario. Revisá si el username ya existe o si falta configuración.'
               : null
 
   return (
@@ -178,13 +177,13 @@ export default async function AdminUsuariosPage({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email de acceso</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
               <input
-                type="email"
-                name="email"
+                type="text"
+                name="username"
                 required
                 className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="usuario@empresa.com"
+                placeholder="aylen.tecnophos"
               />
             </div>
 
@@ -212,20 +211,8 @@ export default async function AdminUsuariosPage({
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Empresa con acceso</label>
-              <select
-                name="empresa_acceso"
-                defaultValue=""
-                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Tomar empresa del empleado</option>
-                {(empresas ?? []).map((empresa) => (
-                  <option key={empresa.id} value={empresa.id}>
-                    {empresa.nombre}
-                  </option>
-                ))}
-              </select>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+              Todos los usuarios creados desde este módulo tienen acceso a todas las empresas.
             </div>
           </div>
 
