@@ -1,7 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import SubmitButton from './SubmitButton'
 
-export default async function NuevoEmpleadoPage() {
+export default async function NuevoEmpleadoPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ error?: string }>
+}) {
+  const params = (await searchParams) ?? {}
   const supabase = await createClient()
   const {
     data: { user },
@@ -46,6 +52,21 @@ export default async function NuevoEmpleadoPage() {
       redirect('/admin/empleados/nuevo?error=missing_fields')
     }
 
+    const duplicateQuery = supabase
+      .from('empleados')
+      .select('id')
+      .eq('empresa_id', empresa_id)
+      .eq('activo', true)
+      .eq('nombre', nombre)
+
+    const { data: existentes } = apellido
+      ? await duplicateQuery.eq('apellido', apellido).limit(1)
+      : await duplicateQuery.is('apellido', null).limit(1)
+
+    if ((existentes ?? []).length > 0) {
+      redirect('/admin/empleados/nuevo?error=duplicate')
+    }
+
     const { error } = await supabase.from('empleados').insert({
       nombre,
       apellido: apellido || null,
@@ -61,6 +82,15 @@ export default async function NuevoEmpleadoPage() {
     redirect('/empleados')
   }
 
+  const errorMessage =
+    params.error === 'missing_fields'
+      ? 'Completá al menos nombre y empresa.'
+      : params.error === 'duplicate'
+        ? 'Ya existe un empleado activo con ese nombre en esa empresa.'
+        : params.error === 'insert_failed'
+          ? 'No se pudo guardar el empleado.'
+          : null
+
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <div className="mb-8">
@@ -69,6 +99,12 @@ export default async function NuevoEmpleadoPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-6">
+        {errorMessage && (
+          <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {errorMessage}
+          </div>
+        )}
+
         <form action={crearEmpleado} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
@@ -131,12 +167,7 @@ export default async function NuevoEmpleadoPage() {
             >
               Cancelar
             </a>
-            <button
-              type="submit"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
-            >
-              Guardar empleado
-            </button>
+            <SubmitButton />
           </div>
         </form>
       </div>

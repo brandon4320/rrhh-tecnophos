@@ -1,29 +1,32 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { getEstadoVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
-import type { Empleado, Certificado, TipoCertificado } from '@/types'
+import type { Empleado, Certificado, TipoCertificado, Empresa } from '@/types'
 import clsx from 'clsx'
 
 const EMPRESA_COLORS: Record<string, string> = {
-  'tecnophos-bb':      'bg-indigo-500',
+  'tecnophos-bb': 'bg-indigo-500',
   'tecnophos-rosario': 'bg-sky-500',
-  'tecnophos-necochea':'bg-emerald-500',
-  'adc':               'bg-amber-500',
+  'tecnophos-necochea': 'bg-emerald-500',
+  adc: 'bg-amber-500',
 }
 
 interface Props {
   empleado: Empleado & { empresa: any }
   certificados: (Certificado & { tipo: any; archivos: any[] })[]
   tiposCertificado: TipoCertificado[]
+  empresas: Empresa[]
   isAdmin: boolean
 }
 
-export default function LegajoClient({ empleado, certificados: initCerts, tiposCertificado, isAdmin }: Props) {
+export default function LegajoClient({ empleado, certificados: initCerts, tiposCertificado, empresas, isAdmin }: Props) {
   const supabase = createClient()
+  const router = useRouter()
   const [certs, setCerts] = useState(initCerts)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -31,6 +34,14 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
   const [uploading, setUploading] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [activeCertId, setActiveCertId] = useState<string | null>(null)
+  const [editingEmpleado, setEditingEmpleado] = useState(false)
+  const [savingEmpleado, setSavingEmpleado] = useState(false)
+  const [empleadoData, setEmpleadoData] = useState({
+    nombre: empleado.nombre ?? '',
+    apellido: empleado.apellido ?? '',
+    empresa_id: empleado.empresa_id ?? '',
+    sector: empleado.sector ?? '',
+  })
 
   const [form, setForm] = useState({
     tipo_id: '',
@@ -41,6 +52,10 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
     notas: '',
     alerta_dias: 30,
   })
+
+  const nombreCompleto = useMemo(() => {
+    return [empleadoData.nombre, empleadoData.apellido].filter(Boolean).join(' ')
+  }, [empleadoData])
 
   function resetForm() {
     setForm({ tipo_id: '', tipo_nombre_custom: '', fecha_vencimiento: '', fecha_emision: '', numero_documento: '', notas: '', alerta_dias: 30 })
@@ -109,6 +124,53 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
     setCerts(prev => prev.filter(c => c.id !== certId))
   }
 
+  async function handleSaveEmpleado() {
+    if (!empleadoData.nombre.trim() || !empleadoData.empresa_id) {
+      alert('Completá al menos nombre y empresa.')
+      return
+    }
+
+    setSavingEmpleado(true)
+
+    const { error } = await supabase
+      .from('empleados')
+      .update({
+        nombre: empleadoData.nombre.trim(),
+        apellido: empleadoData.apellido.trim() || null,
+        empresa_id: empleadoData.empresa_id,
+        sector: empleadoData.sector.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', empleado.id)
+
+    setSavingEmpleado(false)
+
+    if (error) {
+      alert('No se pudo actualizar el empleado.')
+      return
+    }
+
+    setEditingEmpleado(false)
+    router.refresh()
+  }
+
+  async function handleDeleteEmpleado() {
+    if (!confirm('¿Eliminar este empleado? Esta acción desactiva el legajo actual.')) return
+
+    const { error } = await supabase
+      .from('empleados')
+      .update({ activo: false, updated_at: new Date().toISOString() })
+      .eq('id', empleado.id)
+
+    if (error) {
+      alert('No se pudo eliminar el empleado.')
+      return
+    }
+
+    router.push('/empleados')
+    router.refresh()
+  }
+
   async function handleFileUpload(certId: string, files: FileList) {
     setUploading(certId)
     for (const file of Array.from(files)) {
@@ -156,37 +218,34 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-400 mb-6">
         <Link href={`/empresa/${slug}`} className="hover:text-gray-600 transition-colors">
           {empleado.empresa?.nombre}
         </Link>
         <span>/</span>
-        <span className="text-gray-700 font-medium">{empleado.nombre}</span>
+        <span className="text-gray-700 font-medium">{nombreCompleto}</span>
       </div>
 
-      {/* Header empleado */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
           <div className={clsx('w-12 h-12 rounded-xl flex items-center justify-center text-white font-semibold text-lg', EMPRESA_COLORS[slug] ?? 'bg-gray-400')}>
-            {empleado.nombre[0].toUpperCase()}
+            {(nombreCompleto || 'E')[0].toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">{empleado.nombre}</h1>
-            <div className="flex items-center gap-3 mt-1">
+            <h1 className="text-2xl font-semibold text-gray-900">{nombreCompleto}</h1>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
               <span className="text-sm text-gray-500">{empleado.empresa?.nombre}</span>
-              {empleado.sector && (
+              {empleadoData.sector && (
                 <>
                   <span className="text-gray-300">·</span>
-                  <span className="text-sm text-gray-500">{empleado.sector}</span>
+                  <span className="text-sm text-gray-500">{empleadoData.sector}</span>
                 </>
               )}
             </div>
           </div>
         </div>
 
-        {/* Mini stats */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap justify-end">
           {vencidos > 0 && (
             <span className="flex items-center gap-1.5 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
@@ -200,20 +259,97 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
             </span>
           )}
           {isAdmin && (
-            <button
-              onClick={() => { resetForm(); setShowForm(true) }}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Agregar certificado
-            </button>
+            <>
+              <button
+                onClick={() => setEditingEmpleado((prev) => !prev)}
+                className="flex items-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                Editar empleado
+              </button>
+              <button
+                onClick={handleDeleteEmpleado}
+                className="flex items-center gap-2 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                Eliminar empleado
+              </button>
+              <button
+                onClick={() => { resetForm(); setShowForm(true) }}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Agregar certificado
+              </button>
+            </>
           )}
         </div>
       </div>
 
-      {/* Lista de certificados */}
+      {isAdmin && editingEmpleado && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-8">
+          <h3 className="font-semibold text-gray-900 mb-5">Editar empleado</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre</label>
+              <input
+                type="text"
+                value={empleadoData.nombre}
+                onChange={(e) => setEmpleadoData((prev) => ({ ...prev, nombre: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Apellido</label>
+              <input
+                type="text"
+                value={empleadoData.apellido}
+                onChange={(e) => setEmpleadoData((prev) => ({ ...prev, apellido: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Empresa</label>
+              <select
+                value={empleadoData.empresa_id}
+                onChange={(e) => setEmpleadoData((prev) => ({ ...prev, empresa_id: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {empresas.map((empresaItem) => (
+                  <option key={empresaItem.id} value={empresaItem.id}>
+                    {empresaItem.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sector</label>
+              <input
+                type="text"
+                value={empleadoData.sector}
+                onChange={(e) => setEmpleadoData((prev) => ({ ...prev, sector: e.target.value }))}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSaveEmpleado}
+              disabled={savingEmpleado}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
+            >
+              {savingEmpleado ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+            <button
+              onClick={() => setEditingEmpleado(false)}
+              className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2.5"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3 mb-8">
         {certs.length === 0 && (
           <div className="text-center py-12 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
@@ -227,7 +363,6 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
 
           return (
             <div key={cert.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              {/* Row principal */}
               <div
                 className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => setActiveCertId(isOpen ? null : cert.id)}
@@ -238,7 +373,6 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                   'bg-green-500': estado === 'vigente',
                   'bg-gray-300': estado === 'sin_fecha',
                 })} />
-
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">
                     {cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? 'Sin tipo'}
@@ -247,7 +381,6 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                     <p className="text-xs text-gray-400 mt-0.5">{cert.numero_documento}</p>
                   )}
                 </div>
-
                 <div className="text-right shrink-0">
                   <span className={clsx('inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border', ESTADO_COLORS[estado])}>
                     {ESTADO_LABELS[estado]}
@@ -258,7 +391,6 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                     </p>
                   )}
                 </div>
-
                 <div className="flex items-center gap-1 shrink-0">
                   {cert.archivos?.length > 0 && (
                     <span className="flex items-center gap-1 text-xs text-gray-400">
@@ -274,7 +406,6 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                 </div>
               </div>
 
-              {/* Detalle expandido */}
               {isOpen && (
                 <div className="border-t border-gray-100 px-5 py-4 bg-gray-50">
                   <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
@@ -302,7 +433,6 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                     )}
                   </div>
 
-                  {/* Archivos */}
                   <div className="mb-4">
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Archivos adjuntos</p>
                     <div className="space-y-2">
@@ -346,7 +476,6 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                     </div>
                   </div>
 
-                  {/* Acciones */}
                   {isAdmin && (
                     <div className="flex items-center gap-3 pt-3 border-t border-gray-200">
                       <label className={clsx(
@@ -397,7 +526,6 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
         })}
       </div>
 
-      {/* Formulario nuevo / editar */}
       {isAdmin && showForm && (
         <div id="cert-form" className="bg-white rounded-xl border border-indigo-200 p-6 shadow-sm">
           <h3 className="font-semibold text-gray-900 mb-5">
