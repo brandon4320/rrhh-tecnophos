@@ -35,14 +35,18 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
     .select('*')
     .order('nombre')
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   const { data: perfil } = await supabase
     .from('perfiles')
     .select('rol')
-    .eq('id', (await supabase.auth.getUser()).data.user?.id ?? '')
+    .eq('id', user?.id ?? '')
     .single()
 
   const certs = await Promise.all(
-    (certificados ?? []).map(async cert => {
+    (certificados ?? []).map(async (cert) => {
       const archivosConUrl = await Promise.all(
         (cert.archivos ?? []).map(async (archivo: any) => {
           const { data } = await supabase.storage
@@ -61,7 +65,8 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
       certificados={certs}
       tiposCertificado={tiposCert ?? []}
       empresas={empresas ?? []}
-      isAdmin={perfil?.rol === 'admin'}
+      canManageEmployees={!!user}
+      canManageCertificates={perfil?.rol === 'admin'}
     />
   )
 }

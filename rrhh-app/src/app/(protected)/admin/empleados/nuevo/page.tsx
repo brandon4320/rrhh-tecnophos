@@ -15,14 +15,6 @@ export default async function NuevoEmpleadoPage({
 
   if (!user) redirect('/login')
 
-  const { data: perfil } = await supabase
-    .from('perfiles')
-    .select('rol')
-    .eq('id', user.id)
-    .single()
-
-  if (perfil?.rol !== 'admin') redirect('/dashboard')
-
   const { data: empresas } = await supabase.from('empresas').select('id, nombre').order('nombre')
 
   async function crearEmpleado(formData: FormData) {
@@ -34,14 +26,6 @@ export default async function NuevoEmpleadoPage({
     } = await supabase.auth.getUser()
 
     if (!user) redirect('/login')
-
-    const { data: perfil } = await supabase
-      .from('perfiles')
-      .select('rol')
-      .eq('id', user.id)
-      .single()
-
-    if (perfil?.rol !== 'admin') redirect('/dashboard')
 
     const nombre = String(formData.get('nombre') ?? '').trim()
     const apellido = String(formData.get('apellido') ?? '').trim()
