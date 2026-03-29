@@ -1,14 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
-import { getEstadoVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
+import { getEstadoVencimiento, ESTADO_COLORS } from '@/types'
 import { format, differenceInDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Link from 'next/link'
 
 const EMPRESA_COLORS: Record<string, string> = {
-  'tecnophos-bb':      'bg-indigo-500',
+  'tecnophos-bb': 'bg-indigo-500',
   'tecnophos-rosario': 'bg-sky-500',
-  'tecnophos-necochea':'bg-emerald-500',
-  'adc':               'bg-amber-500',
+  'tecnophos-necochea': 'bg-emerald-500',
+  adc: 'bg-amber-500',
 }
 
 export default async function DashboardPage() {
@@ -17,7 +17,13 @@ export default async function DashboardPage() {
   const [{ data: certs }, { data: empresas }, { data: empleados }] = await Promise.all([
     supabase
       .from('certificados')
-      .select('*, tipo:tipos_certificado(nombre), empleado:empleados(nombre, empresa_id, empresa:empresas(nombre, slug)), empresa:empresas(nombre, slug)')
+      .select(`
+        *,
+        tipo:tipos_certificado(nombre),
+        empleado:empleados(nombre, apellido, empresa_id, empresa:empresas(id, nombre, slug)),
+        vehiculo:vehiculos(patente, empresa_id, empresa:empresas(id, nombre, slug)),
+        empresa:empresas(id, nombre, slug)
+      `)
       .not('fecha_vencimiento', 'is', null)
       .order('fecha_vencimiento', { ascending: true }),
     supabase.from('empresas').select('*').order('nombre'),
@@ -26,26 +32,25 @@ export default async function DashboardPage() {
 
   const hoy = new Date()
 
-  const vencidos = (certs ?? []).filter(c => getEstadoVencimiento(c.fecha_vencimiento) === 'vencido')
-  const proximos = (certs ?? []).filter(c => getEstadoVencimiento(c.fecha_vencimiento) === 'proximo')
+  const vencidos = (certs ?? []).filter((c) => getEstadoVencimiento(c.fecha_vencimiento) === 'vencido')
+  const proximos = (certs ?? []).filter((c) => getEstadoVencimiento(c.fecha_vencimiento) === 'proximo')
   const alertas = [...vencidos, ...proximos].slice(0, 20)
 
-  const byEmpresa = (empresas ?? []).map(emp => ({
+  const byEmpresa = (empresas ?? []).map((emp) => ({
     ...emp,
-    total: (empleados ?? []).filter(e => e.empresa_id === emp.id).length,
-    vencidos: (certs ?? []).filter(c => {
-      const empId = c.empleado?.empresa_id ?? c.empresa?.id ?? null
+    total: (empleados ?? []).filter((e) => e.empresa_id === emp.id).length,
+    vencidos: (certs ?? []).filter((c) => {
+      const empId = c.empleado?.empresa_id ?? c.vehiculo?.empresa_id ?? c.empresa?.id ?? null
       return empId === emp.id && getEstadoVencimiento(c.fecha_vencimiento) === 'vencido'
     }).length,
-    proximos: (certs ?? []).filter(c => {
-      const empId = c.empleado?.empresa_id ?? c.empresa?.id ?? null
+    proximos: (certs ?? []).filter((c) => {
+      const empId = c.empleado?.empresa_id ?? c.vehiculo?.empresa_id ?? c.empresa?.id ?? null
       return empId === emp.id && getEstadoVencimiento(c.fecha_vencimiento) === 'proximo'
     }).length,
   }))
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -53,7 +58,6 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Stats globales */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500">Empleados activos</p>
@@ -73,7 +77,6 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-5 gap-6">
-        {/* Alertas */}
         <div className="col-span-3">
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -94,17 +97,22 @@ export default async function DashboardPage() {
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {alertas.map(cert => {
+                {alertas.map((cert) => {
                   const estado = getEstadoVencimiento(cert.fecha_vencimiento)
                   const dias = differenceInDays(new Date(cert.fecha_vencimiento!), hoy)
-                  const nombre = cert.empleado?.nombre ?? cert.empresa?.nombre ?? '—'
-                  const empresa = cert.empleado?.empresa ?? cert.empresa
+                  const nombreEmpleado = [cert.empleado?.nombre, cert.empleado?.apellido].filter(Boolean).join(' ')
+                  const nombre = cert.empleado
+                    ? nombreEmpleado
+                    : cert.vehiculo
+                      ? cert.vehiculo.patente ?? 'Vehículo'
+                      : cert.empresa?.nombre ?? '—'
+                  const empresa = cert.empleado?.empresa ?? cert.vehiculo?.empresa ?? cert.empresa
                   const slug = empresa?.slug ?? ''
 
                   return (
                     <Link
                       key={cert.id}
-                      href={`/empresa/${slug}`}
+                      href={slug ? `/empresa/${slug}` : '/vencimientos'}
                       className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors"
                     >
                       <div className={`w-2 h-2 rounded-full shrink-0 ${EMPRESA_COLORS[slug] ?? 'bg-gray-300'}`} />
@@ -128,10 +136,9 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Por empresa */}
         <div className="col-span-2 space-y-3">
           <h2 className="font-medium text-gray-900">Por empresa</h2>
-          {byEmpresa.map(emp => (
+          {byEmpresa.map((emp) => (
             <Link
               key={emp.id}
               href={`/empresa/${emp.slug}`}
