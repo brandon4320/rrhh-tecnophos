@@ -4,6 +4,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { internalEmailToUsername, normalizeUsername, usernameToInternalEmail } from '@/lib/auth-helpers'
 import SubmitButton from './SubmitButton'
 
+function buildAdminUsersRedirect(error: string, detail?: string) {
+  const params = new URLSearchParams({ error })
+  if (detail) params.set('detail', detail)
+  return `/admin/usuarios?${params.toString()}`
+}
+
 export default async function AdminUsuariosPage({
   searchParams,
 }: {
@@ -114,9 +120,11 @@ export default async function AdminUsuariosPage({
 
     const nombrePerfil = [empleado.nombre, empleado.apellido].filter(Boolean).join(' ')
     const internalEmail = usernameToInternalEmail(username)
+    const admin = createAdminClient()
+
+    let createdUserId: string | null = null
 
     try {
-      const admin = createAdminClient()
       const { data, error } = await admin.auth.admin.createUser({
         email: internalEmail,
         password,
@@ -129,9 +137,10 @@ export default async function AdminUsuariosPage({
       })
 
       if (error || !data.user) {
-        const detail = encodeURIComponent(error?.message ?? 'Error desconocido al crear el usuario')
-        redirect(`/admin/usuarios?error=create_user_failed&detail=${detail}`)
+        redirect(buildAdminUsersRedirect('create_user_failed', error?.message ?? 'Error desconocido al crear el usuario'))
       }
+
+      createdUserId = data.user.id
 
       const { error: perfilError } = await supabase.from('perfiles').insert({
         id: data.user.id,
@@ -141,13 +150,14 @@ export default async function AdminUsuariosPage({
       })
 
       if (perfilError) {
-        await admin.auth.admin.deleteUser(data.user.id)
-        const detail = encodeURIComponent(perfilError.message ?? 'No se pudo crear el perfil')
-        redirect(`/admin/usuarios?error=create_profile_failed&detail=${detail}`)
+        redirect(buildAdminUsersRedirect('create_profile_failed', perfilError.message ?? 'No se pudo crear el perfil'))
       }
     } catch (error) {
-      const detail = encodeURIComponent(error instanceof Error ? error.message : 'Error desconocido')
-      redirect(`/admin/usuarios?error=create_user_failed&detail=${detail}`)
+      if (createdUserId) {
+        await admin.auth.admin.deleteUser(createdUserId)
+      }
+      const detail = error instanceof Error ? error.message : 'Error desconocido'
+      redirect(buildAdminUsersRedirect('create_user_failed', detail))
     }
 
     redirect('/admin/usuarios?success=created')
@@ -174,19 +184,23 @@ export default async function AdminUsuariosPage({
 
     const userId = String(formData.get('user_id') ?? '').trim()
     if (!userId) redirect('/admin/usuarios?error=delete_failed')
-    if (userId === user.id) redirect('/admin/usuarios?error=delete_failed&detail=No podés eliminar tu propio usuario.')
+    if (userId === user.id) redirect(buildAdminUsersRedirect('delete_failed', 'No podés eliminar tu propio usuario.'))
+
+    const admin = createAdminClient()
 
     try {
-      const admin = createAdminClient()
-      await supabase.from('perfiles').delete().eq('id', userId)
+      const { error: perfilDeleteError } = await supabase.from('perfiles').delete().eq('id', userId)
+      if (perfilDeleteError) {
+        redirect(buildAdminUsersRedirect('delete_failed', perfilDeleteError.message))
+      }
+
       const { error } = await admin.auth.admin.deleteUser(userId)
       if (error) {
-        const detail = encodeURIComponent(error.message)
-        redirect(`/admin/usuarios?error=delete_failed&detail=${detail}`)
+        redirect(buildAdminUsersRedirect('delete_failed', error.message))
       }
     } catch (error) {
-      const detail = encodeURIComponent(error instanceof Error ? error.message : 'Error desconocido')
-      redirect(`/admin/usuarios?error=delete_failed&detail=${detail}`)
+      const detail = error instanceof Error ? error.message : 'Error desconocido'
+      redirect(buildAdminUsersRedirect('delete_failed', detail))
     }
 
     redirect('/admin/usuarios?success=deleted')
@@ -215,25 +229,24 @@ export default async function AdminUsuariosPage({
     const newPassword = String(formData.get('new_password') ?? '').trim()
 
     if (!userId || newPassword.length < 6) {
-      redirect('/admin/usuarios?error=password_failed&detail=La nueva contraseña debe tener al menos 6 caracteres.')
+      redirect(buildAdminUsersRedirect('password_failed', 'La nueva contraseña debe tener al menos 6 caracteres.'))
     }
 
     try {
       const admin = createAdminClient()
       const { error } = await admin.auth.admin.updateUserById(userId, { password: newPassword })
       if (error) {
-        const detail = encodeURIComponent(error.message)
-        redirect(`/admin/usuarios?error=password_failed&detail=${detail}`)
+        redirect(buildAdminUsersRedirect('password_failed', error.message))
       }
     } catch (error) {
-      const detail = encodeURIComponent(error instanceof Error ? error.message : 'Error desconocido')
-      redirect(`/admin/usuarios?error=password_failed&detail=${detail}`)
+      const detail = error instanceof Error ? error.message : 'Error desconocido'
+      redirect(buildAdminUsersRedirect('password_failed', detail))
     }
 
     redirect('/admin/usuarios?success=password_updated')
   }
 
-  const detail = params.detail ? decodeURIComponent(params.detail) : null
+  const detail = params.detail ?? null
 
   const errorMessage =
     params.error === 'missing_fields'
