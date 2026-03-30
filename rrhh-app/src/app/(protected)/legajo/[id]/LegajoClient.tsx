@@ -119,14 +119,14 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
   }
 
   async function handleDelete(certId: string) {
-    if (!confirm('¿Eliminar este certificado?')) return
+    if (!confirm('Â¿Eliminar este certificado?')) return
     await supabase.from('certificados').delete().eq('id', certId)
     setCerts(prev => prev.filter(c => c.id !== certId))
   }
 
   async function handleSaveEmpleado() {
     if (!empleadoData.nombre.trim() || !empleadoData.empresa_id) {
-      alert('Completá al menos nombre y empresa.')
+      alert('CompletÃ¡ al menos nombre y empresa.')
       return
     }
 
@@ -155,7 +155,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
   }
 
   async function handleDeleteEmpleado() {
-    if (!confirm('¿Eliminar este empleado? Esta acción desactiva el legajo actual.')) return
+    if (!confirm('Â¿Eliminar este empleado? Esta acciÃ³n desactiva el legajo actual.')) return
 
     const { error } = await supabase
       .from('empleados')
@@ -174,26 +174,17 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
   async function handleFileUpload(certId: string, files: FileList) {
     setUploading(certId)
     for (const file of Array.from(files)) {
-      const ext = file.name.split('.').pop()
-      const path = `${empleado.empresa.slug}/${empleado.id}/${certId}/${Date.now()}.${ext}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('certificados')
-        .upload(path, file)
-
-      if (!uploadError) {
-        const { data: archivo } = await supabase
-          .from('archivos')
-          .insert({ certificado_id: certId, nombre: file.name, path, mime_type: file.type, size_bytes: file.size })
-          .select()
-          .single()
-
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('certId', certId)
+      fd.append('empleadoId', empleado.id)
+      fd.append('empresaSlug', empleado.empresa?.slug ?? '')
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      if (res.ok) {
+        const { archivo } = await res.json()
         if (archivo) {
-          const { data: signed } = await supabase.storage.from('certificados').createSignedUrl(path, 3600)
           setCerts(prev => prev.map(c =>
-            c.id === certId
-              ? { ...c, archivos: [...c.archivos, { ...archivo, url: signed?.signedUrl }] }
-              : c
+            c.id === certId ? { ...c, archivos: [...c.archivos, archivo] } : c
           ))
         }
       }
@@ -201,15 +192,14 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
     setUploading(null)
   }
 
-  async function handleDeleteArchivo(certId: string, archivoId: string, path: string) {
+  async function handleDeleteArchivo(certId: string, archivoId: string) {
     if (!confirm('¿Eliminar este archivo?')) return
-    await supabase.storage.from('certificados').remove([path])
-    await supabase.from('archivos').delete().eq('id', archivoId)
-    setCerts(prev => prev.map(c =>
-      c.id === certId
-        ? { ...c, archivos: c.archivos.filter((a: any) => a.id !== archivoId) }
-        : c
-    ))
+    const res = await fetch(`/api/archivo?id=${archivoId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setCerts(prev => prev.map(c =>
+        c.id === certId ? { ...c, archivos: c.archivos.filter((a: any) => a.id !== archivoId) } : c
+      ))
+    }
   }
 
   const slug = empleado.empresa?.slug ?? ''
@@ -237,7 +227,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
               <span className="text-sm text-gray-500">{empleado.empresa?.nombre}</span>
               {empleadoData.sector && (
                 <>
-                  <span className="text-gray-300">·</span>
+                  <span className="text-gray-300">Â·</span>
                   <span className="text-sm text-gray-500">{empleadoData.sector}</span>
                 </>
               )}
@@ -353,7 +343,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
       <div className="space-y-3 mb-8">
         {certs.length === 0 && (
           <div className="text-center py-12 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
-            Sin certificados registrados. Agregá el primero.
+            Sin certificados registrados. AgregÃ¡ el primero.
           </div>
         )}
 
@@ -411,7 +401,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                   <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
                     {cert.fecha_emision && (
                       <div>
-                        <p className="text-xs text-gray-400 mb-1">Fecha de emisión</p>
+                        <p className="text-xs text-gray-400 mb-1">Fecha de emisiÃ³n</p>
                         <p className="text-gray-700">{format(new Date(cert.fecha_emision), 'dd/MM/yyyy')}</p>
                       </div>
                     )}
@@ -423,7 +413,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                     )}
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Alerta previa</p>
-                      <p className="text-gray-700">{cert.alerta_dias} días</p>
+                      <p className="text-gray-700">{cert.alerta_dias} dÃ­as</p>
                     </div>
                     {cert.notas && (
                       <div className="col-span-3">
@@ -448,19 +438,16 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                             </span>
                           )}
                           <div className="flex items-center gap-2">
-                            {archivo.url && (
-                              <a
-                                href={archivo.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-indigo-600 hover:underline"
-                              >
-                                Ver
-                              </a>
-                            )}
+                            <button
+                              onClick={async () => {
+                                const res = await fetch(`/api/archivo?path=${encodeURIComponent(archivo.path)}`)
+                                if (res.ok) { const { url } = await res.json(); window.open(url, '_blank') }
+                              }}
+                              className="text-xs text-indigo-600 hover:underline"
+                            >Ver</button>
                             {isAdmin && (
                               <button
-                                onClick={() => handleDeleteArchivo(cert.id, archivo.id, archivo.path)}
+                                onClick={() => handleDeleteArchivo(cert.id, archivo.id)}
                                 className="text-xs text-red-400 hover:text-red-600"
                               >
                                 Eliminar
@@ -562,7 +549,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Fecha de emisión</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Fecha de emisiÃ³n</label>
               <input
                 type="date"
                 value={form.fecha_emision}
@@ -582,18 +569,18 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">N° de documento</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">NÂ° de documento</label>
               <input
                 type="text"
                 value={form.numero_documento}
                 onChange={e => setForm(f => ({ ...f, numero_documento: e.target.value }))}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Nro. de resolución, carnet, etc."
+                placeholder="Nro. de resoluciÃ³n, carnet, etc."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Alertar con días de anticipación</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Alertar con dÃ­as de anticipaciÃ³n</label>
               <input
                 type="number"
                 min={1}
@@ -611,7 +598,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                 onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
                 rows={3}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                placeholder="Información adicional..."
+                placeholder="InformaciÃ³n adicional..."
               />
             </div>
           </div>
