@@ -7,11 +7,6 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const { data: perfil } = await supabase
-    .from('perfiles').select('rol').eq('id', user.id).single()
-  if (perfil?.rol !== 'admin')
-    return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
-
   const formData = await request.formData()
   const file = formData.get('file') as File
   const certId = formData.get('certId') as string
@@ -27,11 +22,12 @@ export async function POST(request: NextRequest) {
 
   await uploadToR2(path, buffer, file.type)
 
-  const { data: archivo } = await supabase
+  const { data: archivo, error } = await supabase
     .from('archivos')
     .insert({ certificado_id: certId, nombre: file.name, path, mime_type: file.type, size_bytes: file.size })
     .select()
     .single()
 
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ archivo })
 }
