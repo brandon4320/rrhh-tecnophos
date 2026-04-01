@@ -25,12 +25,11 @@ interface Props {
   vehiculos: VehiculoConCerts[]
   tiposCertificado: TipoCertificado[]
   canEdit: boolean
-  canEdit: boolean
 }
 
 const FORM_EMPTY = { tipo_id: '', tipo_nombre_custom: '', fecha_vencimiento: '', notas: '', alerta_dias: 30 }
 
-export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertificado, canEdit, canEdit }: Props) {
+export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertificado, canEdit }: Props) {
   const supabase = createClient()
   const [vehiculos, setVehiculos] = useState(initVehiculos)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -102,7 +101,7 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
   }
 
   async function handleDelete(vehiculoId: string, certId: string) {
-    if (!confirm('Â¿Eliminar este certificado?')) return
+    if (!confirm('ÃÂ¿Eliminar este certificado?')) return
     const { error: err } = await supabase.from('certificados').delete().eq('id', certId)
     if (err) { setError('Error al eliminar'); return }
     setVehiculos(prev => prev.map(v =>
@@ -114,7 +113,7 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
 
   return (
     <div className="mb-8">
-      <h2 className="text-base font-semibold text-gray-800 mb-3">VehÃ­culos</h2>
+      <h2 className="text-base font-semibold text-gray-800 mb-3">VehÃÂ­culos</h2>
       <div className="space-y-3">
         {vehiculos.map(veh => {
           const isOpen = expandedId === veh.id
@@ -135,7 +134,7 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
 
           return (
             <div key={veh.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              {/* Header del vehÃ­culo */}
+              {/* Header del vehÃÂ­culo */}
               <div
                 className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => setExpandedId(isOpen ? null : veh.id)}
@@ -167,7 +166,7 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
                   {/* Lista de certificados */}
                   <div className="space-y-2 mb-4">
                     {veh.certificados.length === 0 && (
-                      <p className="text-xs text-gray-400 py-2">Sin certificados. AgregÃ¡ el primero.</p>
+                      <p className="text-xs text-gray-400 py-2">Sin certificados. AgregÃÂ¡ el primero.</p>
                     )}
                     {veh.certificados.map(cert => {
                       const estado = getEstadoVencimiento(cert.fecha_vencimiento, cert.alerta_dias)
@@ -272,7 +271,7 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
             className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Alerta (dÃ­as antes)</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Alerta (dÃÂ­as antes)</label>
           <input type="number" min={1} max={365} value={form.alerta_dias}
             onChange={e => setForm(f => ({ ...f, alerta_dias: parseInt(e.target.value) || 30 }))}
             className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -282,7 +281,7 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
           <input type="text" value={form.notas}
             onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
             className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="InformaciÃ³n adicional..." />
+            placeholder="InformaciÃÂ³n adicional..." />
         </div>
       </div>
     )
