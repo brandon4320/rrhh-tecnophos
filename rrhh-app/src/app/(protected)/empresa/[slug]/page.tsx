@@ -85,7 +85,7 @@ export default async function EmpresaPage({ params }: { params: Promise<{ slug: 
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${ESTADO_COLORS[estado]}`}>
                         {cert.fecha_vencimiento
                           ? format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')
-                          : 'â'}
+                          : 'Ã¢ÂÂ'}
                       </span>
                     </div>
                   </div>
@@ -128,7 +128,7 @@ export default async function EmpresaPage({ params }: { params: Promise<{ slug: 
                           <div className="flex items-center gap-2">
                             <span className="text-gray-500">{certs.length} registrados</span>
                             {vencidos > 0 && <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">{vencidos} vencido{vencidos > 1 ? 's' : ''}</span>}
-                            {proximos > 0 && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">{proximos} prÃ³ximo{proximos > 1 ? 's' : ''}</span>}
+                            {proximos > 0 && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">{proximos} prÃÂ³ximo{proximos > 1 ? 's' : ''}</span>}
                           </div>
                         </td>
                         <td className="px-4 py-3.5 text-center">
@@ -137,7 +137,7 @@ export default async function EmpresaPage({ params }: { params: Promise<{ slug: 
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-right">
-                          <Link href={`/legajo/${emp.id}`} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Ver legajo â</Link>
+                          <Link href={`/legajo/${emp.id}`} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Ver legajo Ã¢ÂÂ</Link>
                         </td>
                       </tr>
                     )
@@ -149,11 +149,10 @@ export default async function EmpresaPage({ params }: { params: Promise<{ slug: 
         )
       })}
 
-      {/* VehÃ­culos â componente interactivo */}
+      {/* VehÃÂ­culos Ã¢ÂÂ componente interactivo */}
       <VehiculosClient
         vehiculos={vehiculos ?? []}
         tiposCertificado={tiposVehiculo ?? []}
-        isAdmin={isAdmin}
         canEdit={isAdmin || perfil?.rol === 'usuario'}
       />
     </div>
