@@ -95,14 +95,20 @@ export default async function VencimientosPage({
                 const estado_ = getEstadoVencimiento(cert.fecha_vencimiento)
                 const dias = differenceInDays(new Date(cert.fecha_vencimiento!), hoy)
                 const empSlug = cert.empleado?.empresa?.slug ?? cert.vehiculo?.empresa?.slug ?? cert.empresa?.slug ?? ''
-                const empNombre = cert.empleado?.empresa?.nombre ?? cert.vehiculo?.empresa?.nombre ?? cert.empresa?.nombre ?? '—'
+                const empNombre = cert.empleado?.empresa?.nombre ?? cert.vehiculo?.empresa?.nombre ?? cert.empresa?.nombre ?? 'â'
                 const nombreEmpleado = [cert.empleado?.nombre, cert.empleado?.apellido].filter(Boolean).join(' ')
                 const referencia = cert.empleado
                   ? nombreEmpleado
                   : cert.vehiculo
-                    ? `Vehículo ${cert.vehiculo.patente}`
+                    ? `VehÃ­culo ${cert.vehiculo.patente}`
                     : '(Empresa)'
-                const detailHref = cert.empleado?.id ? `/legajo/${cert.empleado.id}` : undefined
+                const detailHref = cert.empleado?.id
+                  ? `/legajo/${cert.empleado.id}`
+                  : cert.vehiculo?.empresa?.slug
+                    ? `/empresa/${cert.vehiculo.empresa_slug}`
+                    : empSlug
+                      ? `/empresa/${empSlug}`
+                      : undefined
 
                 return (
                   <tr key={cert.id} className="hover:bg-gray-50 transition-colors">
@@ -117,14 +123,14 @@ export default async function VencimientosPage({
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-gray-700">
-                      {cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? '—'}
+                      {cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? 'â'}
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       <p className="font-mono text-gray-700">
                         {format(new Date(cert.fecha_vencimiento!), 'dd/MM/yyyy')}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {dias < 0 ? `hace ${Math.abs(dias)} días` : `en ${dias} días`}
+                        {dias < 0 ? `hace ${Math.abs(dias)} dÃ­as` : `en ${dias} dÃ­as`}
                       </p>
                     </td>
                     <td className="px-4 py-3.5 text-center">
@@ -137,7 +143,7 @@ export default async function VencimientosPage({
                     <td className="px-4 py-3.5 text-right">
                       {detailHref && (
                         <Link href={detailHref} className="text-xs text-indigo-600 hover:underline">
-                          Legajo →
+                          Legajo â
                         </Link>
                       )}
                     </td>
