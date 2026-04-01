@@ -19,11 +19,6 @@ export async function DELETE(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const { data: perfil } = await supabase
-    .from('perfiles').select('rol').eq('id', user.id).single()
-  if (perfil?.rol !== 'admin')
-    return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
-
   const id = request.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'Falta id' }, { status: 400 })
 
