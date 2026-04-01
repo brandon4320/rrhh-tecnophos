@@ -22,9 +22,10 @@ interface Props {
   tiposCertificado: TipoCertificado[]
   empresas: Empresa[]
   isAdmin: boolean
+  canEdit: boolean
 }
 
-export default function LegajoClient({ empleado, certificados: initCerts, tiposCertificado, empresas, isAdmin }: Props) {
+export default function LegajoClient({ empleado, certificados: initCerts, tiposCertificado, empresas, isAdmin, canEdit }: Props) {
   const supabase = createClient()
   const router = useRouter()
   const [certs, setCerts] = useState(initCerts)
@@ -119,14 +120,14 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
   }
 
   async function handleDelete(certId: string) {
-    if (!confirm('Â¿Eliminar este certificado?')) return
+    if (!confirm('ÃÂ¿Eliminar este certificado?')) return
     await supabase.from('certificados').delete().eq('id', certId)
     setCerts(prev => prev.filter(c => c.id !== certId))
   }
 
   async function handleSaveEmpleado() {
     if (!empleadoData.nombre.trim() || !empleadoData.empresa_id) {
-      alert('CompletÃ¡ al menos nombre y empresa.')
+      alert('CompletÃÂ¡ al menos nombre y empresa.')
       return
     }
 
@@ -155,7 +156,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
   }
 
   async function handleDeleteEmpleado() {
-    if (!confirm('Â¿Eliminar este empleado? Esta acciÃ³n desactiva el legajo actual.')) return
+    if (!confirm('ÃÂ¿Eliminar este empleado? Esta acciÃÂ³n desactiva el legajo actual.')) return
 
     const { error } = await supabase
       .from('empleados')
@@ -193,7 +194,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
   }
 
   async function handleDeleteArchivo(certId: string, archivoId: string) {
-    if (!confirm('¿Eliminar este archivo?')) return
+    if (!confirm('Â¿Eliminar este archivo?')) return
     const res = await fetch(`/api/archivo?id=${archivoId}`, { method: 'DELETE' })
     if (res.ok) {
       setCerts(prev => prev.map(c =>
@@ -227,7 +228,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
               <span className="text-sm text-gray-500">{empleado.empresa?.nombre}</span>
               {empleadoData.sector && (
                 <>
-                  <span className="text-gray-300">Â·</span>
+                  <span className="text-gray-300">ÃÂ·</span>
                   <span className="text-sm text-gray-500">{empleadoData.sector}</span>
                 </>
               )}
@@ -343,7 +344,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
       <div className="space-y-3 mb-8">
         {certs.length === 0 && (
           <div className="text-center py-12 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
-            Sin certificados registrados. AgregÃ¡ el primero.
+            Sin certificados registrados. AgregÃÂ¡ el primero.
           </div>
         )}
 
@@ -401,7 +402,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                   <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
                     {cert.fecha_emision && (
                       <div>
-                        <p className="text-xs text-gray-400 mb-1">Fecha de emisiÃ³n</p>
+                        <p className="text-xs text-gray-400 mb-1">Fecha de emisiÃÂ³n</p>
                         <p className="text-gray-700">{format(new Date(cert.fecha_emision), 'dd/MM/yyyy')}</p>
                       </div>
                     )}
@@ -413,7 +414,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                     )}
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Alerta previa</p>
-                      <p className="text-gray-700">{cert.alerta_dias} dÃ­as</p>
+                      <p className="text-gray-700">{cert.alerta_dias} dÃÂ­as</p>
                     </div>
                     {cert.notas && (
                       <div className="col-span-3">
@@ -445,7 +446,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                               }}
                               className="text-xs text-indigo-600 hover:underline"
                             >Ver</button>
-                            {isAdmin && (
+                            {canEdit && (
                               <button
                                 onClick={() => handleDeleteArchivo(cert.id, archivo.id)}
                                 className="text-xs text-red-400 hover:text-red-600"
@@ -463,7 +464,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                     </div>
                   </div>
 
-                  {isAdmin && (
+                  {canEdit && (
                     <div className="flex items-center gap-3 pt-3 border-t border-gray-200">
                       <label className={clsx(
                         'flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg border cursor-pointer transition-colors',
@@ -513,7 +514,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
         })}
       </div>
 
-      {isAdmin && showForm && (
+      {canEdit && showForm && (
         <div id="cert-form" className="bg-white rounded-xl border border-indigo-200 p-6 shadow-sm">
           <h3 className="font-semibold text-gray-900 mb-5">
             {editingId ? 'Editar certificado' : 'Nuevo certificado'}
@@ -549,7 +550,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Fecha de emisiÃ³n</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Fecha de emisiÃÂ³n</label>
               <input
                 type="date"
                 value={form.fecha_emision}
@@ -569,18 +570,18 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">NÂ° de documento</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">NÃÂ° de documento</label>
               <input
                 type="text"
                 value={form.numero_documento}
                 onChange={e => setForm(f => ({ ...f, numero_documento: e.target.value }))}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Nro. de resoluciÃ³n, carnet, etc."
+                placeholder="Nro. de resoluciÃÂ³n, carnet, etc."
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Alertar con dÃ­as de anticipaciÃ³n</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Alertar con dÃÂ­as de anticipaciÃÂ³n</label>
               <input
                 type="number"
                 min={1}
@@ -598,7 +599,7 @@ export default function LegajoClient({ empleado, certificados: initCerts, tiposC
                 onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
                 rows={3}
                 className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                placeholder="InformaciÃ³n adicional..."
+                placeholder="InformaciÃÂ³n adicional..."
               />
             </div>
           </div>
