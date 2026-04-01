@@ -45,6 +45,7 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
       tiposCertificado={tiposCert ?? []}
       empresas={empresas ?? []}
       isAdmin={perfil?.rol === 'admin'}
+      canEdit={perfil?.rol === 'admin' || perfil?.rol === 'usuario'}
     />
   )
 }
