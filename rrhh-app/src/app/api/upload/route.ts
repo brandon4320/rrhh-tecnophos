@@ -24,7 +24,14 @@ export async function POST(request: NextRequest) {
 
   const { data: archivo, error } = await supabase
     .from('archivos')
-    .insert({ certificado_id: certId, nombre: file.name, path, mime_type: file.type, size_bytes: file.size })
+    .insert({
+      certificado_id: certId,
+      nombre: file.name,
+      path,
+      mime_type: file.type,
+      size_bytes: file.size,
+      uploaded_by: user.id,
+    })
     .select()
     .single()
 
