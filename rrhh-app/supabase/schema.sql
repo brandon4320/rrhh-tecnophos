@@ -180,9 +180,9 @@ create policy "Escritura admin" on certificados for all to authenticated
   using (exists (select 1 from perfiles where id = auth.uid() and rol = 'admin'))
   with check (exists (select 1 from perfiles where id = auth.uid() and rol = 'admin'));
 
-create policy "Escritura admin" on archivos for all to authenticated
-  using (exists (select 1 from perfiles where id = auth.uid() and rol = 'admin'))
-  with check (exists (select 1 from perfiles where id = auth.uid() and rol = 'admin'));
+create policy "Escritura autenticada" on archivos for all to authenticated
+  using (true)
+  with check (true);
 
 create policy "Escritura admin" on vehiculos for all to authenticated
   using (exists (select 1 from perfiles where id = auth.uid() and rol = 'admin'))
