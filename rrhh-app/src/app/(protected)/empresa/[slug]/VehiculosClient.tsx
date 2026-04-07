@@ -101,7 +101,7 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
   }
 
   async function handleDelete(vehiculoId: string, certId: string) {
-    if (!confirm('ÃÂ¿Eliminar este certificado?')) return
+    if (!confirm('¿Eliminar este certificado?')) return
     const { error: err } = await supabase.from('certificados').delete().eq('id', certId)
     if (err) { setError('Error al eliminar'); return }
     setVehiculos(prev => prev.map(v =>
@@ -113,7 +113,7 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
 
   return (
     <div className="mb-8">
-      <h2 className="text-base font-semibold text-gray-800 mb-3">VehÃÂ­culos</h2>
+      <h2 className="text-base font-semibold text-gray-800 mb-3">Vehículos</h2>
       <div className="space-y-3">
         {vehiculos.map(veh => {
           const isOpen = expandedId === veh.id
@@ -134,7 +134,6 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
 
           return (
             <div key={veh.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              {/* Header del vehÃÂ­culo */}
               <div
                 className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => setExpandedId(isOpen ? null : veh.id)}
@@ -160,13 +159,11 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
                 </div>
               </div>
 
-              {/* Contenido expandido */}
               {isOpen && (
                 <div className="border-t border-gray-100 bg-gray-50 px-5 py-4">
-                  {/* Lista de certificados */}
                   <div className="space-y-2 mb-4">
                     {veh.certificados.length === 0 && (
-                      <p className="text-xs text-gray-400 py-2">Sin certificados. AgregÃÂ¡ el primero.</p>
+                      <p className="text-xs text-gray-400 py-2">Sin certificados. Agregá el primero.</p>
                     )}
                     {veh.certificados.map(cert => {
                       const estado = getEstadoVencimiento(cert.fecha_vencimiento, cert.alerta_dias)
@@ -215,7 +212,6 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
                     })}
                   </div>
 
-                  {/* Formulario agregar */}
                   {isAddingHere && canEdit && (
                     <div className="bg-white rounded-lg border border-indigo-200 p-4">
                       <p className="text-sm font-medium text-gray-900 mb-3">Nuevo certificado</p>
@@ -271,7 +267,7 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
             className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Alerta (dÃÂ­as antes)</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Alerta, días antes</label>
           <input type="number" min={1} max={365} value={form.alerta_dias}
             onChange={e => setForm(f => ({ ...f, alerta_dias: parseInt(e.target.value) || 30 }))}
             className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -281,7 +277,7 @@ export default function VehiculosClient({ vehiculos: initVehiculos, tiposCertifi
           <input type="text" value={form.notas}
             onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
             className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="InformaciÃÂ³n adicional..." />
+            placeholder="Información adicional..." />
         </div>
       </div>
     )
