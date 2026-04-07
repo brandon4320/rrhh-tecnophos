@@ -6,10 +6,10 @@ import Link from 'next/link'
 import VehiculosClient from './VehiculosClient'
 
 const EMPRESA_BG: Record<string, string> = {
-  'tecnophos-bb':      'bg-indigo-500',
+  'tecnophos-bb': 'bg-indigo-500',
   'tecnophos-rosario': 'bg-sky-500',
-  'tecnophos-necochea':'bg-emerald-500',
-  'adc':               'bg-amber-500',
+  'tecnophos-necochea': 'bg-emerald-500',
+  adc: 'bg-amber-500',
 }
 
 export default async function EmpresaPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -54,7 +54,6 @@ export default async function EmpresaPage({ params }: { params: Promise<{ slug: 
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${EMPRESA_BG[slug] ?? 'bg-gray-500'}`}>
           <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -67,7 +66,6 @@ export default async function EmpresaPage({ params }: { params: Promise<{ slug: 
         </div>
       </div>
 
-      {/* Habilitaciones empresa */}
       {(certsEmpresa?.length ?? 0) > 0 && (
         <div className="mb-8">
           <h2 className="text-base font-semibold text-gray-800 mb-3">Habilitaciones de empresa</h2>
@@ -85,7 +83,7 @@ export default async function EmpresaPage({ params }: { params: Promise<{ slug: 
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${ESTADO_COLORS[estado]}`}>
                         {cert.fecha_vencimiento
                           ? format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')
-                          : 'Ã¢ÂÂ'}
+                          : '—'}
                       </span>
                     </div>
                   </div>
@@ -96,7 +94,6 @@ export default async function EmpresaPage({ params }: { params: Promise<{ slug: 
         </div>
       )}
 
-      {/* Empleados por sector */}
       {sectores.map(sector => {
         const emps = (empleados ?? []).filter(e => (e.sector ?? 'General') === sector)
         return (
@@ -128,7 +125,7 @@ export default async function EmpresaPage({ params }: { params: Promise<{ slug: 
                           <div className="flex items-center gap-2">
                             <span className="text-gray-500">{certs.length} registrados</span>
                             {vencidos > 0 && <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">{vencidos} vencido{vencidos > 1 ? 's' : ''}</span>}
-                            {proximos > 0 && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">{proximos} prÃÂ³ximo{proximos > 1 ? 's' : ''}</span>}
+                            {proximos > 0 && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">{proximos} próximo{proximos > 1 ? 's' : ''}</span>}
                           </div>
                         </td>
                         <td className="px-4 py-3.5 text-center">
@@ -137,7 +134,7 @@ export default async function EmpresaPage({ params }: { params: Promise<{ slug: 
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-right">
-                          <Link href={`/legajo/${emp.id}`} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Ver legajo Ã¢ÂÂ</Link>
+                          <Link href={`/legajo/${emp.id}`} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Ver legajo →</Link>
                         </td>
                       </tr>
                     )
@@ -149,12 +146,14 @@ export default async function EmpresaPage({ params }: { params: Promise<{ slug: 
         )
       })}
 
-      {/* VehÃÂ­culos Ã¢ÂÂ componente interactivo */}
       <VehiculosClient
         vehiculos={vehiculos ?? []}
         tiposCertificado={tiposVehiculo ?? []}
         canEdit={isAdmin || perfil?.rol === 'usuario'}
       />
+    </div>
+  )
+}
     </div>
   )
 }
