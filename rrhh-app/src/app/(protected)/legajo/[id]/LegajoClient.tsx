@@ -213,6 +213,9 @@ export default function LegajoClient({
             )
           )
         }
+      } else {
+        const payload = await res.json().catch(() => null)
+        alert(payload?.error ?? 'No se pudo guardar el archivo.')
       }
     }
 
