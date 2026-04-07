@@ -799,6 +799,3 @@ export default function LegajoClient({
     </div>
   )
 }
-    </div>
-  )
-}
