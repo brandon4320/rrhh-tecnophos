@@ -14,10 +14,12 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     .eq('id', user.id)
     .single()
 
-  const { data: empresas } = await supabase
-    .from('empresas')
-    .select('*')
-    .order('nombre')
+  // Si el perfil tiene empresa_acceso, solo muestra esa empresa
+  const empresasQuery = supabase.from('empresas').select('*').order('nombre')
+  if (perfil?.empresa_acceso) {
+    empresasQuery.eq('id', perfil.empresa_acceso)
+  }
+  const { data: empresas } = await empresasQuery
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
