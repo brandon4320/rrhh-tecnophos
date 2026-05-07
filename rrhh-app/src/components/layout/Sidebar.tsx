@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Empresa, Perfil } from '@/types'
@@ -51,14 +50,7 @@ export default function Sidebar({ empresas, perfil, user }: Props) {
     <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col h-full">
       <div className="px-5 py-5 border-b border-gray-100">
         <div className="flex items-center">
-          <Image
-            src="/logo-tecnophos.png"
-            alt="Tecnophos"
-            width={180}
-            height={48}
-            className="object-contain"
-            priority
-          />
+          <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-10 w-auto object-contain" />
         </div>
       </div>
 
