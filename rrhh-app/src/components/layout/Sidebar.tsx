@@ -50,7 +50,7 @@ export default function Sidebar({ empresas, perfil, user }: Props) {
     <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col h-full">
       <div className="px-5 py-5 border-b border-gray-100">
         <div className="flex items-center">
-          <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-10 w-auto object-contain" />
+          <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-8 w-auto" />
         </div>
       </div>
 
@@ -127,7 +127,7 @@ export default function Sidebar({ empresas, perfil, user }: Props) {
           </div>
           <button
             onClick={handleLogout}
-            title="Cerrar sesión"
+            title="Cerrar sesiÃ³n"
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
