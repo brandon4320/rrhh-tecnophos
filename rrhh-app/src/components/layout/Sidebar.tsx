@@ -127,7 +127,7 @@ export default function Sidebar({ empresas, perfil, user }: Props) {
           </div>
           <button
             onClick={handleLogout}
-            title="Cerrar sesiÃ³n"
+            title="Cerrar sesiÃÂ³n"
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
