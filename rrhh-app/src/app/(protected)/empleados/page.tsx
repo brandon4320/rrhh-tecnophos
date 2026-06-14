@@ -36,7 +36,7 @@ export default async function EmpleadosPage({
   const { data: empleados } = await query
   const { data: empresas } = await supabase.from('empresas').select('*').order('nombre')
 
-  function peorEstado(certs: { fecha_vencimiento?: string; alerta_dias?: number }[]) {
+  function peorEstado(certs: { fecha_vencimiento?: string | null; alerta_dias?: number | null }[]) {
     const estados = certs.map((c) => getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias))
     if (estados.includes('vencido')) return 'vencido'
     if (estados.includes('proximo')) return 'proximo'

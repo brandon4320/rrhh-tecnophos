@@ -9,12 +9,12 @@ import clsx from 'clsx'
 
 interface CertVehiculo {
   id: string
-  tipo_id?: string
-  tipo_nombre_custom?: string
-  fecha_vencimiento?: string
-  notas?: string
-  alerta_dias: number
-  tipo?: { nombre: string }
+  tipo_id?: string | null
+  tipo_nombre_custom?: string | null
+  fecha_vencimiento?: string | null
+  notas?: string | null
+  alerta_dias: number | null
+  tipo?: { nombre: string } | null
 }
 
 interface VehiculoConCerts extends Vehiculo {

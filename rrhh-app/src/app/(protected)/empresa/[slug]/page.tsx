@@ -74,7 +74,7 @@ export default async function EmpresaPage({
 
   const sectores = [...new Set((empleados ?? []).map((e) => e.sector ?? 'General'))].sort()
 
-  function peorEstado(certs: { fecha_vencimiento?: string; alerta_dias?: number }[]) {
+  function peorEstado(certs: { fecha_vencimiento?: string | null; alerta_dias?: number | null }[]) {
     const estados = certs.map((c) =>
       getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias)
     )
@@ -178,11 +178,11 @@ export default async function EmpresaPage({
                     const certs = emp.certificados ?? []
                     const estado = certs.length > 0 ? peorEstado(certs) : 'sin_fecha'
                     const vencidos = certs.filter(
-                      (c: { fecha_vencimiento?: string }) =>
+                      (c: { fecha_vencimiento?: string | null }) =>
                         getEstadoVencimiento(c.fecha_vencimiento) === 'vencido'
                     ).length
                     const proximos = certs.filter(
-                      (c: { fecha_vencimiento?: string }) =>
+                      (c: { fecha_vencimiento?: string | null }) =>
                         getEstadoVencimiento(c.fecha_vencimiento) === 'proximo'
                     ).length
 

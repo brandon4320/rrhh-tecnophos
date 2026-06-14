@@ -6,8 +6,15 @@ import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { getEstadoVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
-import type { Empleado, Certificado, TipoCertificado, Empresa } from '@/types'
+import type { Empleado, TipoCertificado, Empresa, Archivo } from '@/types'
+import type { Tables } from '@/types/database'
 import clsx from 'clsx'
+
+/** Certificado tal como lo devuelve la query del legajo (con relaciones). */
+type CertConRelaciones = Tables<'certificados'> & {
+  tipo: { nombre: string; orden: number | null } | null
+  archivos: Archivo[]
+}
 
 const EMPRESA_COLORS: Record<string, string> = {
   'tecnophos-bb': 'bg-indigo-500',
@@ -17,8 +24,8 @@ const EMPRESA_COLORS: Record<string, string> = {
 }
 
 interface Props {
-  empleado: Empleado & { empresa: any }
-  certificados: (Certificado & { tipo: any; archivos: any[] })[]
+  empleado: Empleado & { empresa: Empresa | null }
+  certificados: CertConRelaciones[]
   tiposCertificado: TipoCertificado[]
   empresas: Empresa[]
   isAdmin: boolean

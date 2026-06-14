@@ -105,7 +105,7 @@ export default async function VencimientosPage({
                 const detailHref = cert.empleado?.id
                   ? `/legajo/${cert.empleado.id}`
                   : cert.vehiculo?.empresa?.slug
-                    ? `/empresa/${cert.vehiculo.empresa_slug}`
+                    ? `/empresa/${cert.vehiculo.empresa?.slug}`
                     : empSlug
                       ? `/empresa/${empSlug}`
                       : undefined

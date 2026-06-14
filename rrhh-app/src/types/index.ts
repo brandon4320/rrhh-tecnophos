@@ -1,96 +1,53 @@
-export type Rol = 'admin' | 'usuario'
+// ============================================================
+// Tipos de dominio — derivados de los tipos generados de la DB
+// (src/types/database.ts) para tener UNA sola fuente de verdad.
+// Las relaciones anidadas se agregan encima como opcionales.
+// ============================================================
+import type { Tables } from './database'
 
-export interface Empresa {
-  id: string
-  nombre: string
-  slug: string
-  color: string
-  created_at: string
+export type { Rol } from '@/lib/auth/roles'
+
+export type Empresa = Tables<'empresas'>
+export type TipoCertificado = Tables<'tipos_certificado'>
+export type Perfil = Tables<'perfiles'>
+
+export type Empleado = Tables<'empleados'> & {
+  empresa?: Empresa | null
 }
 
-export interface TipoCertificado {
-  id: string
-  nombre: string
-  descripcion?: string
-  aplica_personal: boolean
-  aplica_empresa: boolean
-  aplica_vehiculo: boolean
-  orden: number
+export type Vehiculo = Tables<'vehiculos'> & {
+  empresa?: Empresa | null
 }
 
-export interface Empleado {
-  id: string
-  nombre: string
-  apellido?: string
-  empresa_id: string
-  sector?: string
-  activo: boolean
-  created_at: string
-  updated_at: string
-  empresa?: Empresa
-}
-
-export interface Vehiculo {
-  id: string
-  patente: string
-  empresa_id: string
-  descripcion?: string
-  activo: boolean
-  empresa?: Empresa
-}
-
-export interface Certificado {
-  id: string
-  tipo_id?: string
-  tipo_nombre_custom?: string
-  empleado_id?: string
-  empresa_id?: string
-  vehiculo_id?: string
-  fecha_vencimiento?: string
-  fecha_emision?: string
-  numero_documento?: string
-  notas?: string
-  alerta_dias: number
-  created_at: string
-  updated_at: string
-  tipo?: TipoCertificado
-  empleado?: Empleado
-  empresa?: Empresa
-  vehiculo?: Vehiculo
-  archivos?: Archivo[]
-}
-
-export interface Archivo {
-  id: string
-  certificado_id: string
-  nombre: string
-  path: string
-  mime_type?: string
-  size_bytes?: number
-  uploaded_at: string
+export type Archivo = Tables<'archivos'> & {
+  /** URL firmada (presigned) generada en runtime. */
   url?: string
 }
 
-export interface Perfil {
-  id: string
-  nombre?: string
-  rol: Rol
-  empresa_acceso?: string
-  created_at: string
+export type Certificado = Tables<'certificados'> & {
+  tipo?: TipoCertificado | null
+  empleado?: Empleado | null
+  empresa?: Empresa | null
+  vehiculo?: Vehiculo | null
+  archivos?: Archivo[]
 }
 
+// ============================================================
+// Estado de vencimiento (lógica de presentación)
+// ============================================================
 export type EstadoVencimiento = 'vencido' | 'proximo' | 'vigente' | 'sin_fecha'
 
 export function getEstadoVencimiento(
-  fecha?: string,
-  alertaDias = 30
+  fecha?: string | null,
+  alertaDias?: number | null
 ): EstadoVencimiento {
   if (!fecha) return 'sin_fecha'
+  const dias = alertaDias ?? 30
   const hoy = new Date()
   const vencimiento = new Date(fecha)
   const diffDias = Math.floor((vencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
   if (diffDias < 0) return 'vencido'
-  if (diffDias <= alertaDias) return 'proximo'
+  if (diffDias <= dias) return 'proximo'
   return 'vigente'
 }
 
