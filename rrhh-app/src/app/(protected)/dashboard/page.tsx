@@ -3,7 +3,7 @@ import { getEstadoVencimiento, ESTADO_COLORS } from '@/types'
 import { format, differenceInDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Link from 'next/link'
-import { Users, AlertTriangle, Clock, CheckCircle2, ArrowRight } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -65,41 +65,30 @@ export default async function DashboardPage() {
       {/* KPIs */}
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <Card>
-          <CardContent className="flex items-start justify-between gap-3 p-5">
-            <div>
-              <p className="text-sm text-muted-foreground">Empleados activos</p>
-              <p className="mt-1 text-3xl font-semibold">{empleados?.length ?? 0}</p>
-              <p className="mt-1 text-xs text-muted-foreground">en {empresas?.length ?? 0} empresas</p>
-            </div>
-            <div className="rounded-lg bg-primary/10 p-2 text-primary">
-              <Users className="size-5" />
-            </div>
+          <CardContent className="p-5">
+            <p className="text-sm text-muted-foreground">Empleados activos</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums">{empleados?.length ?? 0}</p>
+            <p className="mt-1 text-xs text-muted-foreground">en {empresas?.length ?? 0} empresas</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="flex items-start justify-between gap-3 p-5">
-            <div>
-              <p className="text-sm text-muted-foreground">Certificados vencidos</p>
-              <p className="mt-1 text-3xl font-semibold text-red-400">{vencidos.length}</p>
-              <p className="mt-1 text-xs text-muted-foreground">requieren atención inmediata</p>
-            </div>
-            <div className="rounded-lg bg-red-500/15 p-2 text-red-400">
-              <AlertTriangle className="size-5" />
-            </div>
+          <CardContent className="p-5">
+            <p className="text-sm text-muted-foreground">Certificados vencidos</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-red-600 dark:text-red-400">
+              {vencidos.length}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">requieren atención inmediata</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="flex items-start justify-between gap-3 p-5">
-            <div>
-              <p className="text-sm text-muted-foreground">Por vencer (30 días)</p>
-              <p className="mt-1 text-3xl font-semibold text-amber-400">{proximos.length}</p>
-              <p className="mt-1 text-xs text-muted-foreground">en los próximos 30 días</p>
-            </div>
-            <div className="rounded-lg bg-amber-500/15 p-2 text-amber-400">
-              <Clock className="size-5" />
-            </div>
+          <CardContent className="p-5">
+            <p className="text-sm text-muted-foreground">Por vencer (30 días)</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-amber-600 dark:text-amber-400">
+              {proximos.length}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">en los próximos 30 días</p>
           </CardContent>
         </Card>
       </div>
@@ -117,8 +106,8 @@ export default async function DashboardPage() {
 
             {alertas.length === 0 ? (
               <div className="px-5 py-12 text-center">
-                <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
-                  <CheckCircle2 className="size-5" />
+                <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
+                  <CheckCircle2 className="size-5" strokeWidth={1.75} />
                 </div>
                 <p className="text-sm text-muted-foreground">Sin alertas activas</p>
               </div>
@@ -142,7 +131,7 @@ export default async function DashboardPage() {
                       href={slug ? `/empresa/${slug}` : '/vencimientos'}
                       className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-accent"
                     >
-                      <span className={cn('size-2 shrink-0 rounded-full', EMPRESA_COLORS[slug] ?? 'bg-zinc-300')} />
+                      <span className={cn('size-2 shrink-0 rounded-full', EMPRESA_COLORS[slug] ?? 'bg-slate-400')} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{nombre}</p>
                         <p className="truncate text-xs text-muted-foreground">
@@ -150,10 +139,10 @@ export default async function DashboardPage() {
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <Badge variant="outline" className={ESTADO_COLORS[estado]}>
+                        <Badge variant="outline" className={cn('tabular-nums', ESTADO_COLORS[estado])}>
                           {estado === 'vencido' ? `hace ${Math.abs(dias)}d` : `${dias}d`}
                         </Badge>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <p className="mt-1 text-xs tabular-nums text-muted-foreground">
                           {format(new Date(cert.fecha_vencimiento!), 'dd/MM/yyyy')}
                         </p>
                       </div>
@@ -170,25 +159,25 @@ export default async function DashboardPage() {
           <h2 className="font-medium">Por empresa</h2>
           {byEmpresa.map((emp) => (
             <Link key={emp.id} href={`/empresa/${emp.slug}`} className="block">
-              <Card className="py-0 transition-colors hover:border-primary/40">
+              <Card className="py-0 transition-colors hover:border-primary/50">
                 <CardContent className="p-4">
                   <div className="mb-3 flex items-center gap-3">
-                    <span className={cn('size-3 shrink-0 rounded-full', EMPRESA_COLORS[emp.slug] ?? 'bg-zinc-400')} />
+                    <span className={cn('size-2.5 shrink-0 rounded-full', EMPRESA_COLORS[emp.slug] ?? 'bg-slate-400')} />
                     <p className="truncate text-sm font-medium">{emp.nombre}</p>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
-                      <p className="text-lg font-semibold">{emp.total}</p>
+                      <p className="text-lg font-semibold tabular-nums">{emp.total}</p>
                       <p className="text-xs text-muted-foreground">empleados</p>
                     </div>
                     <div>
-                      <p className={cn('text-lg font-semibold', emp.vencidos > 0 ? 'text-red-400' : 'text-muted-foreground')}>
+                      <p className={cn('text-lg font-semibold tabular-nums', emp.vencidos > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>
                         {emp.vencidos}
                       </p>
                       <p className="text-xs text-muted-foreground">vencidos</p>
                     </div>
                     <div>
-                      <p className={cn('text-lg font-semibold', emp.proximos > 0 ? 'text-amber-400' : 'text-muted-foreground')}>
+                      <p className={cn('text-lg font-semibold tabular-nums', emp.proximos > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
                         {emp.proximos}
                       </p>
                       <p className="text-xs text-muted-foreground">próximos</p>

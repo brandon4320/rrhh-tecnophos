@@ -4,10 +4,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 const PRIORIDAD_BADGE: Record<string, string> = {
-  critica: 'bg-red-500/15 text-red-400 border-red-500/30',
-  alta: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  media: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
-  baja: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+  critica: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30',
+  alta: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30',
+  media: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-500/15 dark:text-sky-400 dark:border-sky-500/30',
+  baja: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-500/15 dark:text-slate-400 dark:border-slate-500/30',
 }
 
 const PRIORIDAD_ORDEN: Record<string, number> = { critica: 0, alta: 1, media: 2, baja: 3 }

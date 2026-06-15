@@ -4,27 +4,62 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================
-   Sistema de diseño — Dark premium SaaS B2B
-   Navy casi negro + acentos azul/violeta/cian, bordes sutiles.
+   Sistema de diseño — SaaS B2B sobrio (estilo Tratta)
+   Toggle claro/oscuro. Bordes cuadrados, sin glow. Sidebar
+   siempre oscura. Acento azul.
    ============================================================ */
 :root {
-  --radius: 0.625rem;
+  --radius: 0.375rem;            /* cuadrado: ~6px */
 
-  --background: #06111f;          /* navy casi negro */
+  --background: #f6f7f9;
+  --foreground: #0f172a;         /* slate-900 */
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f1f5f9;          /* slate-100 */
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;   /* slate-500 */
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  --border: #e2e8f0;             /* slate-200 */
+  --input: #e2e8f0;
+  --ring: #2563eb;
+
+  /* Sidebar: oscura también en modo claro (estilo Tratta) */
+  --sidebar: #0b1220;
+  --sidebar-foreground: #94a3b8;
+
+  --input-background: #ffffff;
+  color-scheme: light;
+}
+
+.dark {
+  --background: #06111f;         /* navy casi negro */
   --foreground: #f8fafc;
 
-  --card: #0b1628;               /* paneles */
+  --card: #0b1628;
   --card-foreground: #f8fafc;
   --popover: #0b1628;
   --popover-foreground: #f8fafc;
 
-  --primary: #3b82f6;            /* azul eléctrico */
+  --primary: #3b82f6;
   --primary-foreground: #ffffff;
 
-  --secondary: #101e33;          /* surface secundaria / hover */
+  --secondary: #101e33;
   --secondary-foreground: #f8fafc;
   --muted: #101e33;
-  --muted-foreground: #94a3b8;   /* texto secundario */
+  --muted-foreground: #94a3b8;
   --accent: #101e33;
   --accent-foreground: #f8fafc;
 
@@ -35,14 +70,11 @@
   --input: rgba(148, 163, 184, 0.16);
   --ring: #3b82f6;
 
-  --sidebar: #050b16;            /* navegación más oscura */
+  --sidebar: #050b16;
   --sidebar-foreground: #94a3b8;
 
   --input-background: #0b1628;
-
-  /* acentos secundarios (uso moderado) */
-  --violet: #7c3aed;
-  --cyan: #06b6d4;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -67,20 +99,14 @@
   --color-ring: var(--ring);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-violet: var(--violet);
-  --color-cyan: var(--cyan);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 4px);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-html {
-  color-scheme: dark;
 }
 
 @layer base {
@@ -91,36 +117,19 @@ html {
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-    /* glow muy sutil arriba, nada recargado */
-    background-image: radial-gradient(55rem 36rem at 50% -12%, rgba(37, 99, 235, 0.10), transparent 60%);
-    background-attachment: fixed;
   }
 }
 
 /* Scrollbars sobrios */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
-}
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.22);
-  border-radius: 9999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(148, 163, 184, 0.36);
-  background-clip: padding-box;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground) 35%, transparent) transparent;
 }
 ::selection {
-  background: rgba(59, 130, 246, 0.32);
+  background: color-mix(in srgb, var(--primary) 28%, transparent);
 }
 
-/* Inputs nativos (pantallas aún no migradas a shadcn) */
+/* Inputs nativos (pantallas no migradas a shadcn) */
 input,
 textarea,
 select {
