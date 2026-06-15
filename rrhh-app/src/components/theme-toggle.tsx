@@ -11,11 +11,12 @@ export function ThemeToggle({ className }: { className?: string }) {
   useEffect(() => setMounted(true), [])
 
   const isDark = resolvedTheme === 'dark'
+  const label = !mounted ? 'Cambiar tema' : isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'
 
   return (
     <button
       type="button"
-      aria-label={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+      aria-label={label}
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       className={cn(
         'inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
