@@ -296,27 +296,27 @@ export default async function AdminUsuariosPage({
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Administrar usuarios</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-semibold text-foreground">Administrar usuarios</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Creá y gestioná accesos para empleados desde la app. Este módulo solo es visible para administradores.
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-card rounded-xl border border-border p-6">
         {!process.env.SUPABASE_SERVICE_ROLE_KEY && (
-          <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mb-5 rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-400">
             Para crear y gestionar usuarios desde esta pantalla necesitás definir <strong>SUPABASE_SERVICE_ROLE_KEY</strong> en las variables de entorno del proyecto.
           </div>
         )}
 
         {errorMessage && (
-          <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-5 rounded-lg border border-red-500/30 bg-red-50 px-4 py-3 text-sm text-red-400">
             {errorMessage}
           </div>
         )}
 
         {successMessage && (
-          <div className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          <div className="mb-5 rounded-lg border border-emerald-500/30 bg-green-50 px-4 py-3 text-sm text-emerald-400">
             {successMessage}
           </div>
         )}
@@ -324,8 +324,8 @@ export default async function AdminUsuariosPage({
         <form action={crearUsuario} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Empleado</label>
-              <select name="empleado_id" required defaultValue="" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <label className="block text-sm font-medium text-foreground mb-1.5">Empleado</label>
+              <select name="empleado_id" required defaultValue="" className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="" disabled>Seleccionar empleado</option>
                 {(empleados ?? []).map((empleado: any) => {
                   const nombreCompleto = [empleado.nombre, empleado.apellido].filter(Boolean).join(' ')
@@ -339,24 +339,24 @@ export default async function AdminUsuariosPage({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
-              <input type="text" name="username" required className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="aylen.tecnophos" />
+              <label className="block text-sm font-medium text-foreground mb-1.5">Username</label>
+              <input type="text" name="username" required className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="aylen.tecnophos" />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Contraseña inicial</label>
-              <input type="text" name="password" required minLength={6} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Mínimo 6 caracteres" />
+              <label className="block text-sm font-medium text-foreground mb-1.5">Contraseña inicial</label>
+              <input type="text" name="password" required minLength={6} className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Mínimo 6 caracteres" />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Rol</label>
-              <select name="rol" defaultValue="usuario" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <label className="block text-sm font-medium text-foreground mb-1.5">Rol</label>
+              <select name="rol" defaultValue="usuario" className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="usuario">Usuario</option>
                 <option value="admin">Administrador</option>
               </select>
             </div>
 
-            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+            <div className="rounded-lg border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
               Todos los usuarios creados desde este módulo tienen acceso a todas las empresas.
             </div>
           </div>
@@ -367,24 +367,24 @@ export default async function AdminUsuariosPage({
         </form>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-medium text-gray-900">Usuarios creados</h2>
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="text-lg font-medium text-foreground">Usuarios creados</h2>
         </div>
 
         {managedUsers.length === 0 ? (
-          <div className="px-6 py-10 text-sm text-gray-400">No hay usuarios para mostrar, o falta configuración de administrador.</div>
+          <div className="px-6 py-10 text-sm text-muted-foreground">No hay usuarios para mostrar, o falta configuración de administrador.</div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-border">
             {managedUsers.map((managedUser) => (
               <div key={managedUser.id} className="px-6 py-5 space-y-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{managedUser.username}</p>
-                    <p className="text-sm text-gray-500">{managedUser.nombre}</p>
-                    <p className="text-xs text-gray-400 mt-1">Rol: {managedUser.rol}</p>
+                    <p className="text-sm font-semibold text-foreground">{managedUser.username}</p>
+                    <p className="text-sm text-muted-foreground">{managedUser.nombre}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Rol: {managedUser.rol}</p>
                   </div>
-                  <div className="text-right text-xs text-gray-400">
+                  <div className="text-right text-xs text-muted-foreground">
                     <p>Creado: {managedUser.createdAt ? new Date(managedUser.createdAt).toLocaleDateString('es-AR') : '—'}</p>
                     <p>Último acceso: {managedUser.lastSignInAt ? new Date(managedUser.lastSignInAt).toLocaleDateString('es-AR') : 'Nunca'}</p>
                   </div>
@@ -394,10 +394,10 @@ export default async function AdminUsuariosPage({
                   <form action={cambiarPassword} className="flex flex-wrap items-end gap-3">
                     <input type="hidden" name="user_id" value={managedUser.id} />
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Nueva contraseña</label>
-                      <input type="text" name="new_password" minLength={6} required className="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Mínimo 6 caracteres" />
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">Nueva contraseña</label>
+                      <input type="text" name="new_password" minLength={6} required className="px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Mínimo 6 caracteres" />
                     </div>
-                    <button type="submit" className="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    <button type="submit" className="px-3 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent">
                       Actualizar contraseña
                     </button>
                   </form>
@@ -407,7 +407,7 @@ export default async function AdminUsuariosPage({
                     <button
                       type="submit"
                       disabled={managedUser.id === user.id}
-                      className="px-3 py-2 rounded-lg border border-red-200 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-2 rounded-lg border border-red-500/30 text-sm font-medium text-red-400 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Eliminar usuario
                     </button>

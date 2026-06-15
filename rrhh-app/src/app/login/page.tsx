@@ -1,7 +1,18 @@
 import { redirect } from 'next/navigation'
+import { Building2, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizeUsername, usernameToInternalEmail } from '@/lib/auth-helpers'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
 export default async function LoginPage({
   searchParams,
@@ -61,67 +72,61 @@ export default async function LoginPage({
         : null
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="grid min-h-[100dvh] place-items-center bg-background px-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 mb-4">
-            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-            </svg>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Building2 className="size-6" />
           </div>
-          <h1 className="text-2xl font-semibold text-gray-900">Gestión</h1>
-          <p className="text-sm text-gray-500 mt-1">Tecnophos · ADC</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Gestión</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Tecnophos · ADC</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-lg font-medium text-gray-900 mb-6">Iniciar sesión</h2>
-
-          <form action={loginAction} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Usuario o email
-              </label>
-              <input
-                type="text"
-                name="identifier"
-                required
-                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                placeholder="usuario"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Contraseña
-              </label>
-              <input
-                type="password"
-                name="password"
-                required
-                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                placeholder="••••••••"
-              />
-            </div>
-
-            {errorMessage && (
-              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3.5 py-2.5">
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
-                </svg>
-                {errorMessage}
+        <Card>
+          <CardHeader>
+            <CardTitle>Iniciar sesión</CardTitle>
+            <CardDescription>Ingresá con tu usuario o email.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={loginAction} className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="identifier">Usuario o email</Label>
+                <Input
+                  id="identifier"
+                  name="identifier"
+                  required
+                  placeholder="nombre.apellido"
+                  autoComplete="username"
+                />
               </div>
-            )}
 
-            <button
-              type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg text-sm transition-colors mt-2"
-            >
-              Ingresar
-            </button>
-          </form>
-        </div>
+              <div className="grid gap-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+              </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
+              {errorMessage && (
+                <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  <AlertCircle className="size-4 shrink-0" />
+                  {errorMessage}
+                </div>
+              )}
+
+              <Button type="submit" className="w-full">
+                Ingresar
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <p className="mt-6 text-center text-xs text-muted-foreground">
           Sistema interno, uso exclusivo autorizado
         </p>
       </div>

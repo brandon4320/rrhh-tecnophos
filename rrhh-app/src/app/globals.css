@@ -1,29 +1,126 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   Sistema de diseño — Dark premium SaaS B2B
+   Navy casi negro + acentos azul/violeta/cian, bordes sutiles.
+   ============================================================ */
 :root {
-  --background: #f9fafb;
-  --foreground: #111827;
-  --muted-foreground: #6b7280;
-  --input-background: #ffffff;
+  --radius: 0.625rem;
+
+  --background: #06111f;          /* navy casi negro */
+  --foreground: #f8fafc;
+
+  --card: #0b1628;               /* paneles */
+  --card-foreground: #f8fafc;
+  --popover: #0b1628;
+  --popover-foreground: #f8fafc;
+
+  --primary: #3b82f6;            /* azul eléctrico */
+  --primary-foreground: #ffffff;
+
+  --secondary: #101e33;          /* surface secundaria / hover */
+  --secondary-foreground: #f8fafc;
+  --muted: #101e33;
+  --muted-foreground: #94a3b8;   /* texto secundario */
+  --accent: #101e33;
+  --accent-foreground: #f8fafc;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  --border: rgba(148, 163, 184, 0.16);
+  --input: rgba(148, 163, 184, 0.16);
+  --ring: #3b82f6;
+
+  --sidebar: #050b16;            /* navegación más oscura */
+  --sidebar-foreground: #94a3b8;
+
+  --input-background: #0b1628;
+
+  /* acentos secundarios (uso moderado) */
+  --violet: #7c3aed;
+  --cyan: #06b6d4;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-violet: var(--violet);
+  --color-cyan: var(--cyan);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 html {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    /* glow muy sutil arriba, nada recargado */
+    background-image: radial-gradient(55rem 36rem at 50% -12%, rgba(37, 99, 235, 0.10), transparent 60%);
+    background-attachment: fixed;
+  }
 }
 
+/* Scrollbars sobrios */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.22);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.36);
+  background-clip: padding-box;
+}
+::selection {
+  background: rgba(59, 130, 246, 0.32);
+}
+
+/* Inputs nativos (pantallas aún no migradas a shadcn) */
 input,
 textarea,
 select {
@@ -31,22 +128,16 @@ select {
   background-color: var(--input-background);
   caret-color: var(--foreground);
 }
-
 input::placeholder,
 textarea::placeholder {
   color: var(--muted-foreground);
   opacity: 1;
 }
-
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 textarea:-webkit-autofill,
-textarea:-webkit-autofill:hover,
-textarea:-webkit-autofill:focus,
-select:-webkit-autofill,
-select:-webkit-autofill:hover,
-select:-webkit-autofill:focus {
+select:-webkit-autofill {
   -webkit-text-fill-color: var(--foreground);
   caret-color: var(--foreground);
   box-shadow: 0 0 0 1000px var(--input-background) inset;

@@ -22,7 +22,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const { data: empresas } = await empresasQuery
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-dvh overflow-hidden bg-background">
       <Sidebar empresas={empresas ?? []} perfil={perfil} user={user} />
       <main className="flex-1 overflow-y-auto">
         {children}

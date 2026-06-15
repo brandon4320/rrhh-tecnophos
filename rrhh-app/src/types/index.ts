@@ -59,8 +59,8 @@ export const ESTADO_LABELS: Record<EstadoVencimiento, string> = {
 }
 
 export const ESTADO_COLORS: Record<EstadoVencimiento, string> = {
-  vencido: 'bg-red-100 text-red-800 border-red-200',
-  proximo: 'bg-amber-100 text-amber-800 border-amber-200',
-  vigente: 'bg-green-100 text-green-800 border-green-200',
-  sin_fecha: 'bg-gray-100 text-gray-600 border-gray-200',
+  vencido: 'bg-red-500/15 text-red-400 border-red-500/30',
+  proximo: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  vigente: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  sin_fecha: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
 }

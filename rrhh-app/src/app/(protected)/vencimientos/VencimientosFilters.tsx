@@ -63,8 +63,8 @@ export function VencimientosFilters({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 flex flex-wrap gap-3 items-center">
-      <span className="text-sm font-medium text-gray-600 shrink-0">Filtrar por:</span>
+    <div className="bg-card rounded-xl border border-border p-4 mb-6 flex flex-wrap gap-3 items-center">
+      <span className="text-sm font-medium text-muted-foreground shrink-0">Filtrar por:</span>
 
       <div className="flex items-center gap-1.5">
         {[
@@ -78,8 +78,8 @@ export function VencimientosFilters({
             href={buildUrl({ estado: opt.value || undefined })}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
               (estado ?? '') === opt.value
-                ? 'bg-indigo-600 text-white border-indigo-600'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                ? 'bg-primary text-white border-primary'
+                : 'bg-card text-muted-foreground border-border hover:border-input'
             }`}
           >
             {opt.label}
@@ -87,12 +87,12 @@ export function VencimientosFilters({
         ))}
       </div>
 
-      <div className="h-4 w-px bg-gray-200" />
+      <div className="h-4 w-px bg-muted" />
 
       <select
         value={empresa ?? ''}
         onChange={(e) => handleEmpresaChange(e.target.value)}
-        className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="px-3 py-1.5 rounded-lg border border-border text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
       >
         <option value="">Todas las empresas</option>
         {empresas.map((empresaItem) => (
@@ -105,7 +105,7 @@ export function VencimientosFilters({
       <select
         value={tipo ?? ''}
         onChange={(e) => handleTipoChange(e.target.value)}
-        className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="px-3 py-1.5 rounded-lg border border-border text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
       >
         <option value="">Todos los certificados</option>
         {tipos.map((tipoItem) => (

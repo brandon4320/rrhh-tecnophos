@@ -37,20 +37,20 @@ export default function AjustesPage() {
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Ajustes del sistema</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-6">Ajustes del sistema</h1>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Logo de la empresa</h2>
-        <p className="text-sm text-gray-500 mb-4">
+      <div className="bg-card rounded-xl border border-border p-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Logo de la empresa</h2>
+        <p className="text-sm text-muted-foreground mb-4">
           Subi una imagen PNG de hasta 200KB. Se muestra en el sidebar.
         </p>
 
         <div className="flex items-center gap-6">
-          <div className="w-48 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 overflow-hidden">
+          <div className="w-48 h-20 border-2 border-dashed border-input rounded-lg flex items-center justify-center bg-muted overflow-hidden">
             {logoUrl ? (
               <img src={logoUrl} alt="Logo" className="max-h-16 max-w-44 object-contain" />
             ) : (
-              <span className="text-sm text-gray-400">Sin logo</span>
+              <span className="text-sm text-muted-foreground">Sin logo</span>
             )}
           </div>
 
@@ -65,11 +65,11 @@ export default function AjustesPage() {
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:brightness-110 disabled:opacity-50"
             >
               {uploading ? 'Subiendo...' : 'Cambiar logo'}
             </button>
-            {msg && <p className="text-sm mt-2 text-green-600">{msg}</p>}
+            {msg && <p className="text-sm mt-2 text-emerald-400">{msg}</p>}
           </div>
         </div>
       </div>

@@ -48,8 +48,8 @@ export default async function EmpleadosPage({
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Empleados</h1>
-          <p className="text-sm text-gray-500 mt-1">{empleados?.length ?? 0} resultados</p>
+          <h1 className="text-2xl font-semibold text-foreground">Empleados</h1>
+          <p className="text-sm text-muted-foreground mt-1">{empleados?.length ?? 0} resultados</p>
         </div>
       </div>
 
@@ -57,7 +57,7 @@ export default async function EmpleadosPage({
         <form className="flex-1 flex gap-3 flex-wrap">
           <div className="relative flex-1 max-w-sm min-w-[240px]">
             <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -74,14 +74,14 @@ export default async function EmpleadosPage({
               name="q"
               defaultValue={q}
               placeholder="Buscar por nombre..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
           <select
             name="empresa"
             defaultValue={empresa ?? ''}
-            className="px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">Todas las empresas</option>
             {(empresas ?? []).map((e) => (
@@ -93,7 +93,7 @@ export default async function EmpleadosPage({
 
           <button
             type="submit"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+            className="bg-primary hover:brightness-110 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
           >
             Buscar
           </button>
@@ -101,7 +101,7 @@ export default async function EmpleadosPage({
           {(q || empresa) && (
             <Link
               href="/empleados"
-              className="px-4 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="px-4 py-2.5 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent"
             >
               Limpiar
             </Link>
@@ -109,19 +109,19 @@ export default async function EmpleadosPage({
         </form>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
-              <th className="text-left px-5 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Nombre</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Empresa</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Sector</th>
-              <th className="text-center px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Certificados</th>
-              <th className="text-center px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">Estado</th>
+            <tr className="border-b border-border bg-muted">
+              <th className="text-left px-5 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Nombre</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Empresa</th>
+              <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Sector</th>
+              <th className="text-center px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Certificados</th>
+              <th className="text-center px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">Estado</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
+          <tbody className="divide-y divide-border">
             {(empleados ?? []).map((emp) => {
               const certs = emp.certificados ?? []
               const estado = peorEstado(certs)
@@ -129,16 +129,16 @@ export default async function EmpleadosPage({
               const nombreCompleto = [emp.nombre, emp.apellido].filter(Boolean).join(' ')
 
               return (
-                <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={emp.id} className="hover:bg-accent transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${EMPRESA_DOT[slug] ?? 'bg-gray-300'}`} />
-                      <span className="font-medium text-gray-900">{nombreCompleto}</span>
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${EMPRESA_DOT[slug] ?? 'bg-slate-600'}`} />
+                      <span className="font-medium text-foreground">{nombreCompleto}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 text-gray-600">{emp.empresa?.nombre ?? '—'}</td>
-                  <td className="px-4 py-3.5 text-gray-500">{emp.sector ?? '—'}</td>
-                  <td className="px-4 py-3.5 text-center text-gray-600">{certs.length}</td>
+                  <td className="px-4 py-3.5 text-muted-foreground">{emp.empresa?.nombre ?? '—'}</td>
+                  <td className="px-4 py-3.5 text-muted-foreground">{emp.sector ?? '—'}</td>
+                  <td className="px-4 py-3.5 text-center text-muted-foreground">{certs.length}</td>
                   <td className="px-4 py-3.5 text-center">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${ESTADO_COLORS[estado]}`}>
                       {estado === 'vigente'
@@ -151,7 +151,7 @@ export default async function EmpleadosPage({
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-right">
-                    <Link href={`/legajo/${emp.id}`} className="text-xs text-indigo-600 hover:underline font-medium">
+                    <Link href={`/legajo/${emp.id}`} className="text-xs text-primary hover:underline font-medium">
                       Ver legajo →
                     </Link>
                   </td>
@@ -162,7 +162,7 @@ export default async function EmpleadosPage({
         </table>
 
         {(empleados?.length ?? 0) === 0 && (
-          <div className="text-center py-12 text-sm text-gray-400">No se encontraron empleados</div>
+          <div className="text-center py-12 text-sm text-muted-foreground">No se encontraron empleados</div>
         )}
       </div>
     </div>

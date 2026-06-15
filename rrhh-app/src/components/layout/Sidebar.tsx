@@ -5,13 +5,24 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Empresa, Perfil } from '@/types'
 import type { User } from '@supabase/supabase-js'
-import clsx from 'clsx'
+import { cn } from '@/lib/utils'
+import {
+  Home,
+  LayoutDashboard,
+  Users,
+  CalendarClock,
+  UserPlus,
+  ShieldCheck,
+  LogOut,
+  type LucideIcon,
+} from 'lucide-react'
 
+// Color identitario por empresa (etiqueta de dato, no el acento de la app).
 const EMPRESA_COLORS: Record<string, string> = {
-  'tecnophos-bb':      'bg-indigo-500',
+  'tecnophos-bb': 'bg-indigo-500',
   'tecnophos-rosario': 'bg-sky-500',
-  'tecnophos-necochea':'bg-emerald-500',
-  'adc':               'bg-amber-500',
+  'tecnophos-necochea': 'bg-emerald-500',
+  adc: 'bg-amber-500',
 }
 
 interface Props {
@@ -31,114 +42,83 @@ export default function Sidebar({ empresas, perfil, user }: Props) {
     router.refresh()
   }
 
-  const navItem = (href: string, label: string, icon: React.ReactNode) => (
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+
+  const navItem = (href: string, label: string, Icon: LucideIcon) => (
     <Link
       href={href}
-      className={clsx(
-        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-        pathname === href || pathname.startsWith(href + '/')
-          ? 'bg-indigo-50 text-indigo-700'
-          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+      className={cn(
+        'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+        isActive(href)
+          ? 'bg-primary/15 text-blue-300 ring-1 ring-inset ring-primary/25'
+          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
       )}
     >
-      {icon}
+      <Icon className="size-4 shrink-0" />
       {label}
     </Link>
   )
 
   return (
-    <aside className="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col h-full">
-      <div className="px-5 py-5 border-b border-gray-100">
-        <div className="flex items-center">
-          <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-8 w-auto" />
-        </div>
+    <aside className="flex h-full w-64 shrink-0 flex-col border-r bg-sidebar">
+      <div className="flex h-16 items-center border-b px-5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-8 w-auto" />
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItem('/', 'Inicio', (
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-          </svg>
-        ))}
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        {navItem('/', 'Inicio', Home)}
+        {navItem('/dashboard', 'Dashboard', LayoutDashboard)}
+        {navItem('/empleados', 'Todos los empleados', Users)}
+        {navItem('/vencimientos', 'Vencimientos', CalendarClock)}
 
-        {navItem('/dashboard', 'Dashboard', (
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-          </svg>
-        ))}
-
-        {navItem('/empleados', 'Todos los empleados', (
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-          </svg>
-        ))}
-
-        {navItem('/vencimientos', 'Vencimientos', (
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-          </svg>
-        ))}
-
-        <div className="pt-3 pb-1">
-          <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Empresas</p>
-        </div>
-
-        {empresas.map(emp => (
+        <p className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Empresas
+        </p>
+        {empresas.map((emp) => (
           <Link
             key={emp.id}
             href={`/empresa/${emp.slug}`}
-            className={clsx(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+            className={cn(
+              'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
               pathname.startsWith(`/empresa/${emp.slug}`)
-                ? 'bg-indigo-50 text-indigo-700'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                ? 'bg-primary/15 text-blue-300 ring-1 ring-inset ring-primary/25'
+                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
             )}
           >
-            <span className={clsx('w-2.5 h-2.5 rounded-full shrink-0', EMPRESA_COLORS[emp.slug] ?? 'bg-gray-400')} />
+            <span className={cn('size-2.5 shrink-0 rounded-full', EMPRESA_COLORS[emp.slug] ?? 'bg-zinc-400')} />
             <span className="truncate">{emp.nombre}</span>
           </Link>
         ))}
 
         {perfil?.rol === 'admin' && (
           <>
-            <div className="pt-3 pb-1">
-              <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin</p>
-            </div>
-            {navItem('/admin/empleados/nuevo', 'Nuevo empleado', (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
-              </svg>
-            ))}
-            {navItem('/admin/usuarios', 'Usuarios', (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-              </svg>
-            ))}
+            <p className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Admin
+            </p>
+            {navItem('/admin/empleados/nuevo', 'Nuevo empleado', UserPlus)}
+            {navItem('/admin/usuarios', 'Usuarios', ShieldCheck)}
           </>
         )}
       </nav>
 
-      <div className="border-t border-gray-100 px-3 py-3">
+      <div className="border-t p-3">
         <div className="flex items-center gap-3 px-2 py-2">
-          <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-            <span className="text-xs font-semibold text-indigo-700">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <span className="text-xs font-semibold text-primary">
               {(perfil?.nombre ?? user.email ?? 'U')[0].toUpperCase()}
             </span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {perfil?.nombre ?? user.email}
-            </p>
-            <p className="text-xs text-gray-400 capitalize">{perfil?.rol ?? 'usuario'}</p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">{perfil?.nombre ?? user.email}</p>
+            <p className="truncate text-xs capitalize text-muted-foreground">{perfil?.rol ?? 'usuario'}</p>
           </div>
           <button
             onClick={handleLogout}
-            title="Cerrar sesiÃÂ³n"
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            title="Cerrar sesión"
+            className="text-muted-foreground transition-colors hover:text-foreground"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
-            </svg>
+            <LogOut className="size-4" />
           </button>
         </div>
       </div>

@@ -5,10 +5,10 @@ import Link from 'next/link'
 import { VencimientosFilters } from './VencimientosFilters'
 
 const EMPRESA_COLORS: Record<string, string> = {
-  'tecnophos-bb': 'text-indigo-700 bg-indigo-50 border-indigo-200',
-  'tecnophos-rosario': 'text-sky-700 bg-sky-50 border-sky-200',
+  'tecnophos-bb': 'text-primary bg-primary/10 border-primary/30',
+  'tecnophos-rosario': 'text-sky-400 bg-sky-50 border-sky-500/30',
   'tecnophos-necochea': 'text-emerald-700 bg-emerald-50 border-emerald-200',
-  adc: 'text-amber-700 bg-amber-50 border-amber-200',
+  adc: 'text-amber-400 bg-amber-50 border-amber-500/30',
 }
 
 export default async function VencimientosPage({
@@ -51,8 +51,8 @@ export default async function VencimientosPage({
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Vencimientos</h1>
-        <p className="text-sm text-gray-500 mt-1">{filtered.length} registros encontrados</p>
+        <h1 className="text-2xl font-semibold text-foreground">Vencimientos</h1>
+        <p className="text-sm text-muted-foreground mt-1">{filtered.length} registros encontrados</p>
       </div>
 
       <VencimientosFilters
@@ -63,34 +63,34 @@ export default async function VencimientosPage({
         tipos={tipos ?? []}
       />
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-sm text-gray-400">
+          <div className="text-center py-12 text-sm text-muted-foreground">
             No se encontraron registros con los filtros aplicados.
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-5 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">
+              <tr className="border-b border-border bg-muted">
+                <th className="text-left px-5 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
                   Referencia
                 </th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
                   Empresa
                 </th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
                   Certificado
                 </th>
-                <th className="text-center px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                <th className="text-center px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
                   Vencimiento
                 </th>
-                <th className="text-center px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                <th className="text-center px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
                   Estado
                 </th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-border">
               {filtered.map((cert) => {
                 const estado_ = getEstadoVencimiento(cert.fecha_vencimiento)
                 const dias = differenceInDays(new Date(cert.fecha_vencimiento!), hoy)
@@ -111,25 +111,25 @@ export default async function VencimientosPage({
                       : undefined
 
                 return (
-                  <tr key={cert.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3.5 font-medium text-gray-900">{referencia}</td>
+                  <tr key={cert.id} className="hover:bg-accent transition-colors">
+                    <td className="px-5 py-3.5 font-medium text-foreground">{referencia}</td>
                     <td className="px-4 py-3.5">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${
-                          EMPRESA_COLORS[empSlug] ?? 'text-gray-600 bg-gray-50 border-gray-200'
+                          EMPRESA_COLORS[empSlug] ?? 'text-muted-foreground bg-muted border-border'
                         }`}
                       >
                         {empNombre}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-gray-700">
+                    <td className="px-4 py-3.5 text-foreground">
                       {cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? 'â'}
                     </td>
                     <td className="px-4 py-3.5 text-center">
-                      <p className="font-mono text-gray-700">
+                      <p className="font-mono text-foreground">
                         {format(new Date(cert.fecha_vencimiento!), 'dd/MM/yyyy')}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {dias < 0 ? `hace ${Math.abs(dias)} dÃ­as` : `en ${dias} dÃ­as`}
                       </p>
                     </td>
@@ -142,7 +142,7 @@ export default async function VencimientosPage({
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       {detailHref && (
-                        <Link href={detailHref} className="text-xs text-indigo-600 hover:underline">
+                        <Link href={detailHref} className="text-xs text-primary hover:underline">
                           Legajo â
                         </Link>
                       )}

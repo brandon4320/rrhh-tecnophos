@@ -88,7 +88,7 @@ export default async function EmpresaPage({
       <div className="flex items-center gap-4 mb-8">
         <div
           className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-            EMPRESA_BG[slug] ?? 'bg-gray-500'
+            EMPRESA_BG[slug] ?? 'bg-muted'
           }`}
         >
           <svg
@@ -106,8 +106,8 @@ export default async function EmpresaPage({
           </svg>
         </div>
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{empresa.nombre}</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-2xl font-semibold text-foreground">{empresa.nombre}</h1>
+          <p className="text-sm text-muted-foreground">
             {empleados?.length ?? 0} empleados activos
           </p>
         </div>
@@ -115,21 +115,21 @@ export default async function EmpresaPage({
 
       {(certsEmpresa?.length ?? 0) > 0 && (
         <div className="mb-8">
-          <h2 className="text-base font-semibold text-gray-800 mb-3">
+          <h2 className="text-base font-semibold text-foreground mb-3">
             Habilitaciones de empresa
           </h2>
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="divide-y divide-gray-50">
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="divide-y divide-border">
               {certsEmpresa!.map((cert) => {
                 const estado = getEstadoVencimiento(cert.fecha_vencimiento)
                 return (
                   <div key={cert.id} className="flex items-center gap-4 px-5 py-3.5">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-foreground">
                         {cert.tipo?.nombre ?? cert.tipo_nombre_custom}
                       </p>
                       {cert.numero_documento && (
-                        <p className="text-xs text-gray-400">{cert.numero_documento}</p>
+                        <p className="text-xs text-muted-foreground">{cert.numero_documento}</p>
                       )}
                     </div>
                     <div className="text-right">
@@ -153,27 +153,27 @@ export default async function EmpresaPage({
         const emps = (empleados ?? []).filter((e) => (e.sector ?? 'General') === sector)
         return (
           <div key={sector} className="mb-8">
-            <h2 className="text-base font-semibold text-gray-800 mb-3">
+            <h2 className="text-base font-semibold text-foreground mb-3">
               {sector}
-              <span className="ml-2 text-sm font-normal text-gray-400">({emps.length})</span>
+              <span className="ml-2 text-sm font-normal text-muted-foreground">({emps.length})</span>
             </h2>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50">
-                    <th className="text-left px-5 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                  <tr className="border-b border-border bg-muted">
+                    <th className="text-left px-5 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
                       Nombre
                     </th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
                       Certificados
                     </th>
-                    <th className="text-center px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                    <th className="text-center px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
                       Estado
                     </th>
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-border">
                   {emps.map((emp) => {
                     const certs = emp.certificados ?? []
                     const estado = certs.length > 0 ? peorEstado(certs) : 'sin_fecha'
@@ -187,20 +187,20 @@ export default async function EmpresaPage({
                     ).length
 
                     return (
-                      <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={emp.id} className="hover:bg-accent transition-colors">
                         <td className="px-5 py-3.5">
-                          <p className="font-medium text-gray-900">{emp.nombre}</p>
+                          <p className="font-medium text-foreground">{emp.nombre}</p>
                         </td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-gray-500">{certs.length} registrados</span>
+                            <span className="text-muted-foreground">{certs.length} registrados</span>
                             {vencidos > 0 && (
-                              <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">
+                              <span className="text-xs bg-red-500/15 text-red-400 px-1.5 py-0.5 rounded font-medium">
                                 {vencidos} vencido{vencidos > 1 ? 's' : ''}
                               </span>
                             )}
                             {proximos > 0 && (
-                              <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
+                              <span className="text-xs bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded font-medium">
                                 {proximos} próximo{proximos > 1 ? 's' : ''}
                               </span>
                             )}
@@ -222,7 +222,7 @@ export default async function EmpresaPage({
                         <td className="px-4 py-3.5 text-right">
                           <Link
                             href={`/legajo/${emp.id}`}
-                            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                            className="text-xs text-primary hover:text-primary font-medium"
                           >
                             Ver legajo →
                           </Link>
