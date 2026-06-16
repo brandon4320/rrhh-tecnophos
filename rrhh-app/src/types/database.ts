@@ -390,6 +390,256 @@ export type Database = {
           },
         ]
       }
+      limpieza_consumible_mov: {
+        Row: {
+          consumible_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          notas: string | null
+          pct_anterior: number | null
+          pct_nuevo: number | null
+          tipo: string | null
+        }
+        Insert: {
+          consumible_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notas?: string | null
+          pct_anterior?: number | null
+          pct_nuevo?: number | null
+          tipo?: string | null
+        }
+        Update: {
+          consumible_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notas?: string | null
+          pct_anterior?: number | null
+          pct_nuevo?: number | null
+          tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "limpieza_consumible_mov_consumible_id_fkey"
+            columns: ["consumible_id"]
+            isOneToOne: false
+            referencedRelation: "limpieza_consumibles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      limpieza_consumibles: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          id: string
+          minimo_pct: number
+          nombre: string
+          provee: string | null
+          stock_pct: number
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          id?: string
+          minimo_pct?: number
+          nombre: string
+          provee?: string | null
+          stock_pct?: number
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          id?: string
+          minimo_pct?: number
+          nombre?: string
+          provee?: string | null
+          stock_pct?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      limpieza_cronograma: {
+        Row: {
+          area_id: string
+          created_at: string | null
+          created_by: string | null
+          dia: number
+          id: string
+          personal_id: string
+          semana: string
+          turno: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          area_id: string
+          created_at?: string | null
+          created_by?: string | null
+          dia: number
+          id?: string
+          personal_id: string
+          semana: string
+          turno?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          area_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          dia?: number
+          id?: string
+          personal_id?: string
+          semana?: string
+          turno?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "limpieza_cronograma_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "limpieza_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "limpieza_cronograma_personal_id_fkey"
+            columns: ["personal_id"]
+            isOneToOne: false
+            referencedRelation: "limpieza_personal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      limpieza_feedback: {
+        Row: {
+          area_id: string | null
+          cerrado_at: string | null
+          created_at: string | null
+          created_by: string | null
+          descripcion: string
+          estado: string
+          evidencia_url: string | null
+          fecha: string | null
+          id: string
+          prioridad: string
+          registrado_por: string | null
+          respuesta_adc: string | null
+          sector: string | null
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          area_id?: string | null
+          cerrado_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion: string
+          estado?: string
+          evidencia_url?: string | null
+          fecha?: string | null
+          id?: string
+          prioridad?: string
+          registrado_por?: string | null
+          respuesta_adc?: string | null
+          sector?: string | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Update: {
+          area_id?: string | null
+          cerrado_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string
+          estado?: string
+          evidencia_url?: string | null
+          fecha?: string | null
+          id?: string
+          prioridad?: string
+          registrado_por?: string | null
+          respuesta_adc?: string | null
+          sector?: string | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "limpieza_feedback_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "limpieza_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      limpieza_tiempos: {
+        Row: {
+          area_id: string | null
+          created_at: string | null
+          created_by: string | null
+          duracion_min: number | null
+          estado: string
+          fecha: string
+          fin: string | null
+          id: string
+          inicio: string | null
+          notas: string | null
+          personal_id: string
+          updated_at: string | null
+          validado_por: string | null
+        }
+        Insert: {
+          area_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          duracion_min?: number | null
+          estado?: string
+          fecha: string
+          fin?: string | null
+          id?: string
+          inicio?: string | null
+          notas?: string | null
+          personal_id: string
+          updated_at?: string | null
+          validado_por?: string | null
+        }
+        Update: {
+          area_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          duracion_min?: number | null
+          estado?: string
+          fecha?: string
+          fin?: string | null
+          id?: string
+          inicio?: string | null
+          notas?: string | null
+          personal_id?: string
+          updated_at?: string | null
+          validado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "limpieza_tiempos_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "limpieza_areas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "limpieza_tiempos_personal_id_fkey"
+            columns: ["personal_id"]
+            isOneToOne: false
+            referencedRelation: "limpieza_personal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       limpieza_personal: {
         Row: {
           activo: boolean | null

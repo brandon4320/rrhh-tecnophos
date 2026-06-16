@@ -1,10 +1,12 @@
-import { Proximo } from '@/components/operaciones/Proximo'
+import { createClient } from '@/lib/supabase/server'
+import { ReporteClient } from './ReporteClient'
 
-export default function ReportesPage() {
-  return (
-    <Proximo
-      titulo="Reporte diario"
-      desc="Reporte de la jornada para el supervisor de UNIPAR: dotación, tareas por área, incidencias y firma, con export a PDF."
-    />
-  )
+export default async function ReportesPage() {
+  const supabase = await createClient()
+  const { data: areas } = await supabase
+    .from('limpieza_areas')
+    .select('id, nombre, tipo')
+    .eq('activo', true)
+    .order('nombre')
+  return <ReporteClient areas={areas ?? []} />
 }

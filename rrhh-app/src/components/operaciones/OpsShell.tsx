@@ -10,8 +10,12 @@ import {
   Users,
   MapPin,
   CalendarCheck,
+  CalendarRange,
   ClipboardList,
+  Clock,
   FileText,
+  Package,
+  MessageSquare,
   Menu,
   X,
   ArrowLeft,
@@ -22,9 +26,13 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/operaciones', label: 'Resumen', icon: Home },
   { href: '/operaciones/personal', label: 'Personal', icon: Users },
   { href: '/operaciones/areas', label: 'Sitios y áreas', icon: MapPin },
+  { href: '/operaciones/cronograma', label: 'Cronograma', icon: CalendarRange },
   { href: '/operaciones/asistencia', label: 'Asistencia', icon: CalendarCheck },
   { href: '/operaciones/asignaciones', label: 'Asignación', icon: ClipboardList },
-  { href: '/operaciones/reportes', label: 'Reportes', icon: FileText },
+  { href: '/operaciones/tiempos', label: 'Tiempos', icon: Clock },
+  { href: '/operaciones/reportes', label: 'Reporte diario', icon: FileText },
+  { href: '/operaciones/stock', label: 'Consumibles', icon: Package },
+  { href: '/operaciones/feedback', label: 'Feedback UNIPAR', icon: MessageSquare },
 ]
 
 export function OpsShell({ children }: { children: React.ReactNode }) {
