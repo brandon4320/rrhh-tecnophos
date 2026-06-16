@@ -6,6 +6,6 @@ export default async function OperacionesLayout({
 }: {
   children: React.ReactNode
 }) {
-  await requireModulo('limpieza')
-  return <OpsShell>{children}</OpsShell>
+  const sesion = await requireModulo('limpieza')
+  return <OpsShell rol={sesion.rol}>{children}</OpsShell>
 }

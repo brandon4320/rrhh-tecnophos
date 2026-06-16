@@ -24,6 +24,9 @@ export default async function HubPage() {
   const sesion = await requireSesion()
   const modulos = modulosPara(sesion.rol)
 
+  // Si solo tiene un módulo, entra directo (ej. UNIPAR → Operaciones).
+  if (modulos.length === 1) redirect(modulos[0].href)
+
   async function logout() {
     'use server'
     const supabase = await createClient()

@@ -16,13 +16,14 @@ import {
   FileText,
   Package,
   MessageSquare,
+  UserCog,
   Menu,
   X,
   ArrowLeft,
   type LucideIcon,
 } from 'lucide-react'
 
-const NAV: { href: string; label: string; icon: LucideIcon }[] = [
+const NAV: { href: string; label: string; icon: LucideIcon; roles?: string[] }[] = [
   { href: '/operaciones', label: 'Resumen', icon: Home },
   { href: '/operaciones/personal', label: 'Personal', icon: Users },
   { href: '/operaciones/areas', label: 'Sitios y áreas', icon: MapPin },
@@ -33,11 +34,14 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/operaciones/reportes', label: 'Reporte diario', icon: FileText },
   { href: '/operaciones/stock', label: 'Consumibles', icon: Package },
   { href: '/operaciones/feedback', label: 'Feedback UNIPAR', icon: MessageSquare },
+  { href: '/operaciones/accesos', label: 'Accesos', icon: UserCog, roles: ['admin', 'admin_adc'] },
 ]
 
-export function OpsShell({ children }: { children: React.ReactNode }) {
+export function OpsShell({ children, rol }: { children: React.ReactNode; rol: string }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+
+  const nav = NAV.filter((i) => !i.roles || i.roles.includes(rol))
 
   const isActive = (href: string) =>
     href === '/operaciones' ? pathname === href : pathname.startsWith(href)
@@ -60,7 +64,7 @@ export function OpsShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {NAV.map(({ href, label, icon: Icon }) => (
+        {nav.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}

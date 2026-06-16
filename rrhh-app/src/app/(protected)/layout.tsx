@@ -14,6 +14,12 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     .eq('id', user.id)
     .single()
 
+  // Acceso a RRHH solo para roles RRHH (admin/usuario). El resto (Operaciones/UNIPAR)
+  // va a su módulo — no puede entrar a las pantallas de RRHH.
+  if (!['admin', 'usuario'].includes(perfil?.rol ?? '')) {
+    redirect('/')
+  }
+
   // Si el perfil tiene empresa_acceso, solo muestra esa empresa
   const empresasQuery = supabase.from('empresas').select('*').order('nombre')
   if (perfil?.empresa_acceso) {
