@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { X, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 type Area = { id: string; nombre: string; tipo: string; prioridad: string }
 type Persona = { id: string; nombre: string; apellido: string | null; funcion: string | null }
@@ -48,20 +49,30 @@ export function AsignacionesClient({ areas, personal }: { areas: Area[]; persona
 
   async function agregar(areaId: string, personalId: string) {
     if (!personalId) return
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('limpieza_asignaciones')
       .insert({ fecha, area_id: areaId, personal_id: personalId })
       .select('id, area_id, personal_id')
       .single()
-    if (data) setAsigs((p) => [...p, data])
+    if (error || !data) {
+      toast.error('No se pudo asignar')
+      return
+    }
+    setAsigs((p) => [...p, data])
   }
 
   async function quitar(id: string) {
-    await supabase.from('limpieza_asignaciones').delete().eq('id', id)
+    const prev = asigs
     setAsigs((p) => p.filter((a) => a.id !== id))
+    const { error } = await supabase.from('limpieza_asignaciones').delete().eq('id', id)
+    if (error) {
+      setAsigs(prev)
+      toast.error('No se pudo quitar')
+    }
   }
 
-  const sinAsignar = personal.length - new Set(asigs.map((a) => a.personal_id)).size
+  const asignadosHoy = new Set(asigs.map((a) => a.personal_id))
+  const sinAsignar = personal.length - asignadosHoy.size
 
   return (
     <div className="space-y-5">
@@ -89,7 +100,8 @@ export function AsignacionesClient({ areas, personal }: { areas: Area[]; persona
         <div className="space-y-3">
           {areas.map((area) => {
             const asignados = asigs.filter((a) => a.area_id === area.id)
-            const disponibles = personal.filter((p) => !asignados.some((a) => a.personal_id === p.id))
+            // Excluye a quien ya está asignado en CUALQUIER área del día (evita doble asignación).
+            const disponibles = personal.filter((p) => !asignadosHoy.has(p.id))
             return (
               <Card key={area.id} className="py-0">
                 <CardContent className="p-4">
