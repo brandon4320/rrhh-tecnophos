@@ -15,6 +15,7 @@ interface CertVehiculo {
   notas?: string | null
   alerta_dias: number | null
   tipo?: { nombre: string } | null
+  archivos?: { id: string; nombre: string; path: string }[]
 }
 
 interface VehiculoConCerts extends Vehiculo {
@@ -25,6 +26,7 @@ interface Props {
   vehiculos: VehiculoConCerts[]
   tiposCertificado: TipoCertificado[]
   canEdit: boolean
+  empresaSlug: string
 }
 
 const FORM_EMPTY = {
@@ -39,6 +41,7 @@ export default function VehiculosClient({
   vehiculos: initVehiculos,
   tiposCertificado,
   canEdit,
+  empresaSlug,
 }: Props) {
   const supabase = createClient()
   const [vehiculos, setVehiculos] = useState(initVehiculos)
@@ -48,6 +51,7 @@ export default function VehiculosClient({
   const [form, setForm] = useState(FORM_EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [uploadingCert, setUploadingCert] = useState<string | null>(null)
 
   function openAdd(vehiculoId: string) {
     setForm(FORM_EMPTY)
@@ -148,6 +152,59 @@ export default function VehiculosClient({
           : v
       )
     )
+  }
+
+  async function handleUploadArchivo(vehiculoId: string, certId: string, files: FileList) {
+    setUploadingCert(certId)
+    for (const file of Array.from(files)) {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('certId', certId)
+      fd.append('empresaSlug', empresaSlug)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      if (res.ok) {
+        const { archivo } = await res.json()
+        if (archivo) {
+          setVehiculos((prev) =>
+            prev.map((v) =>
+              v.id === vehiculoId
+                ? { ...v, certificados: v.certificados.map((c) => (c.id === certId ? { ...c, archivos: [...(c.archivos ?? []), archivo] } : c)) }
+                : v
+            )
+          )
+        }
+      } else {
+        const payload = await res.json().catch(() => null)
+        alert(payload?.error ?? 'No se pudo subir el archivo.')
+      }
+    }
+    setUploadingCert(null)
+  }
+
+  async function verArchivo(path: string) {
+    const res = await fetch(`/api/archivo?path=${encodeURIComponent(path)}`)
+    if (res.ok) {
+      const { url } = await res.json()
+      if (url) window.open(url, '_blank')
+    } else {
+      alert('No se pudo abrir el archivo.')
+    }
+  }
+
+  async function handleDeleteArchivo(vehiculoId: string, certId: string, archivoId: string) {
+    if (!confirm('¿Eliminar este archivo?')) return
+    const res = await fetch(`/api/archivo?id=${archivoId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setVehiculos((prev) =>
+        prev.map((v) =>
+          v.id === vehiculoId
+            ? { ...v, certificados: v.certificados.map((c) => (c.id === certId ? { ...c, archivos: (c.archivos ?? []).filter((a) => a.id !== archivoId) } : c)) }
+            : v
+        )
+      )
+    } else {
+      alert('No se pudo eliminar el archivo.')
+    }
   }
 
   if (vehiculos.length === 0) return null
@@ -274,6 +331,31 @@ export default function VehiculosClient({
                                   </button>
                                 </div>
                               )}
+                            </div>
+                          )}
+
+                          {!isEditing && (
+                            <div className="border-t border-border px-4 py-2.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {(cert.archivos ?? []).map((a) => (
+                                  <span key={a.id} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
+                                    <button type="button" onClick={() => verArchivo(a.path)} className="max-w-[160px] truncate text-left text-primary hover:underline">{a.nombre}</button>
+                                    {canEdit && (
+                                      <button onClick={() => handleDeleteArchivo(veh.id, cert.id, a.id)} className="text-muted-foreground hover:text-red-500" aria-label="Eliminar archivo">×</button>
+                                    )}
+                                  </span>
+                                ))}
+                                {(cert.archivos ?? []).length === 0 && (
+                                  <span className="text-xs text-muted-foreground">Sin archivos</span>
+                                )}
+                                {canEdit && (
+                                  <label className="inline-flex cursor-pointer items-center rounded-md border border-input px-2 py-1 text-xs text-muted-foreground hover:bg-accent">
+                                    {uploadingCert === cert.id ? 'Subiendo…' : '+ Adjuntar'}
+                                    <input type="file" accept="application/pdf,image/*" className="hidden" disabled={uploadingCert === cert.id}
+                                      onChange={(e) => { if (e.target.files?.length) handleUploadArchivo(veh.id, cert.id, e.target.files) }} />
+                                  </label>
+                                )}
+                              </div>
                             </div>
                           )}
 

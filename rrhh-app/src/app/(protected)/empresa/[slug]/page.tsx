@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { getEstadoVencimiento, ESTADO_COLORS } from '@/types'
-import { format } from 'date-fns'
 import Link from 'next/link'
 import VehiculosClient from './VehiculosClient'
+import EmpresaCertsClient from './EmpresaCertsClient'
 
 const EMPRESA_BG: Record<string, string> = {
   'tecnophos-bb': 'bg-indigo-500',
@@ -55,14 +55,14 @@ export default async function EmpresaPage({
     supabase
       .from('vehiculos')
       .select(
-        '*, certificados(id, tipo_id, tipo_nombre_custom, fecha_vencimiento, notas, alerta_dias, tipo:tipos_certificado(nombre))'
+        '*, certificados(id, tipo_id, tipo_nombre_custom, fecha_vencimiento, notas, alerta_dias, tipo:tipos_certificado(nombre), archivos(id, nombre, path))'
       )
       .eq('empresa_id', empresa.id)
       .eq('activo', true)
       .order('patente'),
     supabase
       .from('certificados')
-      .select('*, tipo:tipos_certificado(nombre)')
+      .select('*, tipo:tipos_certificado(nombre), archivos(id, nombre, path)')
       .eq('empresa_id', empresa.id)
       .order('fecha_vencimiento'),
     supabase
@@ -113,41 +113,11 @@ export default async function EmpresaPage({
         </div>
       </div>
 
-      {(certsEmpresa?.length ?? 0) > 0 && (
-        <div className="mb-8">
-          <h2 className="text-base font-semibold text-foreground mb-3">
-            Habilitaciones de empresa
-          </h2>
-          <div className="bg-card rounded-xl border border-border overflow-hidden">
-            <div className="divide-y divide-border">
-              {certsEmpresa!.map((cert) => {
-                const estado = getEstadoVencimiento(cert.fecha_vencimiento)
-                return (
-                  <div key={cert.id} className="flex items-center gap-4 px-5 py-3.5">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {cert.tipo?.nombre ?? cert.tipo_nombre_custom}
-                      </p>
-                      {cert.numero_documento && (
-                        <p className="text-xs text-muted-foreground">{cert.numero_documento}</p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${ESTADO_COLORS[estado]}`}
-                      >
-                        {cert.fecha_vencimiento
-                          ? format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')
-                          : '—'}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      <EmpresaCertsClient
+        certs={certsEmpresa ?? []}
+        canEdit={isAdmin || perfil?.rol === 'usuario'}
+        empresaSlug={slug}
+      />
 
       {sectores.map((sector) => {
         const emps = (empleados ?? []).filter((e) => (e.sector ?? 'General') === sector)
@@ -241,6 +211,7 @@ export default async function EmpresaPage({
         vehiculos={vehiculos ?? []}
         tiposCertificado={tiposVehiculo ?? []}
         canEdit={isAdmin || perfil?.rol === 'usuario'}
+        empresaSlug={slug}
       />
     </div>
   )
