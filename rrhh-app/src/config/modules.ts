@@ -5,7 +5,7 @@
 // ============================================================
 import type { Rol } from '@/lib/auth/roles'
 
-export type ModuloKey = 'rrhh' | 'limpieza' | 'mantenimiento'
+export type ModuloKey = 'rrhh' | 'limpieza' | 'mantenimiento' | 'comercial'
 
 export interface ModuloDef {
   key: ModuloKey
@@ -45,6 +45,14 @@ export const MODULOS: ModuloDef[] = [
     icon: 'Wrench',
     roles: ['admin', 'usuario'],
     enabled: false,
+  },
+  {
+    key: 'comercial',
+    label: 'Gestión Comercial',
+    href: '/comercial',
+    icon: 'BriefcaseBusiness',
+    roles: ['admin', 'direccion', 'gerente_comercial', 'vendedor', 'asistente_comercial'],
+    enabled: true,
   },
 ]
 

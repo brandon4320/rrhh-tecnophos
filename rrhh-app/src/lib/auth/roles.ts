@@ -10,6 +10,11 @@ export const ROLES = [
   'supervisor', // supervisor de limpieza
   'operario', // operario de limpieza
   'admin_unipar', // cliente externo (solo lectura de reportes + feedback)
+  // --- módulo comercial ---
+  'direccion', // dirección general: ve todo, puede editar
+  'gerente_comercial', // gestiona equipo comercial completo
+  'vendedor', // ve y opera solo lo propio
+  'asistente_comercial', // carga datos operativos, no cierra proyectos
 ] as const
 
 export type Rol = (typeof ROLES)[number]
@@ -22,6 +27,21 @@ export const LIMPIEZA_INTERNOS = ['admin', 'admin_adc', 'supervisor', 'operario'
 
 /** Roles que pueden ESCRIBIR en el módulo limpieza. */
 export const LIMPIEZA_ESCRITURA = ['admin', 'admin_adc', 'supervisor'] as const satisfies readonly Rol[]
+
+/** Todos los roles del módulo comercial. */
+export const COMERCIAL_ROLES = [
+  'admin', 'direccion', 'gerente_comercial', 'vendedor', 'asistente_comercial',
+] as const satisfies readonly Rol[]
+
+/** Roles con visión global y gestión de equipo. */
+export const COMERCIAL_GESTION = [
+  'admin', 'direccion', 'gerente_comercial',
+] as const satisfies readonly Rol[]
+
+/** Roles de dirección (lectura total + edición). */
+export const COMERCIAL_DIRECCION = [
+  'admin', 'direccion',
+] as const satisfies readonly Rol[]
 
 export function esSuperAdmin(rol: Rol | null | undefined, empresaAcceso: string | null | undefined): boolean {
   return rol === 'admin' && empresaAcceso == null

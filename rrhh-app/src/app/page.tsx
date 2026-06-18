@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { LogOut, Users, ClipboardList, Wrench, ArrowRight } from 'lucide-react'
+import { LogOut, Users, ClipboardList, Wrench, BriefcaseBusiness, ArrowRight } from 'lucide-react'
 import { requireSesion } from '@/lib/auth/session'
 import { modulosPara, type ModuloKey } from '@/config/modules'
 import { createClient } from '@/lib/supabase/server'
@@ -12,12 +12,14 @@ const ICONOS: Record<ModuloKey, React.ReactNode> = {
   rrhh: <Users className="size-4 text-muted-foreground" strokeWidth={1.75} />,
   limpieza: <ClipboardList className="size-4 text-muted-foreground" strokeWidth={1.75} />,
   mantenimiento: <Wrench className="size-4 text-muted-foreground" strokeWidth={1.75} />,
+  comercial: <BriefcaseBusiness className="size-4 text-muted-foreground" strokeWidth={1.75} />,
 }
 
 const DESCRIPCIONES: Record<ModuloKey, string> = {
   rrhh: 'Legajos, certificados y vencimientos del personal.',
   limpieza: 'Servicio en planta UNIPAR: dotación, tareas y reportes diarios.',
   mantenimiento: 'Planes y vencimientos de mantenimiento de equipos.',
+  comercial: 'Clientes, proyectos y pipeline comercial.',
 }
 
 export default async function HubPage() {
