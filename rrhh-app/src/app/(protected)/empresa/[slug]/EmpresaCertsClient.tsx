@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { format } from 'date-fns'
+import { createClient } from '@/lib/supabase/client'
 import { getEstadoVencimiento, ESTADO_COLORS } from '@/types'
 
 interface Archivo {
@@ -12,11 +13,28 @@ interface Archivo {
 
 interface CertEmpresa {
   id: string
+  tipo_id?: string | null
+  tipo_nombre_custom?: string | null
   numero_documento?: string | null
   fecha_vencimiento?: string | null
-  tipo_nombre_custom?: string | null
+  alerta_dias?: number | null
+  notas?: string | null
   tipo?: { nombre: string } | null
   archivos?: Archivo[]
+}
+
+interface FormState {
+  fecha_vencimiento: string
+  numero_documento: string
+  alerta_dias: number
+  notas: string
+}
+
+const FORM_EMPTY: FormState = {
+  fecha_vencimiento: '',
+  numero_documento: '',
+  alerta_dias: 30,
+  notas: '',
 }
 
 interface Props {
@@ -26,10 +44,60 @@ interface Props {
 }
 
 export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlug }: Props) {
+  const supabase = createClient()
   const [certs, setCerts] = useState<CertEmpresa[]>(initial)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState<FormState>(FORM_EMPTY)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const [uploadingCert, setUploadingCert] = useState<string | null>(null)
 
   if (certs.length === 0) return null
+
+  function openEdit(cert: CertEmpresa) {
+    setForm({
+      fecha_vencimiento: cert.fecha_vencimiento?.slice(0, 10) ?? '',
+      numero_documento: cert.numero_documento ?? '',
+      alerta_dias: cert.alerta_dias ?? 30,
+      notas: cert.notas ?? '',
+    })
+    setEditingId(cert.id)
+    setError('')
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setForm(FORM_EMPTY)
+    setError('')
+  }
+
+  async function handleSave(certId: string) {
+    setSaving(true)
+    setError('')
+
+    const { data, error: err } = await supabase
+      .from('certificados')
+      .update({
+        fecha_vencimiento: form.fecha_vencimiento || null,
+        numero_documento: form.numero_documento || null,
+        alerta_dias: form.alerta_dias,
+        notas: form.notas || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', certId)
+      .select('*, tipo:tipos_certificado(nombre), archivos(id, nombre, path)')
+      .single()
+
+    if (err) {
+      setError('No se pudo guardar. Verificá los datos.')
+      setSaving(false)
+      return
+    }
+
+    setCerts((prev) => prev.map((c) => (c.id === certId ? { ...data, archivos: c.archivos } : c)))
+    setSaving(false)
+    cancelEdit()
+  }
 
   async function verArchivo(path: string) {
     const res = await fetch(`/api/archivo?path=${encodeURIComponent(path)}`)
@@ -88,28 +156,117 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="divide-y divide-border">
           {certs.map((cert) => {
-            const estado = getEstadoVencimiento(cert.fecha_vencimiento)
+            const estado = getEstadoVencimiento(cert.fecha_vencimiento, cert.alerta_dias ?? undefined)
+            const isEditing = editingId === cert.id
+
             return (
               <div key={cert.id}>
+                {/* Fila principal */}
                 <div className="flex items-center gap-4 px-5 py-3.5">
                   <div className="flex-1">
                     <p className="text-sm font-medium text-foreground">
                       {cert.tipo?.nombre ?? cert.tipo_nombre_custom}
                     </p>
-                    {cert.numero_documento && (
+                    {cert.numero_documento && !isEditing && (
                       <p className="text-xs text-muted-foreground">{cert.numero_documento}</p>
                     )}
                   </div>
-                  <div className="text-right">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${ESTADO_COLORS[estado]}`}
-                    >
-                      {cert.fecha_vencimiento
-                        ? format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')
-                        : '—'}
-                    </span>
+                  <div className="flex items-center gap-3">
+                    {!isEditing && (
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${ESTADO_COLORS[estado]}`}
+                      >
+                        {cert.fecha_vencimiento
+                          ? format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')
+                          : '—'}
+                      </span>
+                    )}
+                    {canEdit && !isEditing && (
+                      <button
+                        onClick={() => openEdit(cert)}
+                        className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        Editar
+                      </button>
+                    )}
                   </div>
                 </div>
+
+                {/* Formulario de edición inline */}
+                {isEditing && (
+                  <div className="border-t border-primary/20 bg-primary/5 px-5 py-4">
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="block text-xs font-medium text-foreground mb-1">
+                          Fecha de vencimiento
+                        </label>
+                        <input
+                          type="date"
+                          value={form.fecha_vencimiento}
+                          onChange={(e) => setForm((f) => ({ ...f, fecha_vencimiento: e.target.value }))}
+                          className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-card"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-foreground mb-1">
+                          N° de documento
+                        </label>
+                        <input
+                          type="text"
+                          value={form.numero_documento}
+                          onChange={(e) => setForm((f) => ({ ...f, numero_documento: e.target.value }))}
+                          className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-card"
+                          placeholder="Resolución, acta, etc."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-foreground mb-1">
+                          Alerta, días antes
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={365}
+                          value={form.alerta_dias}
+                          onChange={(e) =>
+                            setForm((f) => ({ ...f, alerta_dias: parseInt(e.target.value) || 30 }))
+                          }
+                          className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-card"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-foreground mb-1">
+                          Notas
+                        </label>
+                        <input
+                          type="text"
+                          value={form.notas}
+                          onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))}
+                          className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-card"
+                          placeholder="Información adicional..."
+                        />
+                      </div>
+                    </div>
+                    {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleSave(cert.id)}
+                        disabled={saving}
+                        className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+                      >
+                        {saving ? 'Guardando...' : 'Guardar cambios'}
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="text-xs text-muted-foreground hover:text-foreground px-2 py-2"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Archivos adjuntos */}
                 <div className="border-t border-border px-5 py-2.5">
                   <div className="flex flex-wrap items-center gap-2">
                     {(cert.archivos ?? []).map((a) => (
