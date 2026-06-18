@@ -13,9 +13,10 @@ export async function POST(request: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  if (perfil?.rol !== 'admin') {
+  // RRHH (admin o usuario) puede adjuntar; la RLS de archivos valida igual a nivel base.
+  if (!['admin', 'usuario'].includes(perfil?.rol ?? '')) {
     return NextResponse.json(
-      { error: 'No tenés permisos para subir archivos. Solo admin puede adjuntar.' },
+      { error: 'No tenés permisos para subir archivos.' },
       { status: 403 }
     )
   }
@@ -23,14 +24,15 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData()
   const file = formData.get('file') as File
   const certId = formData.get('certId') as string
-  const empleadoId = formData.get('empleadoId') as string
-  const empresaSlug = formData.get('empresaSlug') as string
+  // empleadoId/empresaSlug son opcionales: sirve para certificados de empleado, vehículo y empresa.
+  const empleadoId = (formData.get('empleadoId') as string) || ''
+  const empresaSlug = (formData.get('empresaSlug') as string) || 'docs'
 
-  if (!file || !certId || !empleadoId)
+  if (!file || !certId)
     return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
 
   const ext = file.name.split('.').pop()
-  const path = `${empresaSlug}/${empleadoId}/${certId}/${Date.now()}.${ext}`
+  const path = `${empresaSlug}/${empleadoId || 'general'}/${certId}/${Date.now()}.${ext}`
   const buffer = Buffer.from(await file.arrayBuffer())
 
   await uploadToR2(path, buffer, file.type)
