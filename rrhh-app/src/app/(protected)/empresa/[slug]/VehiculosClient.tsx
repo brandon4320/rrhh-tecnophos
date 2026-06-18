@@ -64,7 +64,7 @@ export default function VehiculosClient({
     setForm({
       tipo_id: cert.tipo_id ?? '',
       tipo_nombre_custom: cert.tipo_nombre_custom ?? '',
-      fecha_vencimiento: cert.fecha_vencimiento ?? '',
+      fecha_vencimiento: cert.fecha_vencimiento?.slice(0, 10) ?? '',
       notas: cert.notas ?? '',
       alerta_dias: cert.alerta_dias ?? 30,
     })

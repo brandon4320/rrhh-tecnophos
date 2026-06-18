@@ -90,8 +90,8 @@ export default function LegajoClient({
     setForm({
       tipo_id: cert.tipo_id ?? '',
       tipo_nombre_custom: cert.tipo_nombre_custom ?? '',
-      fecha_vencimiento: cert.fecha_vencimiento ?? '',
-      fecha_emision: cert.fecha_emision ?? '',
+      fecha_vencimiento: cert.fecha_vencimiento?.slice(0, 10) ?? '',
+      fecha_emision: cert.fecha_emision?.slice(0, 10) ?? '',
       numero_documento: cert.numero_documento ?? '',
       notas: cert.notas ?? '',
       alerta_dias: cert.alerta_dias ?? 30,
@@ -458,7 +458,7 @@ export default function LegajoClient({
                   </span>
                   {cert.fecha_vencimiento && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(cert.fecha_vencimiento), 'dd/MM/yyyy')}
+                      {format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')}
                     </p>
                   )}
                 </div>
@@ -500,7 +500,7 @@ export default function LegajoClient({
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Fecha de emisión</p>
                         <p className="text-foreground">
-                          {format(new Date(cert.fecha_emision), 'dd/MM/yyyy')}
+                          {format(new Date(cert.fecha_emision + 'T12:00:00'), 'dd/MM/yyyy')}
                         </p>
                       </div>
                     )}
@@ -509,7 +509,7 @@ export default function LegajoClient({
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Vencimiento</p>
                         <p className="text-foreground">
-                          {format(new Date(cert.fecha_vencimiento), 'dd/MM/yyyy')}
+                          {format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')}
                         </p>
                       </div>
                     )}
