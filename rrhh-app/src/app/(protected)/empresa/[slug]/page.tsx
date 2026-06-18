@@ -117,6 +117,7 @@ export default async function EmpresaPage({
         certs={certsEmpresa ?? []}
         canEdit={isAdmin || perfil?.rol === 'usuario'}
         empresaSlug={slug}
+        empresaId={empresa.id}
       />
 
       {sectores.map((sector) => {
