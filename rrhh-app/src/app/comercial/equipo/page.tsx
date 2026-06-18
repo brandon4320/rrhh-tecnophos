@@ -1,11 +1,10 @@
 import { requireModulo } from '@/lib/auth/session'
 import { listarEquipoComercial } from '@/modules/comercial/queries'
 import { puedeVerEquipoComercial } from '@/modules/comercial/permisos'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { UsersRound, AlertTriangle, CheckSquare, FolderKanban, TrendingUp, Clock, AlertCircle } from 'lucide-react'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { UsersRound, AlertTriangle, CheckSquare, FolderKanban, TrendingUp, Clock, AlertCircle, LogIn } from 'lucide-react'
 import { AsignarTareaRapida } from '@/components/comercial/AsignarTareaRapida'
 
 const ROL_LABEL: Record<string, string> = {
@@ -45,6 +44,16 @@ export default async function EquipoComercialPage() {
   if (!puedeVerEquipoComercial(sesion)) redirect('/comercial')
 
   const equipo = await listarEquipoComercial()
+
+  // Traer last_sign_in_at real desde auth.users (admin API)
+  let loginMap = new Map<string, string | null>()
+  try {
+    const admin = createAdminClient()
+    const { data } = await admin.auth.admin.listUsers({ perPage: 200 })
+    for (const u of data?.users ?? []) {
+      loginMap.set(u.id, u.last_sign_in_at ?? null)
+    }
+  } catch { /* service role no disponible, se muestra sin login */ }
 
   if (equipo.length === 0) {
     return (
@@ -120,6 +129,7 @@ export default async function EquipoComercialPage() {
         {equipo.map((miembro, idx) => {
           const color = AVATAR_COLORS[idx % AVATAR_COLORS.length]
           const tieneProblemas = miembro.tareasVencidas > 0
+          const ultimoLogin = loginMap.get(miembro.id) ?? null
 
           return (
             <div key={miembro.id}
@@ -137,12 +147,18 @@ export default async function EquipoComercialPage() {
                       <p className="font-semibold leading-tight">{miembro.nombre ?? 'Sin nombre'}</p>
                       <p className="text-xs text-muted-foreground">{ROL_LABEL[miembro.rol] ?? miembro.rol}</p>
                     </div>
-                    {miembro.ultimaActividad && (
-                      <p className="shrink-0 text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Clock className="size-3" />
-                        {fmtRelativo(miembro.ultimaActividad)}
+                    <div className="shrink-0 space-y-0.5 text-right">
+                      <p className={`text-[10px] flex items-center justify-end gap-1 ${ultimoLogin ? 'text-muted-foreground' : 'text-red-400'}`}>
+                        <LogIn className="size-3" />
+                        {ultimoLogin ? fmtRelativo(ultimoLogin) : 'Sin login'}
                       </p>
-                    )}
+                      {miembro.ultimaActividad && (
+                        <p className="text-[10px] text-muted-foreground/60 flex items-center justify-end gap-1">
+                          <Clock className="size-3" />
+                          act. {fmtRelativo(miembro.ultimaActividad)}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Métricas */}

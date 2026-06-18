@@ -386,7 +386,9 @@ export default async function AdminUsuariosPage({
                   </div>
                   <div className="text-right text-xs text-muted-foreground">
                     <p>Creado: {managedUser.createdAt ? new Date(managedUser.createdAt).toLocaleDateString('es-AR') : '—'}</p>
-                    <p>Último acceso: {managedUser.lastSignInAt ? new Date(managedUser.lastSignInAt).toLocaleDateString('es-AR') : 'Nunca'}</p>
+                    <p>Último acceso: {managedUser.lastSignInAt
+                      ? new Date(managedUser.lastSignInAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+                      : 'Nunca'}</p>
                   </div>
                 </div>
 
