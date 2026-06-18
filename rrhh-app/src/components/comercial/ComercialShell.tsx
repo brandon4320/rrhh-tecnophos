@@ -6,83 +6,76 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  FolderKanban,
-  CheckSquare,
-  CalendarDays,
-  Plane,
-  BarChart3,
-  Settings2,
-  Menu,
-  X,
-  ArrowLeft,
-  type LucideIcon,
+  House, CheckSquare, CalendarDays, FolderKanban,
+  Building2, Users, Plane, BarChart3, Settings2,
+  UsersRound, ArrowLeft, X, type LucideIcon,
 } from 'lucide-react'
 
-const NAV: { href: string; label: string; icon: LucideIcon; roles?: string[] }[] = [
-  { href: '/comercial',               label: 'Resumen',        icon: LayoutDashboard },
-  { href: '/comercial/clientes',      label: 'Clientes',       icon: Building2 },
-  { href: '/comercial/contactos',     label: 'Contactos',      icon: Users },
-  { href: '/comercial/proyectos',     label: 'Proyectos',      icon: FolderKanban },
-  { href: '/comercial/tareas',        label: 'Tareas',         icon: CheckSquare },
-  { href: '/comercial/agenda',        label: 'Agenda',         icon: CalendarDays },
-  { href: '/comercial/viajes',        label: 'Viajes',         icon: Plane },
-  { href: '/comercial/reportes',      label: 'Reportes',       icon: BarChart3, roles: ['admin', 'direccion', 'gerente_comercial'] },
-  { href: '/comercial/configuracion', label: 'Configuración',  icon: Settings2,  roles: ['admin', 'direccion', 'gerente_comercial'] },
+interface NavItem { href: string; label: string; icon: LucideIcon; roles?: string[] }
+
+const BOTTOM_NAV: NavItem[] = [
+  { href: '/comercial',           label: 'Hoy',       icon: House },
+  { href: '/comercial/tareas',    label: 'Tareas',    icon: CheckSquare },
+  { href: '/comercial/agenda',    label: 'Agenda',    icon: CalendarDays },
+  { href: '/comercial/proyectos', label: 'Proyectos', icon: FolderKanban },
 ]
 
-export function ComercialShell({ children, rol }: { children: React.ReactNode; rol: string }) {
-  const pathname = usePathname()
-  const [open, setOpen] = useState(false)
+const SIDEBAR_NAV: NavItem[] = [
+  { href: '/comercial',               label: 'Hoy',           icon: House },
+  { href: '/comercial/tareas',        label: 'Tareas',        icon: CheckSquare },
+  { href: '/comercial/agenda',        label: 'Agenda',        icon: CalendarDays },
+  { href: '/comercial/proyectos',     label: 'Proyectos',     icon: FolderKanban },
+  { href: '/comercial/clientes',      label: 'Clientes',      icon: Building2 },
+  { href: '/comercial/contactos',     label: 'Contactos',     icon: Users },
+  { href: '/comercial/viajes',        label: 'Viajes',        icon: Plane },
+  { href: '/comercial/equipo',        label: 'Equipo',        icon: UsersRound, roles: ['admin', 'direccion', 'gerente_comercial'] },
+  { href: '/comercial/reportes',      label: 'Reportes',      icon: BarChart3,  roles: ['admin', 'direccion', 'gerente_comercial'] },
+  { href: '/comercial/configuracion', label: 'Configuración', icon: Settings2,  roles: ['admin', 'direccion', 'gerente_comercial'] },
+]
 
-  const nav = NAV.filter((i) => !i.roles || i.roles.includes(rol))
+const MORE_NAV: NavItem[] = [
+  { href: '/comercial/clientes',      label: 'Clientes',    icon: Building2 },
+  { href: '/comercial/contactos',     label: 'Contactos',   icon: Users },
+  { href: '/comercial/viajes',        label: 'Viajes',      icon: Plane },
+  { href: '/comercial/equipo',        label: 'Equipo',      icon: UsersRound, roles: ['admin', 'direccion', 'gerente_comercial'] },
+  { href: '/comercial/reportes',      label: 'Reportes',    icon: BarChart3,  roles: ['admin', 'direccion', 'gerente_comercial'] },
+  { href: '/comercial/configuracion', label: 'Config.',     icon: Settings2,  roles: ['admin', 'direccion', 'gerente_comercial'] },
+]
+
+export function ComercialShell({ children, rol, nombre }: { children: React.ReactNode; rol: string; nombre?: string | null }) {
+  const pathname = usePathname()
+  const [moreOpen, setMoreOpen] = useState(false)
 
   const isActive = (href: string) =>
     href === '/comercial' ? pathname === href : pathname.startsWith(href)
 
+  const sidebarNav = SIDEBAR_NAV.filter((i) => !i.roles || i.roles.includes(rol))
+  const moreNav    = MORE_NAV.filter((i) => !i.roles || i.roles.includes(rol))
+  const isMoreActive = moreNav.some((i) => isActive(i.href))
+
   const sidebar = (
     <div className="flex h-full flex-col bg-sidebar">
-      <div className="flex h-16 items-center justify-between gap-2 border-b border-white/10 px-4">
+      <div className="flex h-16 items-center border-b border-white/10 px-4">
         <div className="min-w-0">
           <p className="font-semibold leading-tight text-white">Gestión Comercial</p>
-          <p className="truncate text-xs text-slate-400">Pipeline · Clientes · Proyectos</p>
+          <p className="truncate text-xs text-slate-400">{nombre ?? 'Pipeline · Agenda · Proyectos'}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          aria-label="Cerrar menú"
-          className="inline-flex size-9 items-center justify-center rounded-md text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
-        >
-          <X className="size-5" />
-        </button>
       </div>
-
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {nav.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            onClick={() => setOpen(false)}
-            className={cn(
-              'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
+        {sidebarNav.map(({ href, label, icon: Icon }) => (
+          <Link key={href} href={href}
+            className={cn('flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
               isActive(href)
                 ? 'bg-primary/15 text-white ring-1 ring-inset ring-primary/30'
                 : 'text-slate-400 hover:bg-white/5 hover:text-white'
-            )}
-          >
+            )}>
             <Icon className="size-4 shrink-0" strokeWidth={1.75} />
             {label}
           </Link>
         ))}
       </nav>
-
       <div className="flex items-center justify-between border-t border-white/10 p-3">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
-        >
+        <Link href="/" className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-slate-400 hover:bg-white/10 hover:text-white">
           <ArrowLeft className="size-4" strokeWidth={1.75} />
           Inicio
         </Link>
@@ -93,43 +86,77 @@ export function ComercialShell({ children, rol }: { children: React.ReactNode; r
 
   return (
     <div className="flex min-h-[100dvh] bg-background">
-      {/* Sidebar desktop */}
-      <aside className="hidden w-64 shrink-0 border-r border-white/10 lg:block">{sidebar}</aside>
+      <aside className="hidden w-60 shrink-0 border-r border-white/10 lg:block">{sidebar}</aside>
 
-      {/* Drawer móvil */}
-      {open && (
-        <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setOpen(false)} aria-hidden />
-      )}
-      <aside
-        className={cn(
-          'fixed inset-y-0 left-0 z-50 w-72 transform shadow-xl transition-transform duration-200 lg:hidden',
-          open ? 'translate-x-0' : '-translate-x-full'
-        )}
-      >
-        {sidebar}
-      </aside>
-
-      {/* Contenido */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-card px-4 lg:hidden">
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label="Abrir menú"
-            className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <Menu className="size-5" />
-          </button>
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-4 lg:hidden">
           <span className="font-semibold">Gestión Comercial</span>
-          <div className="ml-auto">
+          <div className="flex items-center gap-1">
             <ThemeToggle />
+            <Link href="/" className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent">
+              <ArrowLeft className="size-4" strokeWidth={1.75} />
+            </Link>
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">{children}</div>
+          <div className="mx-auto max-w-5xl p-4 pb-24 sm:p-5 lg:p-8 lg:pb-8">{children}</div>
         </main>
       </div>
+
+      {/* Bottom nav mobile */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex h-[4.25rem] items-stretch border-t bg-card lg:hidden">
+        {BOTTOM_NAV.map(({ href, label, icon: Icon }) => (
+          <Link key={href} href={href}
+            className={cn('flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium',
+              isActive(href) ? 'text-primary' : 'text-muted-foreground'
+            )}>
+            <Icon className="size-[1.35rem]" strokeWidth={isActive(href) ? 2.2 : 1.75} />
+            {label}
+          </Link>
+        ))}
+        <button type="button" onClick={() => setMoreOpen((v) => !v)}
+          className={cn('flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-medium',
+            moreOpen || isMoreActive ? 'text-primary' : 'text-muted-foreground'
+          )}>
+          <svg viewBox="0 0 24 24" className="size-[1.35rem]" stroke="currentColor" fill="none" strokeWidth={moreOpen || isMoreActive ? 2.2 : 1.75}>
+            <circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" />
+          </svg>
+          Más
+        </button>
+      </nav>
+
+      {/* Menú "Más" */}
+      {moreOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMoreOpen(false)} aria-hidden />
+          <div className="fixed inset-x-0 bottom-[4.25rem] z-50 rounded-t-2xl border-t bg-card shadow-2xl lg:hidden">
+            <div className="flex items-center justify-between border-b border-border px-5 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Más opciones</p>
+              <button onClick={() => setMoreOpen(false)} className="p-1 text-muted-foreground hover:text-foreground">
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-1 p-3">
+              {moreNav.map(({ href, label, icon: Icon }) => (
+                <Link key={href} href={href} onClick={() => setMoreOpen(false)}
+                  className={cn('flex flex-col items-center gap-2 rounded-xl px-2 py-3.5 text-xs font-medium',
+                    isActive(href) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  )}>
+                  <Icon className="size-6" strokeWidth={1.75} />
+                  {label}
+                </Link>
+              ))}
+            </div>
+            <div className="px-4 pb-5 pt-1">
+              <Link href="/" onClick={() => setMoreOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
+                <ArrowLeft className="size-4" strokeWidth={1.75} />
+                Volver al inicio
+              </Link>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -35,3 +35,11 @@ export function puedeGestionarConfiguracionComercial(sesion: Sesion): boolean {
 export function puedeAccederComercial(sesion: Sesion): boolean {
   return tieneRol(sesion.rol, COMERCIAL_ROLES)
 }
+
+export function puedeVerEquipoComercial(sesion: Sesion): boolean {
+  return tieneRol(sesion.rol, COMERCIAL_GESTION)
+}
+
+export function puedeAsignarTareas(sesion: Sesion): boolean {
+  return tieneRol(sesion.rol, COMERCIAL_GESTION)
+}

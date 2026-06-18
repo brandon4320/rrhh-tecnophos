@@ -312,17 +312,23 @@ export async function crearTarea(form: FormData) {
   const sesion = await requireModulo('comercial')
   const supabase = await cdb()
 
+  const responsableId = (form.get('responsable_id') as string) || sesion.userId
+  const esAsignacion = responsableId !== sesion.userId
   const payload = {
     titulo: form.get('titulo') as string,
     descripcion: (form.get('descripcion') as string) || null,
     tipo: (form.get('tipo') as string) || 'otro',
     estado: 'pendiente',
     prioridad: (form.get('prioridad') as string) || 'media',
-    responsable_id: (form.get('responsable_id') as string) || sesion.userId,
+    responsable_id: responsableId,
     creador_id: sesion.userId,
+    empresa: (form.get('empresa') as string) || null,
     cliente_id: (form.get('cliente_id') as string) || null,
     proyecto_id: (form.get('proyecto_id') as string) || null,
     fecha_vencimiento: (form.get('fecha_vencimiento') as string) || null,
+    asignado_por: esAsignacion ? sesion.userId : null,
+    asignada_at: esAsignacion ? new Date().toISOString() : null,
+    nota_asignacion: (form.get('nota_asignacion') as string) || null,
   }
 
   const { data, error } = await supabase.from('comercial_tareas').insert(payload).select('id, titulo, proyecto_id, cliente_id').single()
@@ -388,6 +394,7 @@ export async function crearEvento(form: FormData) {
     titulo: form.get('titulo') as string,
     tipo: (form.get('tipo') as string) || 'reunion',
     estado: 'programado',
+    empresa: (form.get('empresa') as string) || null,
     cliente_id: (form.get('cliente_id') as string) || null,
     proyecto_id: (form.get('proyecto_id') as string) || null,
     responsable_id: (form.get('responsable_id') as string) || sesion.userId,

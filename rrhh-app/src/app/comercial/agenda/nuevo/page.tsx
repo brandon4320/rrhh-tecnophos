@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
-import { TIPOS_EVENTO, TIPO_EVENTO_LABEL } from '@/modules/comercial/tipos'
+import { TIPOS_EVENTO, TIPO_EVENTO_LABEL, EMPRESAS, EMPRESA_LABEL } from '@/modules/comercial/tipos'
 
 export default async function NuevoEventoPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sesion = await requireModulo('comercial')
@@ -36,6 +36,13 @@ export default async function NuevoEventoPage({ searchParams }: { searchParams: 
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="titulo">Título *</Label>
             <Input id="titulo" name="titulo" required placeholder="Ej: Reunión de presentación" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="empresa">Empresa</Label>
+            <select id="empresa" name="empresa" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+              <option value="">Sin empresa</option>
+              {EMPRESAS.map((e) => <option key={e} value={e}>{EMPRESA_LABEL[e]}</option>)}
+            </select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="tipo">Tipo</Label>

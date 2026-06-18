@@ -2,6 +2,28 @@
 // Tipos del módulo Gestión Comercial
 // ============================================================
 
+// Empresas del grupo (multi-company)
+export const EMPRESAS = ['tecnophos', 'adc', 'serviwhite'] as const
+export type Empresa = (typeof EMPRESAS)[number]
+
+export const EMPRESA_LABEL: Record<Empresa, string> = {
+  tecnophos:  'TECNOPHOS',
+  adc:        'ADC',
+  serviwhite: 'SERVIWHITE',
+}
+
+export const EMPRESA_COLOR: Record<Empresa, string> = {
+  tecnophos:  'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+  adc:        'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800',
+  serviwhite: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800',
+}
+
+export const EMPRESA_DOT: Record<Empresa, string> = {
+  tecnophos:  'bg-blue-500',
+  adc:        'bg-emerald-500',
+  serviwhite: 'bg-amber-500',
+}
+
 export const ETAPAS_PROYECTO = [
   'nuevo',
   'contactado',

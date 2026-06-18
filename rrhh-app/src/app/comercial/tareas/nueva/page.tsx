@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
-import { TIPOS_TAREA, TIPO_TAREA_LABEL, PRIORIDADES, PRIORIDAD_LABEL } from '@/modules/comercial/tipos'
+import { TIPOS_TAREA, TIPO_TAREA_LABEL, PRIORIDADES, PRIORIDAD_LABEL, EMPRESAS, EMPRESA_LABEL } from '@/modules/comercial/tipos'
 
 export default async function NuevaTareaPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const sesion = await requireModulo('comercial')
@@ -41,6 +41,13 @@ export default async function NuevaTareaPage({ searchParams }: { searchParams: P
             <Input id="titulo" name="titulo" required placeholder="¿Qué hay que hacer?" />
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="empresa">Empresa</Label>
+            <select id="empresa" name="empresa" defaultValue={sp.empresa ?? ''} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+              <option value="">Sin empresa</option>
+              {EMPRESAS.map((e) => <option key={e} value={e}>{EMPRESA_LABEL[e]}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="tipo">Tipo</Label>
             <select id="tipo" name="tipo" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
               {TIPOS_TAREA.map((t) => <option key={t} value={t}>{TIPO_TAREA_LABEL[t]}</option>)}
@@ -69,10 +76,16 @@ export default async function NuevaTareaPage({ searchParams }: { searchParams: P
           {esGestion && (
             <div className="space-y-1.5">
               <Label htmlFor="responsable_id">Responsable</Label>
-              <select id="responsable_id" name="responsable_id" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+              <select id="responsable_id" name="responsable_id" defaultValue={sp.responsable_id ?? sesion.userId} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                 <option value={sesion.userId}>{sesion.nombre ?? 'Yo'}</option>
                 {vendedores.filter((v) => v.id !== sesion.userId).map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
               </select>
+            </div>
+          )}
+          {esGestion && (
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="nota_asignacion">Nota para el responsable</Label>
+              <Input id="nota_asignacion" name="nota_asignacion" placeholder="Contexto o instrucciones adicionales…" />
             </div>
           )}
           <div className="space-y-1.5">

@@ -3,5 +3,9 @@ import { ComercialShell } from '@/components/comercial/ComercialShell'
 
 export default async function ComercialLayout({ children }: { children: React.ReactNode }) {
   const sesion = await requireModulo('comercial')
-  return <ComercialShell rol={sesion.rol}>{children}</ComercialShell>
+  return (
+    <ComercialShell rol={sesion.rol} nombre={sesion.nombre}>
+      {children}
+    </ComercialShell>
+  )
 }

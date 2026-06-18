@@ -23,11 +23,12 @@ function esGestion(sesion: Sesion) {
 interface ClienteRow { id: string; nombre: string; razon_social: string | null; pais: string | null; ciudad: string | null; rubro: string | null; estado: string; prioridad: string; vendedor_asignado_id: string | null; updated_at: string | null }
 interface ClienteDetalleRow extends ClienteRow { cuit_tax_id: string | null; tipo_cliente: string | null; provincia_estado: string | null; origen: string | null; notas: string | null; created_at: string }
 interface ContactoRow { id: string; nombre: string; apellido: string | null; cargo: string | null; area: string | null; email: string | null; telefono: string | null; whatsapp: string | null; pais: string | null; idioma: string | null; es_contacto_principal: boolean; estado: string; cliente_id: string }
-interface ProyectoRow { id: string; codigo: string | null; titulo: string; etapa: string; estado: string; prioridad: string; valor_estimado: number | null; moneda: string | null; probabilidad: number | null; responsable_id: string; cliente_id: string | null; ultima_actividad_at: string | null; proxima_accion: string | null; proxima_accion_fecha: string | null; fecha_estimada_cierre: string | null; created_at: string }
+interface ProyectoRow { id: string; codigo: string | null; titulo: string; etapa: string; estado: string; prioridad: string; valor_estimado: number | null; moneda: string | null; probabilidad: number | null; responsable_id: string; cliente_id: string | null; ultima_actividad_at: string | null; proxima_accion: string | null; proxima_accion_fecha: string | null; fecha_estimada_cierre: string | null; created_at: string; empresa: string | null }
+interface PerfilComercialRow { id: string; nombre: string | null; rol: string }
 interface ProyectoDetalleRow extends ProyectoRow { descripcion: string | null; tipo_proyecto: string | null; motivo_perdida_id: string | null; fecha_cierre_real: string | null; valor_cierre: number | null; feedback_perdida: string | null }
-interface TareaRow { id: string; titulo: string; tipo: string; estado: string; prioridad: string; responsable_id: string; cliente_id: string | null; proyecto_id: string | null; fecha_vencimiento: string | null; created_at: string }
-interface EventoRow { id: string; titulo: string; tipo: string; estado: string; fecha_inicio: string; fecha_fin: string | null; cliente_id: string | null; proyecto_id: string | null; responsable_id: string; resultado: string | null }
-interface ViajeRow { id: string; titulo: string; pais: string | null; ciudad: string | null; fecha_inicio: string | null; fecha_fin: string | null; estado: string; responsable_id: string; motivo: string | null }
+interface TareaRow { id: string; titulo: string; tipo: string; estado: string; prioridad: string; responsable_id: string; cliente_id: string | null; proyecto_id: string | null; fecha_vencimiento: string | null; created_at: string; empresa: string | null; asignado_por: string | null; nota_asignacion: string | null }
+interface EventoRow { id: string; titulo: string; tipo: string; estado: string; fecha_inicio: string; fecha_fin: string | null; cliente_id: string | null; proyecto_id: string | null; responsable_id: string; resultado: string | null; empresa: string | null }
+interface ViajeRow { id: string; titulo: string; pais: string | null; ciudad: string | null; fecha_inicio: string | null; fecha_fin: string | null; estado: string; responsable_id: string; motivo: string | null; empresa: string | null }
 interface ActividadRow { id: string; tipo: string; titulo: string; descripcion: string | null; created_at: string; usuario_id: string | null; proyecto_id: string | null; cliente_id: string | null }
 interface NotaRow { id: string; tipo: string; contenido: string; created_at: string; usuario_id: string | null }
 interface ArchivoRow { id: string; nombre: string; path: string; mime_type: string | null; tipo_archivo: string | null; created_at: string; subido_por: string | null }
@@ -149,11 +150,11 @@ export async function listarContactos(sesion: Sesion, filtros?: { cliente_id?: s
   return rows<ContactoRow>(data)
 }
 
-export async function listarProyectos(sesion: Sesion, filtros?: { estado?: string; etapa?: string; responsable?: string; prioridad?: string }): Promise<ProyectoRow[]> {
+export async function listarProyectos(sesion: Sesion, filtros?: { estado?: string; etapa?: string; responsable?: string; prioridad?: string; empresa?: string }): Promise<ProyectoRow[]> {
   const supabase = await cdb()
   let q = supabase
     .from('comercial_proyectos')
-    .select('id, codigo, titulo, etapa, estado, prioridad, valor_estimado, moneda, probabilidad, responsable_id, cliente_id, ultima_actividad_at, proxima_accion, proxima_accion_fecha, fecha_estimada_cierre, created_at')
+    .select('id, codigo, titulo, etapa, estado, prioridad, valor_estimado, moneda, probabilidad, responsable_id, cliente_id, ultima_actividad_at, proxima_accion, proxima_accion_fecha, fecha_estimada_cierre, created_at, empresa')
     .order('created_at', { ascending: false })
 
   if (!esGestion(sesion) && sesion.rol === 'vendedor') {
@@ -163,6 +164,7 @@ export async function listarProyectos(sesion: Sesion, filtros?: { estado?: strin
   if (filtros?.etapa) q = q.eq('etapa', filtros.etapa)
   if (filtros?.responsable) q = q.eq('responsable_id', filtros.responsable)
   if (filtros?.prioridad) q = q.eq('prioridad', filtros.prioridad)
+  if (filtros?.empresa) q = q.eq('empresa', filtros.empresa)
 
   const { data, error } = await q
   if (error) throw error
@@ -196,16 +198,19 @@ export async function obtenerProyecto(id: string, sesion: Sesion) {
   }
 }
 
-export async function listarTareas(sesion: Sesion, filtros?: { estado?: string; prioridad?: string; responsable?: string; proyecto_id?: string; rango?: 'hoy' | 'vencidas' | 'semana' }): Promise<TareaRow[]> {
+export async function listarTareas(sesion: Sesion, filtros?: { estado?: string; prioridad?: string; responsable?: string; proyecto_id?: string; rango?: 'hoy' | 'vencidas' | 'semana'; empresa?: string }): Promise<TareaRow[]> {
   const supabase = await cdb()
-  const hoy = new Date()
-  const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).toISOString()
-  const finHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1).toISOString()
-  const finSemana = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 7).toISOString()
+  // Usar fecha en zona Argentina (UTC-3) para filtros de "hoy"
+  const ahora = new Date()
+  const offsetAR = -3 * 60 // UTC-3, sin DST
+  const localAR = new Date(ahora.getTime() + (offsetAR - ahora.getTimezoneOffset()) * 60000)
+  const inicioHoy = new Date(Date.UTC(localAR.getFullYear(), localAR.getMonth(), localAR.getDate())).toISOString()
+  const finHoy    = new Date(Date.UTC(localAR.getFullYear(), localAR.getMonth(), localAR.getDate() + 1)).toISOString()
+  const finSemana = new Date(Date.UTC(localAR.getFullYear(), localAR.getMonth(), localAR.getDate() + 7)).toISOString()
 
   let q = supabase
     .from('comercial_tareas')
-    .select('id, titulo, tipo, estado, prioridad, responsable_id, cliente_id, proyecto_id, fecha_vencimiento, created_at')
+    .select('id, titulo, tipo, estado, prioridad, responsable_id, cliente_id, proyecto_id, fecha_vencimiento, created_at, empresa, asignado_por, nota_asignacion')
     .order('fecha_vencimiento')
 
   if (!esGestion(sesion)) q = q.eq('responsable_id', sesion.userId)
@@ -213,6 +218,7 @@ export async function listarTareas(sesion: Sesion, filtros?: { estado?: string; 
   if (filtros?.prioridad) q = q.eq('prioridad', filtros.prioridad)
   if (filtros?.responsable && esGestion(sesion)) q = q.eq('responsable_id', filtros.responsable)
   if (filtros?.proyecto_id) q = q.eq('proyecto_id', filtros.proyecto_id)
+  if (filtros?.empresa) q = q.eq('empresa', filtros.empresa)
   if (filtros?.rango === 'hoy') q = q.gte('fecha_vencimiento', inicioHoy).lt('fecha_vencimiento', finHoy)
   if (filtros?.rango === 'vencidas') q = q.lt('fecha_vencimiento', inicioHoy).not('estado', 'in', '("completada","cancelada")')
   if (filtros?.rango === 'semana') q = q.gte('fecha_vencimiento', inicioHoy).lte('fecha_vencimiento', finSemana)
@@ -222,17 +228,18 @@ export async function listarTareas(sesion: Sesion, filtros?: { estado?: string; 
   return rows<TareaRow>(data)
 }
 
-export async function listarEventos(sesion: Sesion, filtros?: { estado?: string; cliente_id?: string; proyecto_id?: string }): Promise<EventoRow[]> {
+export async function listarEventos(sesion: Sesion, filtros?: { estado?: string; cliente_id?: string; proyecto_id?: string; empresa?: string }): Promise<EventoRow[]> {
   const supabase = await cdb()
   let q = supabase
     .from('comercial_eventos')
-    .select('id, titulo, tipo, estado, fecha_inicio, fecha_fin, cliente_id, proyecto_id, responsable_id, resultado')
+    .select('id, titulo, tipo, estado, fecha_inicio, fecha_fin, cliente_id, proyecto_id, responsable_id, resultado, empresa')
     .order('fecha_inicio', { ascending: false })
 
   if (!esGestion(sesion)) q = q.eq('responsable_id', sesion.userId)
   if (filtros?.estado) q = q.eq('estado', filtros.estado)
   if (filtros?.cliente_id) q = q.eq('cliente_id', filtros.cliente_id)
   if (filtros?.proyecto_id) q = q.eq('proyecto_id', filtros.proyecto_id)
+  if (filtros?.empresa) q = q.eq('empresa', filtros.empresa)
 
   const { data, error } = await q
   if (error) throw error
@@ -348,4 +355,65 @@ export async function listarVendedores(): Promise<VendedorRow[]> {
     .in('rol', ['vendedor', 'gerente_comercial', 'admin', 'direccion'])
     .order('nombre')
   return rows<VendedorRow>(data)
+}
+
+export interface EquipoMiembro {
+  id: string
+  nombre: string | null
+  rol: string
+  tareasHoy: number
+  tareasVencidas: number
+  tareasAbiertas: number
+  proyectosAbiertos: number
+  pipeline: number
+  ultimaActividad: string | null
+}
+
+export async function listarEquipoComercial(): Promise<EquipoMiembro[]> {
+  const supabase = await cdb()
+
+  // Zona Argentina UTC-3
+  const ahora = new Date()
+  const offsetAR = -3 * 60
+  const localAR = new Date(ahora.getTime() + (offsetAR - ahora.getTimezoneOffset()) * 60000)
+  const inicioHoy = new Date(Date.UTC(localAR.getFullYear(), localAR.getMonth(), localAR.getDate())).toISOString()
+  const finHoy    = new Date(Date.UTC(localAR.getFullYear(), localAR.getMonth(), localAR.getDate() + 1)).toISOString()
+
+  const [{ data: perfiles }, { data: tareas }, { data: proyectos }] = await Promise.all([
+    supabase.from('perfiles').select('id, nombre, rol')
+      .in('rol', ['vendedor', 'gerente_comercial', 'asistente_comercial', 'direccion'])
+      .order('nombre'),
+    supabase.from('comercial_tareas').select('id, responsable_id, estado, fecha_vencimiento, created_at')
+      .not('estado', 'in', '("completada","cancelada")'),
+    supabase.from('comercial_proyectos').select('id, responsable_id, estado, valor_estimado, ultima_actividad_at')
+      .eq('estado', 'abierto'),
+  ])
+
+  const tareasArr   = rows<{ id: string; responsable_id: string; estado: string; fecha_vencimiento: string | null; created_at: string }>(tareas)
+  const proyArr     = rows<{ id: string; responsable_id: string; estado: string; valor_estimado: number | null; ultima_actividad_at: string | null }>(proyectos)
+  const perfilesArr = rows<PerfilComercialRow>(perfiles)
+
+  return perfilesArr.map((p) => {
+    const misTareas = tareasArr.filter((t) => t.responsable_id === p.id)
+    const misProy   = proyArr.filter((pr) => pr.responsable_id === p.id)
+    const tareasHoy = misTareas.filter((t) => t.fecha_vencimiento && t.fecha_vencimiento >= inicioHoy && t.fecha_vencimiento < finHoy).length
+    const tareasVencidas = misTareas.filter((t) => t.fecha_vencimiento && t.fecha_vencimiento < inicioHoy).length
+    const pipeline  = misProy.reduce((s, pr) => s + (pr.valor_estimado ?? 0), 0)
+    const ultimaAct = misProy.reduce<string | null>((last, pr) => {
+      if (!pr.ultima_actividad_at) return last
+      if (!last || pr.ultima_actividad_at > last) return pr.ultima_actividad_at
+      return last
+    }, null)
+    return {
+      id: p.id,
+      nombre: p.nombre,
+      rol: p.rol,
+      tareasHoy,
+      tareasVencidas,
+      tareasAbiertas: misTareas.length,
+      proyectosAbiertos: misProy.length,
+      pipeline,
+      ultimaActividad: ultimaAct,
+    }
+  })
 }
