@@ -1,5 +1,6 @@
 import { requireModulo } from '@/lib/auth/session'
 import { obtenerDashboardComercial } from '@/modules/comercial/queries'
+import { completarTarea } from '@/modules/comercial/actions'
 import { tieneRol, COMERCIAL_GESTION } from '@/lib/auth/roles'
 import { EmpresaBadge } from '@/components/comercial/EmpresaBadge'
 import { EtapaBadge } from '@/components/comercial/EtapaBadge'
@@ -9,6 +10,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { AlertTriangle, CheckSquare, CalendarDays, FolderKanban, Plus, Clock, TrendingUp, Users } from 'lucide-react'
 import type { EtapaProyecto } from '@/modules/comercial/tipos'
+import { redirect } from 'next/navigation'
 
 function fmtAR(dateStr: string, fmt: string) {
   try { return format(new Date(dateStr), fmt, { locale: es }) } catch { return '' }
@@ -136,9 +138,19 @@ export default async function ComercialHome() {
             <div className="space-y-2">
               {dash.tareasHoy.slice(0, 8).map((t) => {
                 const tAny = t as { empresa?: string | null }
+                async function completar() {
+                  'use server'
+                  await completarTarea(t.id)
+                  redirect('/comercial')
+                }
                 return (
-                  <div key={t.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 hover:bg-accent/50 transition-colors">
-                    <div className="size-4 shrink-0 rounded border-2 border-muted-foreground/30" />
+                  <div key={t.id} className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-3 hover:bg-accent/50 transition-colors">
+                    <form action={completar} className="shrink-0">
+                      <button type="submit" title="Marcar completada"
+                        className="flex size-6 items-center justify-center rounded-full border-2 border-muted-foreground/30 hover:border-primary hover:bg-primary/10 transition-colors">
+                        <CheckSquare className="size-3 text-muted-foreground/40" strokeWidth={2} />
+                      </button>
+                    </form>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{t.titulo}</p>
                       <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">

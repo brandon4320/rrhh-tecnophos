@@ -3,9 +3,10 @@ import { listarEquipoComercial } from '@/modules/comercial/queries'
 import { puedeVerEquipoComercial } from '@/modules/comercial/permisos'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { UsersRound, AlertTriangle, CheckSquare, FolderKanban, Plus, TrendingUp, Clock } from 'lucide-react'
+import { UsersRound, AlertTriangle, CheckSquare, FolderKanban, TrendingUp, Clock, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { AsignarTareaRapida } from '@/components/comercial/AsignarTareaRapida'
 
 const ROL_LABEL: Record<string, string> = {
   vendedor:            'Vendedor/a',
@@ -57,10 +58,11 @@ export default async function EquipoComercialPage() {
     )
   }
 
-  const totalVencidas   = equipo.reduce((s, m) => s + m.tareasVencidas, 0)
-  const totalAbiertas   = equipo.reduce((s, m) => s + m.tareasAbiertas, 0)
-  const totalProyectos  = equipo.reduce((s, m) => s + m.proyectosAbiertos, 0)
-  const totalPipeline   = equipo.reduce((s, m) => s + m.pipeline, 0)
+  const totalVencidas      = equipo.reduce((s, m) => s + m.tareasVencidas, 0)
+  const totalAbiertas      = equipo.reduce((s, m) => s + m.tareasAbiertas, 0)
+  const totalProyectos     = equipo.reduce((s, m) => s + m.proyectosAbiertos, 0)
+  const totalSinAccion     = equipo.reduce((s, m) => s + m.proyectosSinAccion, 0)
+  const totalPipeline      = equipo.reduce((s, m) => s + m.pipeline, 0)
 
   return (
     <div className="space-y-6">
@@ -70,7 +72,7 @@ export default async function EquipoComercialPage() {
       </div>
 
       {/* Resumen consolidado */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
             <FolderKanban className="size-3.5" strokeWidth={1.75} />
@@ -94,6 +96,14 @@ export default async function EquipoComercialPage() {
           </div>
           <p className="text-2xl font-bold">{totalAbiertas}</p>
           <p className="text-xs text-muted-foreground">tareas abiertas</p>
+        </div>
+        <div className={`rounded-xl border p-4 ${totalSinAccion > 0 ? 'border-amber-400/40 bg-amber-50/30 dark:bg-amber-900/10' : 'border-border bg-card'}`}>
+          <div className={`flex items-center gap-1.5 mb-1.5 ${totalSinAccion > 0 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+            <AlertCircle className="size-3.5" strokeWidth={1.75} />
+            <span className="text-xs font-medium">Sin acción</span>
+          </div>
+          <p className={`text-2xl font-bold ${totalSinAccion > 0 ? 'text-amber-500' : ''}`}>{totalSinAccion}</p>
+          <p className="text-xs text-muted-foreground">proyectos parados</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
@@ -154,18 +164,18 @@ export default async function EquipoComercialPage() {
                         {formatPeso(miembro.pipeline)}
                       </span>
                     )}
+                    {miembro.proyectosSinAccion > 0 && (
+                      <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                        {miembro.proyectosSinAccion} sin acción
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Acciones */}
               <div className="flex items-center gap-3 border-t border-border bg-muted/30 px-4 py-2.5">
-                <Link
-                  href={`/comercial/tareas/nueva?responsable_id=${miembro.id}`}
-                  className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
-                  <Plus className="size-3.5" strokeWidth={2.5} />
-                  Asignar tarea
-                </Link>
+                <AsignarTareaRapida miembroId={miembro.id} miembroNombre={miembro.nombre} />
                 <Link
                   href={`/comercial/tareas?responsable=${miembro.id}&rango=vencidas`}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors">

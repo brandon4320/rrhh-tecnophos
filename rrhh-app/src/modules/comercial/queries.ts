@@ -365,6 +365,7 @@ export interface EquipoMiembro {
   tareasVencidas: number
   tareasAbiertas: number
   proyectosAbiertos: number
+  proyectosSinAccion: number
   pipeline: number
   ultimaActividad: string | null
 }
@@ -385,12 +386,12 @@ export async function listarEquipoComercial(): Promise<EquipoMiembro[]> {
       .order('nombre'),
     supabase.from('comercial_tareas').select('id, responsable_id, estado, fecha_vencimiento, created_at')
       .not('estado', 'in', '("completada","cancelada")'),
-    supabase.from('comercial_proyectos').select('id, responsable_id, estado, valor_estimado, ultima_actividad_at')
+    supabase.from('comercial_proyectos').select('id, responsable_id, estado, valor_estimado, ultima_actividad_at, proxima_accion')
       .eq('estado', 'abierto'),
   ])
 
   const tareasArr   = rows<{ id: string; responsable_id: string; estado: string; fecha_vencimiento: string | null; created_at: string }>(tareas)
-  const proyArr     = rows<{ id: string; responsable_id: string; estado: string; valor_estimado: number | null; ultima_actividad_at: string | null }>(proyectos)
+  const proyArr     = rows<{ id: string; responsable_id: string; estado: string; valor_estimado: number | null; ultima_actividad_at: string | null; proxima_accion: string | null }>(proyectos)
   const perfilesArr = rows<PerfilComercialRow>(perfiles)
 
   return perfilesArr.map((p) => {
@@ -412,6 +413,7 @@ export async function listarEquipoComercial(): Promise<EquipoMiembro[]> {
       tareasVencidas,
       tareasAbiertas: misTareas.length,
       proyectosAbiertos: misProy.length,
+      proyectosSinAccion: misProy.filter((pr) => !pr.proxima_accion).length,
       pipeline,
       ultimaActividad: ultimaAct,
     }

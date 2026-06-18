@@ -13,7 +13,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
 
   const sp = await searchParams
   const [reporte, vendedores] = await Promise.all([
-    obtenerReportesComerciales(sesion, { vendedor: sp.vendedor, estado: sp.estado }),
+    obtenerReportesComerciales(sesion, { vendedor: sp.vendedor, estado: sp.estado, desde: sp.desde, hasta: sp.hasta }),
     listarVendedores(),
   ])
 
@@ -36,12 +36,23 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
           <h1 className="text-xl font-semibold tracking-tight">Reportes comerciales</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Indicadores del equipo comercial</p>
         </div>
-        <form className="flex flex-wrap gap-2">
+        <form className="flex flex-wrap gap-2 items-end">
           <select name="vendedor" defaultValue={sp.vendedor ?? ''} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
             <option value="">Todo el equipo</option>
             {vendedores.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
           </select>
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-muted-foreground">Desde</label>
+            <input type="date" name="desde" defaultValue={sp.desde ?? ''} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-muted-foreground">Hasta</label>
+            <input type="date" name="hasta" defaultValue={sp.hasta ?? ''} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+          </div>
           <button type="submit" className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">Filtrar</button>
+          {(sp.vendedor || sp.desde || sp.hasta) && (
+            <a href="/comercial/reportes" className="rounded-md border border-input px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent">Limpiar</a>
+          )}
         </form>
       </div>
 

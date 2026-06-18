@@ -12,7 +12,8 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { EtapaProyecto } from '@/modules/comercial/tipos'
 import { ETAPA_LABEL, ETAPAS_PROYECTO } from '@/modules/comercial/tipos'
-import { cambiarEtapaProyecto, actualizarProximaAccion, cerrarProyectoGanado, cerrarProyectoPerdido, crearNota } from '@/modules/comercial/actions'
+import { cambiarEtapaProyecto, actualizarProximaAccion, cerrarProyectoGanado, cerrarProyectoPerdido, crearNota, marcarNotaRespondida, registrarActividadManual } from '@/modules/comercial/actions'
+import { tieneRol, COMERCIAL_GESTION } from '@/lib/auth/roles'
 import { redirect } from 'next/navigation'
 
 export default async function ProyectoDetallePage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,6 +26,7 @@ export default async function ProyectoDetallePage({ params }: { params: Promise<
 
   const canEdit = puedeEditarProyecto(sesion, proyecto)
   const canClose = puedeCerrarProyecto(sesion, proyecto)
+  const esGestion = tieneRol(sesion.rol, COMERCIAL_GESTION)
   const motivosPerdida = canClose ? await listarMotivosPerdida() : []
 
   const hoy = new Date().toISOString().substring(0, 10)
@@ -59,6 +61,20 @@ export default async function ProyectoDetallePage({ params }: { params: Promise<
     'use server'
     form.set('proyecto_id', id)
     await crearNota(form)
+    redirect(`/comercial/proyectos/${id}`)
+  }
+
+  async function actionResponderNota(form: FormData) {
+    'use server'
+    const notaId = form.get('nota_id') as string
+    await marcarNotaRespondida(notaId)
+    redirect(`/comercial/proyectos/${id}`)
+  }
+
+  async function actionActividad(form: FormData) {
+    'use server'
+    const contenido = form.get('contenido') as string
+    if (contenido?.trim()) await registrarActividadManual(id, contenido.trim())
     redirect(`/comercial/proyectos/${id}`)
   }
 
@@ -214,22 +230,63 @@ export default async function ProyectoDetallePage({ params }: { params: Promise<
           {/* Notas */}
           <section>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Notas ({notas.length})</h2>
+              <h2 className="text-sm font-semibold">
+                Notas ({notas.length})
+                {esGestion && notas.some((n) => (n as { tipo?: string; respondida?: boolean }).tipo === 'pregunta' && !(n as { respondida?: boolean }).respondida) && (
+                  <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                    preguntas sin responder
+                  </span>
+                )}
+              </h2>
             </div>
             {canEdit && (
-              <form action={actionNota} className="mb-3 flex gap-2">
-                <textarea name="contenido" rows={2} placeholder="Agregar una nota…" required className="flex-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none" />
-                <button type="submit" className="self-end rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90">Guardar</button>
+              <form action={actionNota} className="mb-3 space-y-2">
+                <div className="flex gap-2">
+                  <select name="tipo" defaultValue="avance" className="h-9 w-32 shrink-0 rounded-md border border-input bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                    <option value="avance">📈 Avance</option>
+                    <option value="pregunta">❓ Pregunta</option>
+                    <option value="nota_general">📝 Nota</option>
+                  </select>
+                  <textarea name="contenido" rows={2} placeholder="Escribí un avance, pregunta o nota…" required className="flex-1 rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none" />
+                </div>
+                <div className="flex justify-end">
+                  <button type="submit" className="rounded-md bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">Guardar</button>
+                </div>
               </form>
             )}
             {notas.length === 0 ? <EmptyState title="Sin notas" /> : (
               <div className="space-y-2">
-                {notas.map((n) => (
-                  <div key={n.id} className="rounded-lg border border-border bg-card px-4 py-3">
-                    <p className="text-sm">{n.contenido}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{format(new Date(n.created_at), "d MMM yyyy · HH:mm", { locale: es })}</p>
-                  </div>
-                ))}
+                {notas.map((n) => {
+                  const nAny = n as { tipo?: string; respondida?: boolean }
+                  const tipo = nAny.tipo ?? 'nota_general'
+                  const respondida = nAny.respondida ?? false
+                  const esPregunta = tipo === 'pregunta'
+                  return (
+                    <div key={n.id} className={`rounded-lg border bg-card px-4 py-3 ${esPregunta && !respondida ? 'border-amber-400/40 bg-amber-50/30 dark:bg-amber-900/10' : 'border-border'}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="text-xs">{tipo === 'avance' ? '📈' : tipo === 'pregunta' ? '❓' : '📝'}</span>
+                          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {tipo === 'avance' ? 'Avance' : tipo === 'pregunta' ? 'Pregunta' : 'Nota'}
+                          </span>
+                          {esPregunta && respondida && (
+                            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">· Respondida ✓</span>
+                          )}
+                        </div>
+                        {esGestion && esPregunta && !respondida && (
+                          <form action={actionResponderNota}>
+                            <input type="hidden" name="nota_id" value={n.id} />
+                            <button type="submit" className="text-[10px] font-medium text-emerald-600 hover:underline dark:text-emerald-400">
+                              Marcar respondida
+                            </button>
+                          </form>
+                        )}
+                      </div>
+                      <p className="text-sm">{n.contenido}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{format(new Date(n.created_at), "d MMM yyyy · HH:mm", { locale: es })}</p>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </section>
@@ -267,7 +324,19 @@ export default async function ProyectoDetallePage({ params }: { params: Promise<
         </div>
 
         {/* Sidebar — Timeline actividad */}
-        <div>
+        <div className="space-y-4">
+          {canEdit && proyecto.estado === 'abierto' && (
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="mb-2 text-sm font-semibold">Registrar avance</h3>
+                <form action={actionActividad} className="flex gap-2">
+                  <input name="contenido" placeholder="¿Qué pasó? Llamé al cliente, envié propuesta…" required
+                    className="flex-1 rounded-md border border-input bg-transparent px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                  <button type="submit" className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90">+</button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardContent className="p-4">
               <h3 className="mb-3 text-sm font-semibold">Actividad</h3>

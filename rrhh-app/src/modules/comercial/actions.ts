@@ -509,7 +509,31 @@ export async function cerrarViaje(id: string, notas?: string) {
   return { ok: true }
 }
 
+// ── ACTIVIDAD MANUAL ──
+
+export async function registrarActividadManual(proyectoId: string, contenido: string) {
+  const sesion = await requireModulo('comercial')
+  const supabase = await cdb()
+  await supabase.from('comercial_actividad').insert({
+    tipo: 'avance_manual',
+    titulo: contenido,
+    proyecto_id: proyectoId,
+    usuario_id: sesion.userId,
+    metadata: {},
+  })
+  await supabase.from('comercial_proyectos').update({ ultima_actividad_at: new Date().toISOString() }).eq('id', proyectoId)
+  return { ok: true }
+}
+
 // ── NOTAS ──
+
+export async function marcarNotaRespondida(notaId: string) {
+  const sesion = await requireModulo('comercial')
+  if (!tieneRol(sesion.rol, COMERCIAL_GESTION)) return { error: 'Sin permisos' }
+  const supabase = await cdb()
+  await supabase.from('comercial_notas').update({ respondida: true }).eq('id', notaId)
+  return { ok: true }
+}
 
 export async function crearNota(form: FormData) {
   const sesion = await requireModulo('comercial')

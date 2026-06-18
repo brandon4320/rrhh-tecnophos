@@ -3,14 +3,21 @@ import { puedeGestionarConfiguracionComercial } from '@/modules/comercial/permis
 import { redirect } from 'next/navigation'
 import { listarMotivosDetalle, obtenerConfigComercial } from '@/modules/comercial/queries'
 import { Card, CardContent } from '@/components/ui/card'
+import Link from 'next/link'
+import { UserPlus } from 'lucide-react'
 
-export default async function ConfiguracionComercialPage() {
+export default async function ConfiguracionComercialPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>
+}) {
   const sesion = await requireModulo('comercial')
   if (!puedeGestionarConfiguracionComercial(sesion)) redirect('/comercial')
 
-  const [motivos, configMap] = await Promise.all([
+  const [motivos, configMap, sp] = await Promise.all([
     listarMotivosDetalle(),
     obtenerConfigComercial(),
+    searchParams,
   ])
 
   return (
@@ -19,6 +26,25 @@ export default async function ConfiguracionComercialPage() {
         <h1 className="text-xl font-semibold tracking-tight">Configuración del módulo</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Parámetros y datos de referencia del módulo comercial</p>
       </div>
+
+      {sp.success === 'comercial_creado' && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+          Comercial creado exitosamente.
+        </div>
+      )}
+
+      <section>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Gestión de equipo</h2>
+          <Link
+            href="/comercial/configuracion/equipo/nuevo"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+            <UserPlus className="size-3.5" strokeWidth={2} />
+            Agregar comercial
+          </Link>
+        </div>
+        <p className="text-xs text-muted-foreground">Creá usuarios para que los comerciales puedan acceder al sistema. Los usuarios creados aquí tendrán acceso únicamente al módulo comercial.</p>
+      </section>
 
       <section>
         <h2 className="mb-4 text-sm font-semibold">Parámetros generales</h2>

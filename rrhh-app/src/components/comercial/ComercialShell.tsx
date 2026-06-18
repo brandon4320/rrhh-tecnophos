@@ -8,7 +8,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import {
   House, CheckSquare, CalendarDays, FolderKanban,
   Building2, Users, Plane, BarChart3, Settings2,
-  UsersRound, ArrowLeft, X, type LucideIcon,
+  UsersRound, ArrowLeft, X, Plus, type LucideIcon,
 } from 'lucide-react'
 
 interface NavItem { href: string; label: string; icon: LucideIcon; roles?: string[] }
@@ -103,6 +103,13 @@ export function ComercialShell({ children, rol, nombre }: { children: React.Reac
           <div className="mx-auto max-w-5xl p-4 pb-24 sm:p-5 lg:p-8 lg:pb-8">{children}</div>
         </main>
       </div>
+
+      {/* FAB — nueva tarea rápida */}
+      <Link href="/comercial/tareas/nueva"
+        className="fixed bottom-[5.25rem] right-4 z-50 flex size-13 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-95 transition-all lg:hidden"
+        aria-label="Nueva tarea">
+        <Plus className="size-6" strokeWidth={2.5} />
+      </Link>
 
       {/* Bottom nav mobile */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex h-[4.25rem] items-stretch border-t bg-card lg:hidden">
