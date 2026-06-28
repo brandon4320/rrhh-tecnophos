@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { getEstadoVencimiento, ESTADO_COLORS } from '@/types'
 import Link from 'next/link'
 import VehiculosClient from './VehiculosClient'
+import EquiposClient from './EquiposClient'
 import EmpresaCertsClient from './EmpresaCertsClient'
 
 const EMPRESA_BG: Record<string, string> = {
@@ -43,8 +44,10 @@ export default async function EmpresaPage({
   const [
     { data: empleados },
     { data: vehiculos },
+    { data: equipos },
     { data: certsEmpresa },
     { data: tiposVehiculo },
+    { data: tiposEquipo },
   ] = await Promise.all([
     supabase
       .from('empleados')
@@ -61,6 +64,14 @@ export default async function EmpresaPage({
       .eq('activo', true)
       .order('patente'),
     supabase
+      .from('equipos')
+      .select(
+        '*, certificados(id, tipo_id, tipo_nombre_custom, fecha_vencimiento, notas, alerta_dias, tipo:tipos_certificado(nombre), archivos(id, nombre, path))'
+      )
+      .eq('empresa_id', empresa.id)
+      .eq('activo', true)
+      .order('nombre'),
+    supabase
       .from('certificados')
       .select('*, tipo:tipos_certificado(nombre), archivos(id, nombre, path)')
       .eq('empresa_id', empresa.id)
@@ -69,6 +80,11 @@ export default async function EmpresaPage({
       .from('tipos_certificado')
       .select('*')
       .eq('aplica_vehiculo', true)
+      .order('orden'),
+    supabase
+      .from('tipos_certificado')
+      .select('*')
+      .eq('aplica_equipo', true)
       .order('orden'),
   ])
 
@@ -213,6 +229,14 @@ export default async function EmpresaPage({
         tiposCertificado={tiposVehiculo ?? []}
         canEdit={isAdmin || perfil?.rol === 'usuario'}
         empresaSlug={slug}
+      />
+
+      <EquiposClient
+        equipos={equipos ?? []}
+        tiposCertificado={tiposEquipo ?? []}
+        canEdit={isAdmin || perfil?.rol === 'usuario'}
+        empresaSlug={slug}
+        empresaId={empresa.id}
       />
     </div>
   )

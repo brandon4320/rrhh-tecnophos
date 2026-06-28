@@ -43,9 +43,11 @@ export const COMERCIAL_DIRECCION = [
   'admin', 'direccion',
 ] as const satisfies readonly Rol[]
 
-/** Roles que pueden crear y editar empleados/legajos. */
+/** Roles que pueden crear y editar empleados/legajos.
+ *  Debe coincidir con app_es_rrhh() en la DB (admin/usuario), de lo
+ *  contrario el insert pasa el guard de UI pero lo rechaza la RLS. */
 export const LEGAJO_ESCRITURA = [
-  'admin', 'admin_adc', 'admin_unipar', 'direccion',
+  'admin', 'usuario',
 ] as const satisfies readonly Rol[]
 
 export function esSuperAdmin(rol: Rol | null | undefined, empresaAcceso: string | null | undefined): boolean {

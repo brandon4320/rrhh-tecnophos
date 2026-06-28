@@ -27,6 +27,7 @@ export default async function VencimientosPage({
         tipo:tipos_certificado(id, nombre),
         empleado:empleados(id, nombre, apellido, empresa_id, empresa:empresas(nombre, slug)),
         vehiculo:vehiculos(id, patente, empresa_id, empresa:empresas(nombre, slug)),
+        equipo:equipos(id, nombre, empresa_id, empresa:empresas(nombre, slug)),
         empresa:empresas(nombre, slug)
       `)
       .not('fecha_vencimiento', 'is', null)
@@ -38,7 +39,7 @@ export default async function VencimientosPage({
   const hoy = new Date()
 
   const filtered = (certs ?? []).filter((c) => {
-    const entitySlug = c.empleado?.empresa?.slug ?? c.vehiculo?.empresa?.slug ?? c.empresa?.slug ?? ''
+    const entitySlug = c.empleado?.empresa?.slug ?? c.vehiculo?.empresa?.slug ?? c.equipo?.empresa?.slug ?? c.empresa?.slug ?? ''
     const tipoId = c.tipo?.id ?? ''
     const est = getEstadoVencimiento(c.fecha_vencimiento)
 
@@ -94,14 +95,16 @@ export default async function VencimientosPage({
               {filtered.map((cert) => {
                 const estado_ = getEstadoVencimiento(cert.fecha_vencimiento)
                 const dias = differenceInDays(new Date(cert.fecha_vencimiento!), hoy)
-                const empSlug = cert.empleado?.empresa?.slug ?? cert.vehiculo?.empresa?.slug ?? cert.empresa?.slug ?? ''
-                const empNombre = cert.empleado?.empresa?.nombre ?? cert.vehiculo?.empresa?.nombre ?? cert.empresa?.nombre ?? 'â'
+                const empSlug = cert.empleado?.empresa?.slug ?? cert.vehiculo?.empresa?.slug ?? cert.equipo?.empresa?.slug ?? cert.empresa?.slug ?? ''
+                const empNombre = cert.empleado?.empresa?.nombre ?? cert.vehiculo?.empresa?.nombre ?? cert.equipo?.empresa?.nombre ?? cert.empresa?.nombre ?? 'â'
                 const nombreEmpleado = [cert.empleado?.nombre, cert.empleado?.apellido].filter(Boolean).join(' ')
                 const referencia = cert.empleado
                   ? nombreEmpleado
                   : cert.vehiculo
                     ? `VehÃ­culo ${cert.vehiculo.patente}`
-                    : '(Empresa)'
+                    : cert.equipo
+                      ? `Equipo ${cert.equipo.nombre}`
+                      : '(Empresa)'
                 const detailHref = cert.empleado?.id
                   ? `/legajo/${cert.empleado.id}`
                   : cert.vehiculo?.empresa?.slug

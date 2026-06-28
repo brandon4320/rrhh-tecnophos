@@ -19,6 +19,10 @@ export type Vehiculo = Tables<'vehiculos'> & {
   empresa?: Empresa | null
 }
 
+export type Equipo = Tables<'equipos'> & {
+  empresa?: Empresa | null
+}
+
 export type Archivo = Tables<'archivos'> & {
   /** URL firmada (presigned) generada en runtime. */
   url?: string
@@ -29,6 +33,7 @@ export type Certificado = Tables<'certificados'> & {
   empleado?: Empleado | null
   empresa?: Empresa | null
   vehiculo?: Vehiculo | null
+  equipo?: Equipo | null
   archivos?: Archivo[]
 }
 

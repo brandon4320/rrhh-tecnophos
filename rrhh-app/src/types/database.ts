@@ -66,6 +66,7 @@ export type Database = {
           created_at: string | null
           empleado_id: string | null
           empresa_id: string | null
+          equipo_id: string | null
           fecha_emision: string | null
           fecha_vencimiento: string | null
           id: string
@@ -81,6 +82,7 @@ export type Database = {
           created_at?: string | null
           empleado_id?: string | null
           empresa_id?: string | null
+          equipo_id?: string | null
           fecha_emision?: string | null
           fecha_vencimiento?: string | null
           id?: string
@@ -96,6 +98,7 @@ export type Database = {
           created_at?: string | null
           empleado_id?: string | null
           empresa_id?: string | null
+          equipo_id?: string | null
           fecha_emision?: string | null
           fecha_vencimiento?: string | null
           id?: string
@@ -119,6 +122,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificados_equipo_id_fkey"
+            columns: ["equipo_id"]
+            isOneToOne: false
+            referencedRelation: "equipos"
             referencedColumns: ["id"]
           },
           {
@@ -785,9 +795,54 @@ export type Database = {
           },
         ]
       }
+      equipos: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          descripcion: string | null
+          empresa_id: string | null
+          id: string
+          nombre: string
+          numero_serie: string | null
+          tipo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          empresa_id?: string | null
+          id?: string
+          nombre: string
+          numero_serie?: string | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          empresa_id?: string | null
+          id?: string
+          nombre?: string
+          numero_serie?: string | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tipos_certificado: {
         Row: {
           aplica_empresa: boolean | null
+          aplica_equipo: boolean | null
           aplica_personal: boolean | null
           aplica_vehiculo: boolean | null
           descripcion: string | null
@@ -797,6 +852,7 @@ export type Database = {
         }
         Insert: {
           aplica_empresa?: boolean | null
+          aplica_equipo?: boolean | null
           aplica_personal?: boolean | null
           aplica_vehiculo?: boolean | null
           descripcion?: string | null
@@ -806,6 +862,7 @@ export type Database = {
         }
         Update: {
           aplica_empresa?: boolean | null
+          aplica_equipo?: boolean | null
           aplica_personal?: boolean | null
           aplica_vehiculo?: boolean | null
           descripcion?: string | null
