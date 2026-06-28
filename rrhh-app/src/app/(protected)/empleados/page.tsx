@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getEstadoVencimiento, ESTADO_COLORS } from '@/types'
+import { tieneRol, LEGAJO_ESCRITURA, type Rol } from '@/lib/auth/roles'
 import Link from 'next/link'
 
 const EMPRESA_DOT: Record<string, string> = {
@@ -36,6 +37,12 @@ export default async function EmpleadosPage({
   const { data: empleados } = await query
   const { data: empresas } = await supabase.from('empresas').select('*').order('nombre')
 
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: perfil } = user
+    ? await supabase.from('perfiles').select('rol').eq('id', user.id).single()
+    : { data: null }
+  const puedeCrear = tieneRol(perfil?.rol as Rol | null, LEGAJO_ESCRITURA)
+
   function peorEstado(certs: { fecha_vencimiento?: string | null; alerta_dias?: number | null }[]) {
     const estados = certs.map((c) => getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias))
     if (estados.includes('vencido')) return 'vencido'
@@ -51,6 +58,14 @@ export default async function EmpleadosPage({
           <h1 className="text-2xl font-semibold text-foreground">Empleados</h1>
           <p className="text-sm text-muted-foreground mt-1">{empleados?.length ?? 0} resultados</p>
         </div>
+        {puedeCrear && (
+          <Link
+            href="/admin/empleados/nuevo"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            + Nuevo empleado
+          </Link>
+        )}
       </div>
 
       <div className="flex gap-3 mb-6">

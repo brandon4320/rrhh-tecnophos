@@ -43,6 +43,11 @@ export const COMERCIAL_DIRECCION = [
   'admin', 'direccion',
 ] as const satisfies readonly Rol[]
 
+/** Roles que pueden crear y editar empleados/legajos. */
+export const LEGAJO_ESCRITURA = [
+  'admin', 'admin_adc', 'admin_unipar', 'direccion',
+] as const satisfies readonly Rol[]
+
 export function esSuperAdmin(rol: Rol | null | undefined, empresaAcceso: string | null | undefined): boolean {
   return rol === 'admin' && empresaAcceso == null
 }

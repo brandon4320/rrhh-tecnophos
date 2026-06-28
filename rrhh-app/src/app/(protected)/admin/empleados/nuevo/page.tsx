@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { tieneRol, LEGAJO_ESCRITURA, type Rol } from '@/lib/auth/roles'
 import SubmitButton from './SubmitButton'
 
 export default async function NuevoEmpleadoPage({
@@ -21,7 +22,7 @@ export default async function NuevoEmpleadoPage({
     .eq('id', user.id)
     .single()
 
-  if (perfil?.rol !== 'admin') redirect('/dashboard')
+  if (!tieneRol(perfil?.rol as Rol | null, LEGAJO_ESCRITURA)) redirect('/dashboard')
 
   const { data: empresas } = await supabase.from('empresas').select('id, nombre').order('nombre')
 
@@ -41,7 +42,7 @@ export default async function NuevoEmpleadoPage({
       .eq('id', user.id)
       .single()
 
-    if (perfil?.rol !== 'admin') redirect('/dashboard')
+    if (!tieneRol(perfil?.rol as Rol | null, LEGAJO_ESCRITURA)) redirect('/dashboard')
 
     const nombre = String(formData.get('nombre') ?? '').trim()
     const apellido = String(formData.get('apellido') ?? '').trim()
