@@ -86,7 +86,7 @@ export default async function ProyectosPage({ searchParams }: { searchParams: Pr
                       <td className="px-4 py-3.5"><EtapaBadge etapa={p.etapa as EtapaProyecto} /></td>
                       <td className="px-4 py-3.5"><PriorityBadge prioridad={p.prioridad} /></td>
                       <td className="px-4 py-3.5 text-right font-mono text-sm">
-                        {p.valor_estimado ? `${p.moneda ?? 'USD'} ${p.valor_estimado.toLocaleString('es-AR')}` : '—'}
+                        {p.valor_estimado ? `${p.moneda ?? 'ARS'} ${p.valor_estimado.toLocaleString('es-AR')}` : '—'}
                       </td>
                       <td className="px-4 py-3.5">
                         {p.proxima_accion ? (

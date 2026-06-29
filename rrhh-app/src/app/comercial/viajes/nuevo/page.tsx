@@ -51,9 +51,9 @@ export default async function NuevoViajePage() {
           <div className="space-y-1.5">
             <Label htmlFor="costo_estimado">Costo estimado</Label>
             <div className="flex gap-2">
-              <select name="moneda" className="h-9 rounded-md border border-input bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-20">
-                <option value="USD">USD</option>
+              <select name="moneda" defaultValue="ARS" className="h-9 rounded-md border border-input bg-transparent px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-20">
                 <option value="ARS">ARS</option>
+                <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
               </select>
               <Input id="costo_estimado" name="costo_estimado" type="number" min="0" step="0.01" placeholder="0.00" />

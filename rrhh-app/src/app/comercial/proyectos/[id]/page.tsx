@@ -114,7 +114,7 @@ export default async function ProyectoDetallePage({ params }: { params: Promise<
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Valor estimado</p>
-                <p className="text-sm font-medium font-mono">{proyecto.valor_estimado ? `${proyecto.moneda ?? 'USD'} ${Number(proyecto.valor_estimado).toLocaleString('es-AR')}` : '—'}</p>
+                <p className="text-sm font-medium font-mono">{proyecto.valor_estimado ? `${proyecto.moneda ?? 'ARS'} ${Number(proyecto.valor_estimado).toLocaleString('es-AR')}` : '—'}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Probabilidad</p>

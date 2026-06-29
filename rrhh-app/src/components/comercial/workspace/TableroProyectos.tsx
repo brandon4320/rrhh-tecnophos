@@ -17,9 +17,9 @@ const columns: KanbanColumn[] = ETAPAS_PROYECTO.map((e) => ({ key: e, label: ETA
 function fmtMonto(v: number | null, moneda: string | null) {
   if (!v) return null
   try {
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: moneda || 'USD', maximumFractionDigits: 0 }).format(v)
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: moneda || 'ARS', maximumFractionDigits: 0 }).format(v)
   } catch {
-    return `${moneda || 'USD'} ${v.toLocaleString('es-AR')}`
+    return `${moneda || 'ARS'} ${v.toLocaleString('es-AR')}`
   }
 }
 

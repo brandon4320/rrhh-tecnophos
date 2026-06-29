@@ -62,7 +62,7 @@ export default async function ConfiguracionComercialPage({
                 <p className="text-sm font-medium">Moneda por defecto</p>
                 <p className="text-xs text-muted-foreground">Se usa al crear nuevos proyectos y viajes.</p>
               </div>
-              <span className="text-sm font-semibold">{String(configMap['moneda_default'] ?? 'USD').replace(/"/g, '')}</span>
+              <span className="text-sm font-semibold">{String(configMap['moneda_default'] ?? 'ARS').replace(/"/g, '')}</span>
             </div>
           </CardContent>
         </Card>
