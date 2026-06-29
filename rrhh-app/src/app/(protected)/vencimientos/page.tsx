@@ -96,12 +96,12 @@ export default async function VencimientosPage({
                 const estado_ = getEstadoVencimiento(cert.fecha_vencimiento)
                 const dias = differenceInDays(new Date(cert.fecha_vencimiento!), hoy)
                 const empSlug = cert.empleado?.empresa?.slug ?? cert.vehiculo?.empresa?.slug ?? cert.equipo?.empresa?.slug ?? cert.empresa?.slug ?? ''
-                const empNombre = cert.empleado?.empresa?.nombre ?? cert.vehiculo?.empresa?.nombre ?? cert.equipo?.empresa?.nombre ?? cert.empresa?.nombre ?? 'â'
+                const empNombre = cert.empleado?.empresa?.nombre ?? cert.vehiculo?.empresa?.nombre ?? cert.equipo?.empresa?.nombre ?? cert.empresa?.nombre ?? '—'
                 const nombreEmpleado = [cert.empleado?.nombre, cert.empleado?.apellido].filter(Boolean).join(' ')
                 const referencia = cert.empleado
                   ? nombreEmpleado
                   : cert.vehiculo
-                    ? `VehÃ­culo ${cert.vehiculo.patente}`
+                    ? `Vehículo ${cert.vehiculo.patente}`
                     : cert.equipo
                       ? `Equipo ${cert.equipo.nombre}`
                       : '(Empresa)'
@@ -126,14 +126,18 @@ export default async function VencimientosPage({
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-foreground">
-                      {cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? 'â'}
+                      {cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? '—'}
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       <p className="font-mono text-foreground">
                         {format(new Date(cert.fecha_vencimiento!), 'dd/MM/yyyy')}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {dias < 0 ? `hace ${Math.abs(dias)} dÃ­as` : `en ${dias} dÃ­as`}
+                        {dias < 0
+                          ? `hace ${Math.abs(dias)} ${Math.abs(dias) === 1 ? 'día' : 'días'}`
+                          : dias === 0
+                            ? 'vence hoy'
+                            : `en ${dias} ${dias === 1 ? 'día' : 'días'}`}
                       </p>
                     </td>
                     <td className="px-4 py-3.5 text-center">
@@ -146,7 +150,7 @@ export default async function VencimientosPage({
                     <td className="px-4 py-3.5 text-right">
                       {detailHref && (
                         <Link href={detailHref} className="text-xs text-primary hover:underline">
-                          Legajo â
+                          Legajo →
                         </Link>
                       )}
                     </td>
