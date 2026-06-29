@@ -323,6 +323,88 @@ export async function obtenerReportesComerciales(sesion: Sesion, filtros?: { des
   }
 }
 
+export interface MetricaComercial {
+  id: string
+  nombre: string | null
+  ganados: number
+  perdidos: number
+  winRate: number | null          // % conversión sobre decididos
+  montoGanado: number             // suma valor_estimado de ganados (en rango)
+  pipelineAbierto: number         // valor de proyectos abiertos (hoy)
+  proyectosAbiertos: number
+  tareasCompletadas: number       // en rango
+  tareasATiempoPct: number | null // % completadas en fecha
+  reunionesRealizadas: number     // en rango
+  cicloPromedioDias: number | null // promedio fecha_cierre_real - created_at de ganados
+}
+
+/**
+ * Métricas comparativas POR COMERCIAL para medir resultados.
+ * Resultados (ganados/perdidos/monto/ciclo) se filtran por fecha_cierre_real;
+ * actividad (tareas completadas, reuniones) por su fecha real; el pipeline
+ * abierto es el estado actual (no depende del rango).
+ */
+export async function obtenerMetricasPorComercial(filtros?: { desde?: string; hasta?: string }): Promise<MetricaComercial[]> {
+  const supabase = await cdb()
+  const desde = filtros?.desde || null
+  const hasta = filtros?.hasta || null
+  const enRango = (fecha: string | null | undefined) => {
+    if (!fecha) return false
+    const d = fecha.slice(0, 10)
+    if (desde && d < desde) return false
+    if (hasta && d > hasta) return false
+    return true
+  }
+
+  const [{ data: perfiles }, { data: proyectos }, { data: completadas }, { data: eventos }] = await Promise.all([
+    supabase.from('perfiles').select('id, nombre')
+      .in('rol', ['vendedor', 'gerente_comercial', 'asistente_comercial', 'direccion']).order('nombre'),
+    supabase.from('comercial_proyectos').select('responsable_id, estado, valor_estimado, created_at, fecha_cierre_real'),
+    supabase.from('comercial_tareas').select('responsable_id, fecha_completada, fecha_vencimiento').eq('estado', 'completada'),
+    supabase.from('comercial_eventos').select('responsable_id, estado, fecha_inicio').eq('estado', 'realizado'),
+  ])
+
+  const ps = rows<{ responsable_id: string; estado: string; valor_estimado: number | null; created_at: string; fecha_cierre_real: string | null }>(proyectos)
+  const ts = rows<{ responsable_id: string; fecha_completada: string | null; fecha_vencimiento: string | null }>(completadas)
+  const ev = rows<{ responsable_id: string; estado: string; fecha_inicio: string | null }>(eventos)
+  const perfilesArr = rows<{ id: string; nombre: string | null }>(perfiles)
+
+  return perfilesArr.map((p) => {
+    const misProy = ps.filter((x) => x.responsable_id === p.id)
+    const abiertos = misProy.filter((x) => x.estado === 'abierto')
+    const ganados = misProy.filter((x) => x.estado === 'ganado' && enRango(x.fecha_cierre_real))
+    const perdidos = misProy.filter((x) => x.estado === 'perdido' && enRango(x.fecha_cierre_real))
+    const decididos = ganados.length + perdidos.length
+
+    const misTareas = ts.filter((x) => x.responsable_id === p.id && enRango(x.fecha_completada))
+    const conVenc = misTareas.filter((x) => x.fecha_vencimiento)
+    const aTiempo = conVenc.filter((x) => (x.fecha_completada ?? '') <= (x.fecha_vencimiento ?? ''))
+
+    const misReuniones = ev.filter((x) => x.responsable_id === p.id && enRango(x.fecha_inicio))
+
+    const ciclos = ganados
+      .map((x) => x.fecha_cierre_real && x.created_at
+        ? Math.round((new Date(x.fecha_cierre_real + 'T12:00:00').getTime() - new Date(x.created_at).getTime()) / 86400000)
+        : null)
+      .filter((d): d is number => d != null && d >= 0)
+
+    return {
+      id: p.id,
+      nombre: p.nombre,
+      ganados: ganados.length,
+      perdidos: perdidos.length,
+      winRate: decididos > 0 ? Math.round((ganados.length / decididos) * 100) : null,
+      montoGanado: ganados.reduce((s, x) => s + (x.valor_estimado ?? 0), 0),
+      pipelineAbierto: abiertos.reduce((s, x) => s + (x.valor_estimado ?? 0), 0),
+      proyectosAbiertos: abiertos.length,
+      tareasCompletadas: misTareas.length,
+      tareasATiempoPct: conVenc.length > 0 ? Math.round((aTiempo.length / conVenc.length) * 100) : null,
+      reunionesRealizadas: misReuniones.length,
+      cicloPromedioDias: ciclos.length > 0 ? Math.round(ciclos.reduce((s, d) => s + d, 0) / ciclos.length) : null,
+    }
+  })
+}
+
 export async function listarMotivosPerdida(): Promise<MotivoRow[]> {
   const supabase = await cdb()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
