@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { AdcLogo } from '@/components/brand/AdcLogo'
 import {
   House, CheckSquare, CalendarDays, FolderKanban,
   Building2, Users, Plane, BarChart3, Settings2,
@@ -60,9 +59,10 @@ export function ComercialShell({ children, rol }: { children: React.ReactNode; r
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-5 w-auto" />
-            <span className="h-4 w-px bg-white/15" />
-            <AdcLogo variant="mark" className="h-5 w-auto text-white" />
+            <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-6 w-auto" />
+            <span className="h-6 w-px bg-white/15" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-adc-blanco.png" alt="ADC S.R.L." className="h-7 w-auto" />
           </div>
           <p className="mt-1 truncate text-xs text-slate-400">Gestión Comercial</p>
         </div>

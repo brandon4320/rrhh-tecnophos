@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { AdcLogo } from '@/components/brand/AdcLogo'
 import {
   Home,
   Users,
@@ -51,7 +50,8 @@ export function OpsShell({ children, rol }: { children: React.ReactNode; rol: st
     <div className="flex h-full flex-col bg-sidebar">
       <div className="flex h-16 items-center justify-between gap-2 border-b border-white/10 px-4">
         <div className="min-w-0">
-          <AdcLogo variant="mark" className="h-5 w-auto text-white" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-adc-blanco.png" alt="ADC S.R.L." className="h-8 w-auto" />
           <p className="mt-1 truncate text-xs text-slate-400">Operaciones · Contrato UNIPAR</p>
         </div>
         <button

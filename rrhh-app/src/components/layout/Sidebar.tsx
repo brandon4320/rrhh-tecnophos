@@ -7,7 +7,6 @@ import type { Empresa, Perfil } from '@/types'
 import type { User } from '@supabase/supabase-js'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { AdcLogo } from '@/components/brand/AdcLogo'
 import {
   Home,
   LayoutDashboard,
@@ -61,8 +60,9 @@ export default function Sidebar({ empresas, perfil, user }: Props) {
       <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-7 w-auto" />
-        <span className="h-6 w-px bg-white/15" />
-        <AdcLogo variant="mark" className="h-7 w-auto text-white" />
+        <span className="h-8 w-px bg-white/15" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-adc-blanco.png" alt="ADC S.R.L." className="h-9 w-auto" />
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">

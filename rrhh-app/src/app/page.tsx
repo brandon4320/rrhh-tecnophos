@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/theme-toggle'
-import { AdcLogo } from '@/components/brand/AdcLogo'
 import { EmpresaPills } from '@/components/brand/EmpresaPills'
 
 const ICONOS: Record<ModuloKey, React.ReactNode> = {
@@ -47,8 +46,9 @@ export default async function HubPage() {
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-7 w-auto" />
-            <span className="h-6 w-px bg-border" />
-            <AdcLogo variant="mark" className="h-7 w-auto text-foreground" />
+            <span className="h-8 w-px bg-border" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-adc.png" alt="ADC S.R.L. Fumigation" className="h-9 w-auto" />
             <span className="ml-1 hidden h-6 w-px bg-border sm:inline-block" />
             <span className="hidden text-sm font-medium text-muted-foreground sm:inline">Gestión</span>
           </div>
