@@ -210,7 +210,7 @@ export async function listarTareas(sesion: Sesion, filtros?: { estado?: string; 
 
   let q = supabase
     .from('comercial_tareas')
-    .select('id, titulo, tipo, estado, prioridad, responsable_id, cliente_id, proyecto_id, fecha_vencimiento, created_at, empresa, asignado_por, nota_asignacion')
+    .select('id, titulo, tipo, estado, prioridad, responsable_id, cliente_id, proyecto_id, fecha_vencimiento, fecha_completada, created_at, empresa, asignado_por, nota_asignacion')
     .order('fecha_vencimiento')
 
   if (!esGestion(sesion)) q = q.eq('responsable_id', sesion.userId)
@@ -364,6 +364,7 @@ export interface EquipoMiembro {
   tareasHoy: number
   tareasVencidas: number
   tareasAbiertas: number
+  tareasCompletadas7d: number
   proyectosAbiertos: number
   proyectosSinAccion: number
   pipeline: number
@@ -379,24 +380,29 @@ export async function listarEquipoComercial(): Promise<EquipoMiembro[]> {
   const localAR = new Date(ahora.getTime() + (offsetAR - ahora.getTimezoneOffset()) * 60000)
   const inicioHoy = new Date(Date.UTC(localAR.getFullYear(), localAR.getMonth(), localAR.getDate())).toISOString()
   const finHoy    = new Date(Date.UTC(localAR.getFullYear(), localAR.getMonth(), localAR.getDate() + 1)).toISOString()
+  const hace7d    = new Date(ahora.getTime() - 7 * 24 * 3600 * 1000).toISOString()
 
-  const [{ data: perfiles }, { data: tareas }, { data: proyectos }] = await Promise.all([
+  const [{ data: perfiles }, { data: tareas }, { data: completadas }, { data: proyectos }] = await Promise.all([
     supabase.from('perfiles').select('id, nombre, rol')
       .in('rol', ['vendedor', 'gerente_comercial', 'asistente_comercial', 'direccion'])
       .order('nombre'),
     supabase.from('comercial_tareas').select('id, responsable_id, estado, fecha_vencimiento, created_at')
       .not('estado', 'in', '("completada","cancelada")'),
+    supabase.from('comercial_tareas').select('responsable_id, fecha_completada')
+      .eq('estado', 'completada').gte('fecha_completada', hace7d),
     supabase.from('comercial_proyectos').select('id, responsable_id, estado, valor_estimado, ultima_actividad_at, proxima_accion')
       .eq('estado', 'abierto'),
   ])
 
   const tareasArr   = rows<{ id: string; responsable_id: string; estado: string; fecha_vencimiento: string | null; created_at: string }>(tareas)
+  const completadasArr = rows<{ responsable_id: string; fecha_completada: string | null }>(completadas)
   const proyArr     = rows<{ id: string; responsable_id: string; estado: string; valor_estimado: number | null; ultima_actividad_at: string | null; proxima_accion: string | null }>(proyectos)
   const perfilesArr = rows<PerfilComercialRow>(perfiles)
 
   return perfilesArr.map((p) => {
     const misTareas = tareasArr.filter((t) => t.responsable_id === p.id)
     const misProy   = proyArr.filter((pr) => pr.responsable_id === p.id)
+    const completas7d = completadasArr.filter((t) => t.responsable_id === p.id).length
     const tareasHoy = misTareas.filter((t) => t.fecha_vencimiento && t.fecha_vencimiento >= inicioHoy && t.fecha_vencimiento < finHoy).length
     const tareasVencidas = misTareas.filter((t) => t.fecha_vencimiento && t.fecha_vencimiento < inicioHoy).length
     const pipeline  = misProy.reduce((s, pr) => s + (pr.valor_estimado ?? 0), 0)
@@ -412,6 +418,7 @@ export async function listarEquipoComercial(): Promise<EquipoMiembro[]> {
       tareasHoy,
       tareasVencidas,
       tareasAbiertas: misTareas.length,
+      tareasCompletadas7d: completas7d,
       proyectosAbiertos: misProy.length,
       proyectosSinAccion: misProy.filter((pr) => !pr.proxima_accion).length,
       pipeline,

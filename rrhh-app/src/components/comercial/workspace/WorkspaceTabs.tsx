@@ -1,17 +1,18 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { CalendarDays, FolderKanban, LayoutGrid } from 'lucide-react'
+import { CalendarDays, FolderKanban, LayoutGrid, UsersRound } from 'lucide-react'
 
 const TABS = [
-  { key: 'hoy',       label: 'Hoy',         icon: CalendarDays },
-  { key: 'proyectos', label: 'Por proyecto', icon: FolderKanban },
-  { key: 'tablero',   label: 'Tablero',     icon: LayoutGrid },
+  { key: 'hoy',       label: 'Hoy',          icon: CalendarDays, soloGestion: false },
+  { key: 'proyectos', label: 'Por proyecto', icon: FolderKanban, soloGestion: false },
+  { key: 'comercial', label: 'Por comercial', icon: UsersRound,  soloGestion: true },
+  { key: 'tablero',   label: 'Tablero',      icon: LayoutGrid,   soloGestion: false },
 ] as const
 
-export function WorkspaceTabs({ vista }: { vista: string }) {
+export function WorkspaceTabs({ vista, esGestion }: { vista: string; esGestion: boolean }) {
   return (
     <div className="flex gap-1 overflow-x-auto border-b border-border no-scrollbar">
-      {TABS.map((t) => {
+      {TABS.filter((t) => !t.soloGestion || esGestion).map((t) => {
         const active = vista === t.key
         return (
           <Link

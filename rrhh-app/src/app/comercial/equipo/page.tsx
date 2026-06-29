@@ -172,6 +172,12 @@ export default async function EquipoComercialPage() {
                     <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                       {miembro.tareasHoy} para hoy
                     </span>
+                    <span className={`rounded-md px-2 py-0.5 text-xs font-medium
+                      ${miembro.tareasCompletadas7d > 0
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                        : 'bg-muted text-muted-foreground'}`}>
+                      ✓ {miembro.tareasCompletadas7d} en 7d
+                    </span>
                     <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                       {miembro.proyectosAbiertos} {miembro.proyectosAbiertos === 1 ? 'proyecto' : 'proyectos'}
                     </span>
