@@ -23,6 +23,19 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = await cdb()
+
+  // Si la tarea cuelga de un proyecto y no vino empresa/cliente, heredarlos del proyecto
+  let empresa = (body.empresa as string) || null
+  let clienteId = (body.cliente_id as string) || null
+  const proyectoId = (body.proyecto_id as string) || null
+  if (proyectoId && (!empresa || !clienteId)) {
+    const { data: proy } = await supabase.from('comercial_proyectos').select('empresa, cliente_id').eq('id', proyectoId).single()
+    if (proy) {
+      empresa = empresa || proy.empresa || null
+      clienteId = clienteId || proy.cliente_id || null
+    }
+  }
+
   const payload = {
     titulo,
     descripcion: (body.descripcion as string) || null,
@@ -31,9 +44,9 @@ export async function POST(req: NextRequest) {
     prioridad: (body.prioridad as string) || 'media',
     responsable_id: responsableId,
     creador_id: sesion.userId,
-    empresa: (body.empresa as string) || null,
-    cliente_id: (body.cliente_id as string) || null,
-    proyecto_id: (body.proyecto_id as string) || null,
+    empresa,
+    cliente_id: clienteId,
+    proyecto_id: proyectoId,
     etiquetas: Array.isArray(body.etiquetas) ? body.etiquetas : [],
     fecha_vencimiento: (body.fecha_vencimiento as string) || null,
     asignado_por: esAsignacion ? sesion.userId : null,

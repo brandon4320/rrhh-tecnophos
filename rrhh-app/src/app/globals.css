@@ -152,3 +152,12 @@ select:-webkit-autofill {
   box-shadow: 0 0 0 1000px var(--input-background) inset;
   transition: background-color 9999s ease-in-out 0s;
 }
+
+/* Ocultar barra de scroll en carruseles (chips, kanban, tabs) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

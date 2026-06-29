@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Plus, X } from 'lucide-react'
 
 interface Props {
@@ -9,6 +11,7 @@ interface Props {
 }
 
 export function AsignarTareaRapida({ miembroId, miembroNombre }: Props) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -16,10 +19,15 @@ export function AsignarTareaRapida({ miembroId, miembroNombre }: Props) {
     e.preventDefault()
     setLoading(true)
     const form = new FormData(e.currentTarget)
-    await fetch('/api/comercial/tarea-rapida', { method: 'POST', body: form })
+    const res = await fetch('/api/comercial/tarea-rapida', { method: 'POST', body: form })
     setLoading(false)
-    setOpen(false)
-    window.location.reload()
+    if (res.ok) {
+      setOpen(false)
+      toast.success(`Tarea asignada a ${miembroNombre ?? 'comercial'}`)
+      router.refresh()
+    } else {
+      toast.error('No se pudo asignar la tarea')
+    }
   }
 
   if (!open) {

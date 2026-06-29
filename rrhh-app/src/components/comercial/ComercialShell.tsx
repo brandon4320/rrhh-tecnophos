@@ -112,7 +112,7 @@ export function ComercialShell({ children, rol }: { children: React.ReactNode; r
 
       {/* FAB — nueva tarea rápida */}
       <Link href="/comercial/tareas/nueva"
-        className="fixed bottom-[5.25rem] right-4 z-50 flex size-13 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-95 transition-all lg:hidden"
+        className="fixed bottom-[5.25rem] right-4 z-50 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 active:scale-95 transition-all lg:hidden"
         aria-label="Nueva tarea">
         <Plus className="size-6" strokeWidth={2.5} />
       </Link>

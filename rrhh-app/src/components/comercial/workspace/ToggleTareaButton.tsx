@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -18,7 +19,12 @@ export function ToggleTareaButton({ tareaId, completada }: { tareaId: string; co
       body: JSON.stringify({ id: tareaId, estado: completada ? 'pendiente' : 'completada' }),
     })
     setBusy(false)
-    if (res.ok) router.refresh()
+    if (res.ok) {
+      toast.success(completada ? 'Tarea reabierta' : 'Tarea completada')
+      router.refresh()
+    } else {
+      toast.error('No se pudo actualizar la tarea')
+    }
   }
 
   return (

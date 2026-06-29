@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 
 export function QuickAddTarea({ proyectoId, placeholder }: { proyectoId: string | null; placeholder?: string }) {
@@ -21,7 +22,10 @@ export function QuickAddTarea({ proyectoId, placeholder }: { proyectoId: string 
     setSaving(false)
     if (res.ok) {
       setTitulo('')
+      toast.success('Tarea agregada')
       router.refresh()
+    } else {
+      toast.error('No se pudo agregar la tarea')
     }
   }
 
@@ -32,7 +36,6 @@ export function QuickAddTarea({ proyectoId, placeholder }: { proyectoId: string 
         value={titulo}
         onChange={(e) => setTitulo(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') add() }}
-        onBlur={add}
         disabled={saving}
         placeholder={placeholder ?? 'Nueva tarea…'}
         className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground/60 focus:outline-none disabled:opacity-50"

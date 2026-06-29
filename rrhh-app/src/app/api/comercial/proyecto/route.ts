@@ -41,9 +41,10 @@ export async function PATCH(req: NextRequest) {
       patch.fecha_cierre_real = new Date().toISOString().slice(0, 10)
       if (body.motivo_perdida_id) patch.motivo_perdida_id = body.motivo_perdida_id
     } else {
-      // volver a una etapa abierta reabre el proyecto
+      // volver a una etapa abierta reabre el proyecto y limpia datos de cierre
       patch.estado = 'abierto'
       patch.fecha_cierre_real = null
+      patch.motivo_perdida_id = null
     }
   } else if (typeof body.estado === 'string') {
     patch.estado = body.estado

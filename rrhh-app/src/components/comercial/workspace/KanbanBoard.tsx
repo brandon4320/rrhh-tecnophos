@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 export interface KanbanColumn { key: string; label: string }
 export interface KanbanItem { id: string; col: string }
@@ -24,12 +25,20 @@ export function KanbanBoard<T extends KanbanItem>({
   const [dragId, setDragId] = useState<string | null>(null)
   const [overCol, setOverCol] = useState<string | null>(null)
 
+  // Re-sincronizar con los datos del servidor cuando llegan (tras router.refresh)
+  useEffect(() => { setItems(initial) }, [initial])
+
   async function move(id: string, toCol: string) {
     const cur = items.find((i) => i.id === id)
     if (!cur || cur.col === toCol) return
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, col: toCol } : i))) // optimista
+    const prev = items
+    setItems((p) => p.map((i) => (i.id === id ? { ...i, col: toCol } : i))) // optimista
     const ok = await onMove(id, toCol)
-    if (!ok) setItems(initial) // revertir
+    if (!ok) {
+      setItems(prev) // revertir al estado previo, no al snapshot inicial
+      toast.error('No se pudo mover. Reintentá.')
+      return
+    }
     router.refresh()
   }
 

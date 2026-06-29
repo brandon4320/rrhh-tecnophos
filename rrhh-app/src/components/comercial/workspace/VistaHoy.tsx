@@ -6,15 +6,10 @@ import { EmpresaBadge } from '@/components/comercial/EmpresaBadge'
 import { EtapaBadge } from '@/components/comercial/EtapaBadge'
 import { PriorityBadge } from '@/components/comercial/PriorityBadge'
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { fmtFechaAR, fmtHoraAR, fmtFechaHoraAR } from '@/modules/comercial/fechas'
 import { AlertTriangle, CheckSquare, CalendarDays, FolderKanban, Clock, TrendingUp, Users } from 'lucide-react'
 import type { EtapaProyecto } from '@/modules/comercial/tipos'
 import { redirect } from 'next/navigation'
-
-function fmtAR(dateStr: string, fmt: string) {
-  try { return format(new Date(dateStr), fmt, { locale: es }) } catch { return '' }
-}
 
 function formatPeso(valor: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(valor)
@@ -136,7 +131,7 @@ export async function VistaHoy({ sesion }: { sesion: Sesion }) {
                       <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
                         {tAny.empresa && <EmpresaBadge empresa={tAny.empresa} size="xs" />}
                         {t.fecha_vencimiento && (
-                          <span className="text-[10px] text-muted-foreground">{fmtAR(t.fecha_vencimiento, 'HH:mm')}</span>
+                          <span className="text-[10px] text-muted-foreground">{fmtHoraAR(t.fecha_vencimiento)}</span>
                         )}
                       </div>
                     </div>
@@ -170,8 +165,8 @@ export async function VistaHoy({ sesion }: { sesion: Sesion }) {
                 return (
                   <div key={ev.id} className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3">
                     <div className="shrink-0 text-center min-w-[2.5rem]">
-                      <p className="text-sm font-bold text-primary leading-none">{fmtAR(ev.fecha_inicio, 'HH:mm')}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{fmtAR(ev.fecha_inicio, 'dd/MM')}</p>
+                      <p className="text-sm font-bold text-primary leading-none">{fmtHoraAR(ev.fecha_inicio)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{fmtFechaAR(ev.fecha_inicio)}</p>
                     </div>
                     <div className="min-w-0 flex-1 border-l border-border pl-3">
                       <p className="truncate text-sm font-medium">{ev.titulo}</p>
@@ -235,7 +230,7 @@ export async function VistaHoy({ sesion }: { sesion: Sesion }) {
                 <div className="mt-[9px] size-1.5 shrink-0 rounded-full bg-primary/50" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm">{a.titulo}</p>
-                  <p className="text-[10px] text-muted-foreground">{fmtAR(a.created_at, "dd/MM · HH:mm")}</p>
+                  <p className="text-[10px] text-muted-foreground">{fmtFechaHoraAR(a.created_at)}</p>
                 </div>
               </div>
             ))}
