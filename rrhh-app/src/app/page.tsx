@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { AdcLogo } from '@/components/brand/AdcLogo'
+import { EmpresaPills } from '@/components/brand/EmpresaPills'
 
 const ICONOS: Record<ModuloKey, React.ReactNode> = {
   rrhh: <Users className="size-4 text-muted-foreground" strokeWidth={1.75} />,
@@ -42,12 +44,13 @@ export default async function HubPage() {
     <div className="min-h-[100dvh] bg-background">
       <header className="border-b bg-card">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
-              G
-            </div>
-            <span className="font-semibold">Gestión</span>
-            <span className="hidden text-sm text-muted-foreground sm:inline">· Tecnophos · ADC</span>
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-7 w-auto" />
+            <span className="h-6 w-px bg-border" />
+            <AdcLogo variant="mark" className="h-7 w-auto text-foreground" />
+            <span className="ml-1 hidden h-6 w-px bg-border sm:inline-block" />
+            <span className="hidden text-sm font-medium text-muted-foreground sm:inline">Gestión</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="mr-2 hidden text-sm text-muted-foreground sm:inline">{nombre}</span>
@@ -76,7 +79,7 @@ export default async function HubPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {modulos.map((m) => (
               <Link key={m.key} href={m.href} className="group">
-                <Card className="h-full transition-colors hover:border-primary/50">
+                <Card className="flex h-full flex-col transition-all hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       {ICONOS[m.key]}
@@ -84,11 +87,14 @@ export default async function HubPage() {
                     </CardTitle>
                     <CardDescription>{DESCRIPCIONES[m.key]}</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
-                      Entrar
-                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
-                    </span>
+                  <CardContent className="mt-auto">
+                    <EmpresaPills empresas={m.empresas} className="mb-4" />
+                    <div className="flex items-center justify-between border-t border-border/60 pt-3">
+                      <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                        Entrar
+                        <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.75} />
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
               </Link>

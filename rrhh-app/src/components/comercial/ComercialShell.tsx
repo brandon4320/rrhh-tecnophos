@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { AdcLogo } from '@/components/brand/AdcLogo'
 import {
   House, CheckSquare, CalendarDays, FolderKanban,
   Building2, Users, Plane, BarChart3, Settings2,
@@ -42,7 +43,7 @@ const MORE_NAV: NavItem[] = [
   { href: '/comercial/configuracion', label: 'Config.',     icon: Settings2,  roles: ['admin', 'direccion', 'gerente_comercial'] },
 ]
 
-export function ComercialShell({ children, rol, nombre }: { children: React.ReactNode; rol: string; nombre?: string | null }) {
+export function ComercialShell({ children, rol }: { children: React.ReactNode; rol: string; nombre?: string | null }) {
   const pathname = usePathname()
   const [moreOpen, setMoreOpen] = useState(false)
 
@@ -57,8 +58,13 @@ export function ComercialShell({ children, rol, nombre }: { children: React.Reac
     <div className="flex h-full flex-col bg-sidebar">
       <div className="flex h-16 items-center border-b border-white/10 px-4">
         <div className="min-w-0">
-          <p className="font-semibold leading-tight text-white">Gestión Comercial</p>
-          <p className="truncate text-xs text-slate-400">{nombre ?? 'Pipeline · Agenda · Proyectos'}</p>
+          <div className="flex items-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-5 w-auto" />
+            <span className="h-4 w-px bg-white/15" />
+            <AdcLogo variant="mark" className="h-5 w-auto text-white" />
+          </div>
+          <p className="mt-1 truncate text-xs text-slate-400">Gestión Comercial</p>
         </div>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">

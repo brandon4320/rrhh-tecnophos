@@ -7,6 +7,9 @@ import type { Rol } from '@/lib/auth/roles'
 
 export type ModuloKey = 'rrhh' | 'limpieza' | 'mantenimiento' | 'comercial'
 
+/** Empresas dueñas de un módulo (para mostrar marca en el menú). */
+export type EmpresaMarca = 'tecnophos' | 'adc'
+
 export interface ModuloDef {
   key: ModuloKey
   label: string
@@ -16,6 +19,8 @@ export interface ModuloDef {
   icon: string
   /** Roles que pueden ver/entrar al módulo. */
   roles: readonly Rol[]
+  /** Empresas a las que pertenece el módulo (se refleja en el menú). */
+  empresas: readonly EmpresaMarca[]
   /** Si está disponible (false = "próximamente", no se muestra). */
   enabled: boolean
 }
@@ -27,6 +32,7 @@ export const MODULOS: ModuloDef[] = [
     href: '/dashboard',
     icon: 'IdCard',
     roles: ['admin', 'usuario'],
+    empresas: ['tecnophos', 'adc'],
     enabled: true,
   },
   {
@@ -36,6 +42,7 @@ export const MODULOS: ModuloDef[] = [
     href: '/operaciones',
     icon: 'ClipboardList',
     roles: ['admin', 'admin_adc', 'supervisor', 'operario', 'admin_unipar'],
+    empresas: ['adc'],
     enabled: true,
   },
   {
@@ -44,6 +51,7 @@ export const MODULOS: ModuloDef[] = [
     href: '/mantenimiento',
     icon: 'Wrench',
     roles: ['admin', 'usuario'],
+    empresas: ['tecnophos', 'adc'],
     enabled: false,
   },
   {
@@ -52,6 +60,7 @@ export const MODULOS: ModuloDef[] = [
     href: '/comercial',
     icon: 'BriefcaseBusiness',
     roles: ['admin', 'direccion', 'gerente_comercial', 'vendedor', 'asistente_comercial'],
+    empresas: ['tecnophos', 'adc'],
     enabled: true,
   },
 ]
