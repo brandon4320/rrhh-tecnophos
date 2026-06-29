@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { getEstadoVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
-import { format, differenceInDays } from 'date-fns'
+import { getEstadoVencimiento, diasHastaVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
+import { format } from 'date-fns'
 import Link from 'next/link'
 import { VencimientosFilters } from './VencimientosFilters'
 
@@ -35,8 +35,6 @@ export default async function VencimientosPage({
     supabase.from('empresas').select('*').order('nombre'),
     supabase.from('tipos_certificado').select('id, nombre').order('orden'),
   ])
-
-  const hoy = new Date()
 
   const filtered = (certs ?? []).filter((c) => {
     const entitySlug = c.empleado?.empresa?.slug ?? c.vehiculo?.empresa?.slug ?? c.equipo?.empresa?.slug ?? c.empresa?.slug ?? ''
@@ -94,7 +92,7 @@ export default async function VencimientosPage({
             <tbody className="divide-y divide-border">
               {filtered.map((cert) => {
                 const estado_ = getEstadoVencimiento(cert.fecha_vencimiento)
-                const dias = differenceInDays(new Date(cert.fecha_vencimiento!), hoy)
+                const dias = diasHastaVencimiento(cert.fecha_vencimiento!)
                 const empSlug = cert.empleado?.empresa?.slug ?? cert.vehiculo?.empresa?.slug ?? cert.equipo?.empresa?.slug ?? cert.empresa?.slug ?? ''
                 const empNombre = cert.empleado?.empresa?.nombre ?? cert.vehiculo?.empresa?.nombre ?? cert.equipo?.empresa?.nombre ?? cert.empresa?.nombre ?? '—'
                 const nombreEmpleado = [cert.empleado?.nombre, cert.empleado?.apellido].filter(Boolean).join(' ')
@@ -130,7 +128,7 @@ export default async function VencimientosPage({
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       <p className="font-mono text-foreground">
-                        {format(new Date(cert.fecha_vencimiento!), 'dd/MM/yyyy')}
+                        {format(new Date(cert.fecha_vencimiento!.slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy')}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {dias < 0

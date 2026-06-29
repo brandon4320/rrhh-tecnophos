@@ -42,15 +42,23 @@ export type Certificado = Tables<'certificados'> & {
 // ============================================================
 export type EstadoVencimiento = 'vencido' | 'proximo' | 'vigente' | 'sin_fecha'
 
+/** Días entre hoy y la fecha de vencimiento, normalizando ambas a mediodía
+ *  local para evitar el corrimiento de un día en UTC-3 (Argentina). Negativo
+ *  = ya venció. Acepta 'YYYY-MM-DD' o timestamps ISO (toma los primeros 10). */
+export function diasHastaVencimiento(fecha: string): number {
+  const venc = new Date(fecha.slice(0, 10) + 'T12:00:00')
+  const hoy = new Date()
+  hoy.setHours(12, 0, 0, 0)
+  return Math.round((venc.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
+}
+
 export function getEstadoVencimiento(
   fecha?: string | null,
   alertaDias?: number | null
 ): EstadoVencimiento {
   if (!fecha) return 'sin_fecha'
   const dias = alertaDias ?? 30
-  const hoy = new Date()
-  const vencimiento = new Date(fecha)
-  const diffDias = Math.floor((vencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
+  const diffDias = diasHastaVencimiento(fecha)
   if (diffDias < 0) return 'vencido'
   if (diffDias <= dias) return 'proximo'
   return 'vigente'

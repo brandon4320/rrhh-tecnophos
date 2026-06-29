@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { getEstadoVencimiento, ESTADO_COLORS } from '@/types'
-import { format, differenceInDays } from 'date-fns'
+import { getEstadoVencimiento, diasHastaVencimiento, ESTADO_COLORS } from '@/types'
+import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
@@ -115,7 +115,7 @@ export default async function DashboardPage() {
               <div className="divide-y">
                 {alertas.map((cert) => {
                   const estado = getEstadoVencimiento(cert.fecha_vencimiento)
-                  const dias = differenceInDays(new Date(cert.fecha_vencimiento!), hoy)
+                  const dias = diasHastaVencimiento(cert.fecha_vencimiento!)
                   const nombreEmpleado = [cert.empleado?.nombre, cert.empleado?.apellido].filter(Boolean).join(' ')
                   const nombre = cert.empleado
                     ? nombreEmpleado
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
                           {estado === 'vencido' ? `hace ${Math.abs(dias)}d` : `${dias}d`}
                         </Badge>
                         <p className="mt-1 text-xs tabular-nums text-muted-foreground">
-                          {format(new Date(cert.fecha_vencimiento!), 'dd/MM/yyyy')}
+                          {format(new Date(cert.fecha_vencimiento!.slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy')}
                         </p>
                       </div>
                     </Link>
