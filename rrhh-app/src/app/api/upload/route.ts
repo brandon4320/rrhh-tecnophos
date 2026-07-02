@@ -63,7 +63,12 @@ export async function POST(request: NextRequest) {
   const path = `${empresaSlug}/${empleadoId || 'general'}/${certId}/${Date.now()}.${ext}`
   const buffer = Buffer.from(await file.arrayBuffer())
 
-  await uploadToR2(path, buffer, file.type)
+  // Responder siempre JSON: si R2 falla, que el cliente reciba el motivo
+  try {
+    await uploadToR2(path, buffer, file.type)
+  } catch {
+    return NextResponse.json({ error: 'No se pudo guardar el archivo en el almacenamiento.' }, { status: 502 })
+  }
 
   const { data: archivo, error } = await supabase
     .from('archivos')

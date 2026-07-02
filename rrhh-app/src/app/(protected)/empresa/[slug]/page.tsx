@@ -165,12 +165,12 @@ export default async function EmpresaPage({
                     const certs = emp.certificados ?? []
                     const estado = certs.length > 0 ? peorEstado(certs) : 'sin_fecha'
                     const vencidos = certs.filter(
-                      (c: { fecha_vencimiento?: string | null }) =>
-                        getEstadoVencimiento(c.fecha_vencimiento) === 'vencido'
+                      (c: { fecha_vencimiento?: string | null; alerta_dias?: number | null }) =>
+                        getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias) === 'vencido'
                     ).length
                     const proximos = certs.filter(
-                      (c: { fecha_vencimiento?: string | null }) =>
-                        getEstadoVencimiento(c.fecha_vencimiento) === 'proximo'
+                      (c: { fecha_vencimiento?: string | null; alerta_dias?: number | null }) =>
+                        getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias) === 'proximo'
                     ).length
 
                     return (

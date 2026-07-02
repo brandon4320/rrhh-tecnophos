@@ -28,7 +28,11 @@ export default async function EmpleadosPage({
     .eq('activo', true)
     .order('nombre')
 
-  if (q) query = query.ilike('nombre', `%${q}%`)
+  if (q) {
+    // buscar por nombre O apellido (sanitizar caracteres que rompen el .or de PostgREST)
+    const term = q.replace(/[%,()]/g, ' ').trim()
+    if (term) query = query.or(`nombre.ilike.%${term}%,apellido.ilike.%${term}%`)
+  }
   if (empresa) {
     const { data: emp } = await supabase.from('empresas').select('id').eq('slug', empresa).single()
     if (emp) query = query.eq('empresa_id', emp.id)

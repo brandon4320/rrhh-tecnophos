@@ -4,6 +4,7 @@ import { useMemo, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { subirArchivo } from '@/lib/upload-client'
 import { getEstadoVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
@@ -105,12 +106,17 @@ export default function LegajoClient({
   }
 
   async function handleSave() {
+    if (form.tipo_id === 'otro' && !form.tipo_nombre_custom.trim()) {
+      toast.error('Especificá el nombre del certificado.')
+      return
+    }
     setSaving(true)
 
     const payload = {
       empleado_id: empleado.id,
-      tipo_id: form.tipo_id || null,
-      tipo_nombre_custom: form.tipo_id === 'otro' ? form.tipo_nombre_custom : null,
+      // "otro" no es un UUID: el tipo custom va en tipo_nombre_custom
+      tipo_id: form.tipo_id === 'otro' ? null : form.tipo_id || null,
+      tipo_nombre_custom: form.tipo_id === 'otro' ? form.tipo_nombre_custom.trim() : null,
       fecha_vencimiento: form.fecha_vencimiento || null,
       fecha_emision: form.fecha_emision || null,
       numero_documento: form.numero_documento || null,
@@ -126,11 +132,15 @@ export default function LegajoClient({
         .select('*, tipo:tipos_certificado(nombre, orden), archivos(*)')
         .single()
 
-      if (!error && data) {
-        setCerts((prev) =>
-          prev.map((c) => (c.id === editingId ? { ...data, archivos: c.archivos } : c))
-        )
+      setSaving(false)
+      if (error || !data) {
+        toast.error('No se pudo guardar el certificado.')
+        return // el form queda abierto, no se pierde lo tipeado
       }
+      setCerts((prev) =>
+        prev.map((c) => (c.id === editingId ? { ...data, archivos: c.archivos } : c))
+      )
+      toast.success('Certificado actualizado')
     } else {
       const { data, error } = await supabase
         .from('certificados')
@@ -138,18 +148,24 @@ export default function LegajoClient({
         .select('*, tipo:tipos_certificado(nombre, orden), archivos(*)')
         .single()
 
-      if (!error && data) {
-        setCerts((prev) => [...prev, { ...data, archivos: [] }])
+      setSaving(false)
+      if (error || !data) {
+        toast.error('No se pudo agregar el certificado.')
+        return
       }
+      setCerts((prev) => [...prev, { ...data, archivos: [] }])
+      toast.success('Certificado agregado')
     }
-
-    setSaving(false)
     resetForm()
   }
 
   async function handleDelete(certId: string) {
     if (!confirm('¿Eliminar este certificado?')) return
-    await supabase.from('certificados').delete().eq('id', certId)
+    const { error } = await supabase.from('certificados').delete().eq('id', certId)
+    if (error) {
+      toast.error('No se pudo eliminar el certificado.')
+      return
+    }
     setCerts((prev) => prev.filter((c) => c.id !== certId))
   }
 
@@ -240,10 +256,10 @@ export default function LegajoClient({
 
   const slug = empleado.empresa?.slug ?? ''
   const vencidos = certs.filter(
-    (c) => getEstadoVencimiento(c.fecha_vencimiento) === 'vencido'
+    (c) => getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias) === 'vencido'
   ).length
   const proximos = certs.filter(
-    (c) => getEstadoVencimiento(c.fecha_vencimiento) === 'proximo'
+    (c) => getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias) === 'proximo'
   ).length
 
   return (

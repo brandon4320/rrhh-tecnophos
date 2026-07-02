@@ -126,7 +126,8 @@ export default function EquiposClient({
 
     const payload = {
       equipo_id: equipoId,
-      tipo_id: form.tipo_id || null,
+      // "otro" no es un UUID: el tipo custom va en tipo_nombre_custom
+      tipo_id: form.tipo_id === 'otro' ? null : form.tipo_id || null,
       tipo_nombre_custom: form.tipo_id === 'otro' ? form.tipo_nombre_custom : null,
       fecha_vencimiento: form.fecha_vencimiento || null,
       notas: form.notas || null,

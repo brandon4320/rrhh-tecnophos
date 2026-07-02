@@ -39,7 +39,7 @@ export default async function VencimientosPage({
   const filtered = (certs ?? []).filter((c) => {
     const entitySlug = c.empleado?.empresa?.slug ?? c.vehiculo?.empresa?.slug ?? c.equipo?.empresa?.slug ?? c.empresa?.slug ?? ''
     const tipoId = c.tipo?.id ?? ''
-    const est = getEstadoVencimiento(c.fecha_vencimiento)
+    const est = getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias)
 
     if (empresa && entitySlug !== empresa) return false
     if (tipo && tipoId !== tipo) return false
@@ -91,7 +91,7 @@ export default async function VencimientosPage({
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((cert) => {
-                const estado_ = getEstadoVencimiento(cert.fecha_vencimiento)
+                const estado_ = getEstadoVencimiento(cert.fecha_vencimiento, cert.alerta_dias)
                 const dias = diasHastaVencimiento(cert.fecha_vencimiento!)
                 const empSlug = cert.empleado?.empresa?.slug ?? cert.vehiculo?.empresa?.slug ?? cert.equipo?.empresa?.slug ?? cert.empresa?.slug ?? ''
                 const empNombre = cert.empleado?.empresa?.nombre ?? cert.vehiculo?.empresa?.nombre ?? cert.equipo?.empresa?.nombre ?? cert.empresa?.nombre ?? '—'

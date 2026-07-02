@@ -36,8 +36,8 @@ export default async function DashboardPage() {
 
   const hoy = new Date()
 
-  const vencidos = (certs ?? []).filter((c) => getEstadoVencimiento(c.fecha_vencimiento) === 'vencido')
-  const proximos = (certs ?? []).filter((c) => getEstadoVencimiento(c.fecha_vencimiento) === 'proximo')
+  const vencidos = (certs ?? []).filter((c) => getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias) === 'vencido')
+  const proximos = (certs ?? []).filter((c) => getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias) === 'proximo')
   const alertas = [...vencidos, ...proximos].slice(0, 20)
 
   const byEmpresa = (empresas ?? []).map((emp) => ({
@@ -45,11 +45,11 @@ export default async function DashboardPage() {
     total: (empleados ?? []).filter((e) => e.empresa_id === emp.id).length,
     vencidos: (certs ?? []).filter((c) => {
       const empId = c.empleado?.empresa_id ?? c.vehiculo?.empresa_id ?? c.empresa?.id ?? null
-      return empId === emp.id && getEstadoVencimiento(c.fecha_vencimiento) === 'vencido'
+      return empId === emp.id && getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias) === 'vencido'
     }).length,
     proximos: (certs ?? []).filter((c) => {
       const empId = c.empleado?.empresa_id ?? c.vehiculo?.empresa_id ?? c.empresa?.id ?? null
-      return empId === emp.id && getEstadoVencimiento(c.fecha_vencimiento) === 'proximo'
+      return empId === emp.id && getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias) === 'proximo'
     }).length,
   }))
 
@@ -84,11 +84,11 @@ export default async function DashboardPage() {
 
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Por vencer (30 días)</p>
+            <p className="text-sm text-muted-foreground">Por vencer</p>
             <p className="mt-1 text-3xl font-semibold tabular-nums text-amber-600 dark:text-amber-400">
               {proximos.length}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">en los próximos 30 días</p>
+            <p className="mt-1 text-xs text-muted-foreground">dentro de su ventana de alerta</p>
           </CardContent>
         </Card>
       </div>
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
             ) : (
               <div className="divide-y">
                 {alertas.map((cert) => {
-                  const estado = getEstadoVencimiento(cert.fecha_vencimiento)
+                  const estado = getEstadoVencimiento(cert.fecha_vencimiento, cert.alerta_dias)
                   const dias = diasHastaVencimiento(cert.fecha_vencimiento!)
                   const nombreEmpleado = [cert.empleado?.nombre, cert.empleado?.apellido].filter(Boolean).join(' ')
                   const nombre = cert.empleado
