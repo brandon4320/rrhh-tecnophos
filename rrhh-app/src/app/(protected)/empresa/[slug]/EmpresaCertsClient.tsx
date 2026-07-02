@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { subirArchivo } from '@/lib/upload-client'
 import { getEstadoVencimiento, ESTADO_COLORS } from '@/types'
 
 interface Archivo {
@@ -157,23 +158,15 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
   async function handleUploadArchivo(certId: string, files: FileList) {
     setUploadingCert(certId)
     for (const file of Array.from(files)) {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('certId', certId)
-      fd.append('empresaSlug', empresaSlug)
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
-      if (res.ok) {
-        const { archivo } = await res.json()
-        if (archivo) {
-          setCerts((prev) =>
-            prev.map((c) =>
-              c.id === certId ? { ...c, archivos: [...(c.archivos ?? []), archivo] } : c
-            )
+      try {
+        const archivo = await subirArchivo(file, certId, { empresaSlug })
+        setCerts((prev) =>
+          prev.map((c) =>
+            c.id === certId ? { ...c, archivos: [...(c.archivos ?? []), archivo] } : c
           )
-        }
-      } else {
-        const payload = await res.json().catch(() => null)
-        alert(payload?.error ?? 'No se pudo subir el archivo.')
+        )
+      } catch (e) {
+        alert(e instanceof Error ? e.message : 'No se pudo subir el archivo.')
       }
     }
     setUploadingCert(null)

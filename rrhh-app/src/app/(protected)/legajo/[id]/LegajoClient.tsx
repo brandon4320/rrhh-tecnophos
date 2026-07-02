@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { subirArchivo } from '@/lib/upload-client'
 import { getEstadoVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
 import type { Empleado, TipoCertificado, Empresa, Archivo } from '@/types'
 import type { Tables } from '@/types/database'
@@ -203,26 +204,18 @@ export default function LegajoClient({
     setUploading(certId)
 
     for (const file of Array.from(files)) {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('certId', certId)
-      fd.append('empleadoId', empleado.id)
-      fd.append('empresaSlug', empleado.empresa?.slug ?? '')
-
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
-
-      if (res.ok) {
-        const { archivo } = await res.json()
-        if (archivo) {
-          setCerts((prev) =>
-            prev.map((c) =>
-              c.id === certId ? { ...c, archivos: [...c.archivos, archivo] } : c
-            )
+      try {
+        const archivo = await subirArchivo(file, certId, {
+          empleadoId: empleado.id,
+          empresaSlug: empleado.empresa?.slug ?? '',
+        })
+        setCerts((prev) =>
+          prev.map((c) =>
+            c.id === certId ? { ...c, archivos: [...c.archivos, archivo] } : c
           )
-        }
-      } else {
-        const payload = await res.json().catch(() => null)
-        alert(payload?.error ?? 'No se pudo guardar el archivo.')
+        )
+      } catch (e) {
+        alert(e instanceof Error ? e.message : 'No se pudo guardar el archivo.')
       }
     }
 

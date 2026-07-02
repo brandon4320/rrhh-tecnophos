@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
+import { subirArchivo } from '@/lib/upload-client'
 import { getEstadoVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
 import type { Equipo, TipoCertificado } from '@/types'
 import clsx from 'clsx'
@@ -201,25 +202,17 @@ export default function EquiposClient({
   async function handleUploadArchivo(equipoId: string, certId: string, files: FileList) {
     setUploadingCert(certId)
     for (const file of Array.from(files)) {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('certId', certId)
-      fd.append('empresaSlug', empresaSlug)
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
-      if (res.ok) {
-        const { archivo } = await res.json()
-        if (archivo) {
-          setEquipos((prev) =>
-            prev.map((eq) =>
-              eq.id === equipoId
-                ? { ...eq, certificados: eq.certificados.map((c) => (c.id === certId ? { ...c, archivos: [...(c.archivos ?? []), archivo] } : c)) }
-                : eq
-            )
+      try {
+        const archivo = await subirArchivo(file, certId, { empresaSlug })
+        setEquipos((prev) =>
+          prev.map((eq) =>
+            eq.id === equipoId
+              ? { ...eq, certificados: eq.certificados.map((c) => (c.id === certId ? { ...c, archivos: [...(c.archivos ?? []), archivo] } : c)) }
+              : eq
           )
-        }
-      } else {
-        const payload = await res.json().catch(() => null)
-        alert(payload?.error ?? 'No se pudo subir el archivo.')
+        )
+      } catch (e) {
+        alert(e instanceof Error ? e.message : 'No se pudo subir el archivo.')
       }
     }
     setUploadingCert(null)

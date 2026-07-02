@@ -21,6 +21,34 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Modo registro (JSON): el archivo ya se subió directo a R2 con URL
+  // prefirmada (/api/upload-url); acá solo insertamos la fila (gated por RLS).
+  if (request.headers.get('content-type')?.includes('application/json')) {
+    const body = await request.json().catch(() => null)
+    const certId = (body?.certId as string) || ''
+    const path = (body?.path as string) || ''
+    const nombre = (body?.nombre as string) || ''
+    if (!certId || !path || !nombre) {
+      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+    }
+
+    const { data: archivo, error } = await supabase
+      .from('archivos')
+      .insert({
+        certificado_id: certId,
+        nombre,
+        path,
+        mime_type: (body?.mimeType as string) || null,
+        size_bytes: typeof body?.sizeBytes === 'number' ? body.sizeBytes : null,
+        uploaded_by: user.id,
+      })
+      .select()
+      .single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ archivo })
+  }
+
   const formData = await request.formData()
   const file = formData.get('file') as File
   const certId = formData.get('certId') as string

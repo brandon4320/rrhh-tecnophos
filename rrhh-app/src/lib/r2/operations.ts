@@ -33,3 +33,19 @@ export async function getSignedDownloadUrl(
     { expiresIn }
   )
 }
+
+/**
+ * URL prefirmada para que el navegador suba DIRECTO a R2 (PUT).
+ * Evita el límite de 4.5MB por request de las funciones de Vercel.
+ */
+export async function getSignedUploadUrl(
+  path: string,
+  contentType: string,
+  expiresIn = 300
+): Promise<string> {
+  return getSignedUrl(
+    r2,
+    new PutObjectCommand({ Bucket: R2_BUCKET, Key: path, ContentType: contentType }),
+    { expiresIn }
+  )
+}
