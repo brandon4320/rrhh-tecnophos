@@ -7,11 +7,14 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Monograma } from '@/components/ui/monograma'
+import { modulosPara } from '@/config/modules'
+import type { Rol } from '@/lib/auth/roles'
 import {
-  Home,
   LayoutDashboard,
-  Users,
-  CalendarClock,
+  IdCard,
+  ClipboardList,
+  BriefcaseBusiness,
+  Wrench,
   ShieldCheck,
   UserPlus,
   LogOut,
@@ -36,6 +39,14 @@ interface Props {
 
 const STORAGE_KEY = 'empresa_activa'
 
+// Íconos por módulo (registro en src/config/modules.ts)
+const MODULO_ICON: Record<string, LucideIcon> = {
+  rrhh: IdCard,
+  limpieza: ClipboardList,
+  comercial: BriefcaseBusiness,
+  mantenimiento: Wrench,
+}
+
 export default function AppShell({ empresas, sesion, children }: Props) {
   const pathname = usePathname()
   const router = useRouter()
@@ -55,7 +66,7 @@ export default function AppShell({ empresas, sesion, children }: Props) {
       }
       const guardada = localStorage.getItem(STORAGE_KEY)
       if (guardada) setPreferida(guardada)
-    } catch { /* SSR/privacidad: sin preferencia */ }
+    } catch { /* sin preferencia */ }
   }, [pathname])
 
   const slugEnPath = pathname.startsWith('/empresa/') ? pathname.split('/')[2] : null
@@ -88,28 +99,23 @@ export default function AppShell({ empresas, sesion, children }: Props) {
   }
 
   const esAdmin = sesion.rol === 'admin'
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
-  // Ítems del rail (accesos globales)
-  const railItems: { href: string; label: string; icon: LucideIcon }[] = [
-    { href: '/dashboard', label: 'Resumen general', icon: LayoutDashboard },
-    { href: '/empleados', label: 'Empleados', icon: Users },
-    { href: '/vencimientos', label: 'Vencimientos', icon: CalendarClock },
-  ]
+  // Rail = cambiar de MÓDULO (una sola función). Estamos en RRHH.
+  const modulos = modulosPara(sesion.rol as Rol)
 
   // Vistas de la empresa activa (panel)
   const vistas = activa
     ? [
         { key: 'resumen', label: 'Resumen', href: `/empresa/${activa.slug}`, active: pathname === `/empresa/${activa.slug}` },
-        { key: 'empleados', label: 'Empleados', href: `/empleados?empresa=${activa.slug}`, active: false },
-        { key: 'vencimientos', label: 'Vencimientos', href: `/vencimientos?empresa=${activa.slug}`, active: false },
+        { key: 'empleados', label: 'Empleados', href: `/empleados?empresa=${activa.slug}`, active: pathname.startsWith('/empleados') },
+        { key: 'vencimientos', label: 'Vencimientos', href: `/vencimientos?empresa=${activa.slug}`, active: pathname.startsWith('/vencimientos') },
         { key: 'documentacion', label: 'Documentación', href: `/empresa/${activa.slug}?vista=documentacion`, active: false },
       ]
     : []
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
-      {/* ── Rail oscuro ── */}
+      {/* ── Rail oscuro: cambiar de módulo ── */}
       <aside className="flex w-16 shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar py-4">
         <Link
           href="/"
@@ -120,50 +126,25 @@ export default function AppShell({ empresas, sesion, children }: Props) {
         </Link>
 
         <nav className="flex flex-1 flex-col items-center gap-1.5">
-          {railItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              className={cn(
-                'flex size-10 items-center justify-center rounded-xl transition-colors',
-                isActive(item.href)
-                  ? 'bg-sidebar-accent text-white'
-                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-white'
-              )}
-            >
-              <item.icon className="size-[18px]" strokeWidth={1.75} />
-            </Link>
-          ))}
-          {esAdmin && (
-            <>
-              <div className="my-2 h-px w-8 bg-sidebar-border" />
+          {modulos.map((m) => {
+            const Icon = MODULO_ICON[m.key] ?? LayoutDashboard
+            const esRrhh = m.key === 'rrhh' // estamos dentro de RRHH
+            return (
               <Link
-                href="/admin/empleados/nuevo"
-                title="Nuevo empleado"
+                key={m.key}
+                href={m.href}
+                title={m.label}
                 className={cn(
                   'flex size-10 items-center justify-center rounded-xl transition-colors',
-                  isActive('/admin/empleados')
+                  esRrhh
                     ? 'bg-sidebar-accent text-white'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-white'
                 )}
               >
-                <UserPlus className="size-[18px]" strokeWidth={1.75} />
+                <Icon className="size-[18px]" strokeWidth={1.75} />
               </Link>
-              <Link
-                href="/admin/usuarios"
-                title="Usuarios"
-                className={cn(
-                  'flex size-10 items-center justify-center rounded-xl transition-colors',
-                  isActive('/admin/usuarios')
-                    ? 'bg-sidebar-accent text-white'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-white'
-                )}
-              >
-                <ShieldCheck className="size-[18px]" strokeWidth={1.75} />
-              </Link>
-            </>
-          )}
+            )
+          })}
         </nav>
 
         <div className="flex flex-col items-center gap-2">
@@ -184,16 +165,32 @@ export default function AppShell({ empresas, sesion, children }: Props) {
         </div>
       </aside>
 
-      {/* ── Panel claro ── */}
+      {/* ── Panel claro: navegación completa de RRHH ── */}
       <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
         <div className="px-5 pb-2 pt-5">
           <p className="text-base font-semibold tracking-tight">Gestión</p>
           <p className="text-xs text-muted-foreground">Tecnophos · ADC · Serviwhite</p>
         </div>
 
+        {/* Vista global */}
+        <div className="px-3 pt-3">
+          <Link
+            href="/dashboard"
+            className={cn(
+              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              pathname.startsWith('/dashboard')
+                ? 'bg-accent text-accent-foreground'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            )}
+          >
+            <LayoutDashboard className="size-4 shrink-0" strokeWidth={1.75} />
+            Dashboard general
+          </Link>
+        </div>
+
         {/* Empresa activa */}
         {activa && (
-          <div className="relative px-3 pt-4">
+          <div className="relative px-3 pt-5">
             <p className="px-2 pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Empresa activa
             </p>
@@ -235,8 +232,8 @@ export default function AppShell({ empresas, sesion, children }: Props) {
           </div>
         )}
 
-        {/* Vistas de la empresa activa */}
         <nav className="flex-1 overflow-y-auto px-3 py-5">
+          {/* Vistas de la empresa activa */}
           <p className="px-2 pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Vistas
           </p>
@@ -283,6 +280,41 @@ export default function AppShell({ empresas, sesion, children }: Props) {
                     </span>
                   </Link>
                 ))}
+              </div>
+            </>
+          )}
+
+          {/* Administración */}
+          {esAdmin && (
+            <>
+              <p className="px-2 pb-2 pt-6 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Administración
+              </p>
+              <div className="space-y-0.5">
+                <Link
+                  href="/admin/empleados/nuevo"
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    pathname.startsWith('/admin/empleados')
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  <UserPlus className="size-4 shrink-0" strokeWidth={1.75} />
+                  Nuevo empleado
+                </Link>
+                <Link
+                  href="/admin/usuarios"
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    pathname.startsWith('/admin/usuarios')
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  <ShieldCheck className="size-4 shrink-0" strokeWidth={1.75} />
+                  Usuarios
+                </Link>
               </div>
             </>
           )}
