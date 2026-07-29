@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { subirArchivo } from '@/lib/upload-client'
-import { getEstadoVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
+import { getEstadoVencimiento } from '@/types'
+import { EstadoPill } from '@/components/ui/estado-pill'
 import type { Vehiculo, TipoCertificado } from '@/types'
 import clsx from 'clsx'
 
@@ -224,11 +225,11 @@ export default function VehiculosClient({
 
           const estadoColor =
             {
-              vencido: 'bg-red-500',
-              proximo: 'bg-amber-400',
-              vigente: 'bg-green-500',
-              sin_fecha: 'bg-slate-600',
-            }[worstEstado] ?? 'bg-slate-600'
+              vencido: 'bg-danger',
+              proximo: 'bg-warning',
+              vigente: 'bg-success',
+              sin_fecha: 'bg-muted-foreground/40',
+            }[worstEstado] ?? 'bg-muted-foreground/40'
 
           return (
             <div key={veh.id} className="bg-card rounded-xl border border-border overflow-hidden">
@@ -298,16 +299,13 @@ export default function VehiculosClient({
                                 )}
                               </div>
 
-                              <span
-                                className={clsx(
-                                  'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border shrink-0',
-                                  ESTADO_COLORS[estado]
-                                )}
-                              >
-                                {cert.fecha_vencimiento
+                              <EstadoPill
+                                estado={estado}
+                                className="shrink-0"
+                                label={cert.fecha_vencimiento
                                   ? format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')
-                                  : ESTADO_LABELS[estado]}
-                              </span>
+                                  : undefined}
+                              />
 
                               {canEdit && (
                                 <div className="flex items-center gap-2 shrink-0">
@@ -360,7 +358,7 @@ export default function VehiculosClient({
                                 <button
                                   onClick={() => handleSave(veh.id)}
                                   disabled={saving || !form.tipo_id}
-                                  className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg"
+                                  className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
                                 >
                                   {saving ? 'Guardando...' : 'Guardar'}
                                 </button>
@@ -390,7 +388,7 @@ export default function VehiculosClient({
                         <button
                           onClick={() => handleSave(veh.id)}
                           disabled={saving || !form.tipo_id}
-                          className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg"
+                          className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
                         >
                           {saving ? 'Guardando...' : 'Agregar'}
                         </button>

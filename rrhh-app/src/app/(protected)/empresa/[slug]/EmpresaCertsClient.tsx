@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { subirArchivo } from '@/lib/upload-client'
-import { getEstadoVencimiento, ESTADO_COLORS } from '@/types'
+import { getEstadoVencimiento } from '@/types'
+import { EstadoPill } from '@/components/ui/estado-pill'
 
 interface Archivo {
   id: string
@@ -265,7 +266,7 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
             <button
               onClick={handleCreate}
               disabled={savingNew}
-              className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+              className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg transition-colors"
             >
               {savingNew ? 'Guardando...' : 'Agregar habilitación'}
             </button>
@@ -314,13 +315,12 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
                     </div>
                     <div className="flex items-center gap-3">
                       {!isEditing && (
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${ESTADO_COLORS[estado]}`}
-                        >
-                          {cert.fecha_vencimiento
+                        <EstadoPill
+                          estado={estado}
+                          label={cert.fecha_vencimiento
                             ? format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')
-                            : '—'}
-                        </span>
+                            : undefined}
+                        />
                       )}
                       {canEdit && !isEditing && (
                         <>
@@ -391,7 +391,7 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
                         <button
                           onClick={() => handleSave(cert.id)}
                           disabled={saving}
-                          className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+                          className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg transition-colors"
                         >
                           {saving ? 'Guardando...' : 'Guardar cambios'}
                         </button>

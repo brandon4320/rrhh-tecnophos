@@ -7,20 +7,14 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Monograma } from '@/components/ui/monograma'
-import { modulosPara } from '@/config/modules'
-import type { Rol } from '@/lib/auth/roles'
 import {
   LayoutDashboard,
-  IdCard,
-  ClipboardList,
-  BriefcaseBusiness,
-  Wrench,
   ShieldCheck,
   UserPlus,
   LogOut,
+  Home,
   ChevronsUpDown,
   Check,
-  type LucideIcon,
 } from 'lucide-react'
 
 export interface EmpresaNav {
@@ -38,14 +32,6 @@ interface Props {
 }
 
 const STORAGE_KEY = 'empresa_activa'
-
-// Íconos por módulo (registro en src/config/modules.ts)
-const MODULO_ICON: Record<string, LucideIcon> = {
-  rrhh: IdCard,
-  limpieza: ClipboardList,
-  comercial: BriefcaseBusiness,
-  mantenimiento: Wrench,
-}
 
 export default function AppShell({ empresas, sesion, children }: Props) {
   const pathname = usePathname()
@@ -100,10 +86,6 @@ export default function AppShell({ empresas, sesion, children }: Props) {
 
   const esAdmin = sesion.rol === 'admin'
 
-  // Rail = cambiar de MÓDULO (una sola función). Estamos en RRHH.
-  const modulos = modulosPara(sesion.rol as Rol)
-
-  // Vistas de la empresa activa (panel)
   const vistas = activa
     ? [
         { key: 'resumen', label: 'Resumen', href: `/empresa/${activa.slug}`, active: pathname === `/empresa/${activa.slug}` },
@@ -113,60 +95,18 @@ export default function AppShell({ empresas, sesion, children }: Props) {
       ]
     : []
 
+  const itemCls = (active: boolean) =>
+    cn(
+      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+      active
+        ? 'bg-accent text-accent-foreground'
+        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+    )
+
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
-      {/* ── Rail oscuro: cambiar de módulo ── */}
-      <aside className="flex w-16 shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar py-4">
-        <Link
-          href="/"
-          title="Inicio"
-          className="mb-6 flex size-10 items-center justify-center rounded-xl bg-sidebar-primary text-sm font-bold text-white transition-opacity hover:opacity-90"
-        >
-          G
-        </Link>
-
-        <nav className="flex flex-1 flex-col items-center gap-1.5">
-          {modulos.map((m) => {
-            const Icon = MODULO_ICON[m.key] ?? LayoutDashboard
-            const esRrhh = m.key === 'rrhh' // estamos dentro de RRHH
-            return (
-              <Link
-                key={m.key}
-                href={m.href}
-                title={m.label}
-                className={cn(
-                  'flex size-10 items-center justify-center rounded-xl transition-colors',
-                  esRrhh
-                    ? 'bg-sidebar-accent text-white'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-white'
-                )}
-              >
-                <Icon className="size-[18px]" strokeWidth={1.75} />
-              </Link>
-            )
-          })}
-        </nav>
-
-        <div className="flex flex-col items-center gap-2">
-          <ThemeToggle className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-white" />
-          <button
-            onClick={handleLogout}
-            title="Cerrar sesión"
-            className="flex size-8 items-center justify-center rounded-md text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-white"
-          >
-            <LogOut className="size-4" strokeWidth={1.75} />
-          </button>
-          <span
-            title={sesion.nombre ?? sesion.email ?? ''}
-            className="mt-1 flex size-9 items-center justify-center rounded-full bg-sidebar-accent text-xs font-semibold text-white"
-          >
-            {(sesion.nombre ?? sesion.email ?? 'U')[0].toUpperCase()}
-          </span>
-        </div>
-      </aside>
-
-      {/* ── Panel claro: navegación completa de RRHH ── */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
+      {/* ── Sidebar única (clara) ── */}
+      <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card">
         <div className="px-5 pb-2 pt-5">
           <p className="text-base font-semibold tracking-tight">Gestión</p>
           <p className="text-xs text-muted-foreground">Tecnophos · ADC · Serviwhite</p>
@@ -174,15 +114,7 @@ export default function AppShell({ empresas, sesion, children }: Props) {
 
         {/* Vista global */}
         <div className="px-3 pt-3">
-          <Link
-            href="/dashboard"
-            className={cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-              pathname.startsWith('/dashboard')
-                ? 'bg-accent text-accent-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            )}
-          >
+          <Link href="/dashboard" className={itemCls(pathname.startsWith('/dashboard'))}>
             <LayoutDashboard className="size-4 shrink-0" strokeWidth={1.75} />
             Dashboard general
           </Link>
@@ -233,22 +165,12 @@ export default function AppShell({ empresas, sesion, children }: Props) {
         )}
 
         <nav className="flex-1 overflow-y-auto px-3 py-5">
-          {/* Vistas de la empresa activa */}
           <p className="px-2 pb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Vistas
           </p>
           <div className="space-y-0.5">
             {vistas.map((v) => (
-              <Link
-                key={v.key}
-                href={v.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  v.active
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                )}
-              >
+              <Link key={v.key} href={v.href} className={itemCls(v.active)}>
                 <span
                   className={cn(
                     'size-1.5 shrink-0 rounded-full',
@@ -260,7 +182,6 @@ export default function AppShell({ empresas, sesion, children }: Props) {
             ))}
           </div>
 
-          {/* Sectores de la empresa activa */}
           {activa && activa.sectores.length > 0 && (
             <>
               <p className="px-2 pb-2 pt-6 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -284,34 +205,17 @@ export default function AppShell({ empresas, sesion, children }: Props) {
             </>
           )}
 
-          {/* Administración */}
           {esAdmin && (
             <>
               <p className="px-2 pb-2 pt-6 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Administración
               </p>
               <div className="space-y-0.5">
-                <Link
-                  href="/admin/empleados/nuevo"
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    pathname.startsWith('/admin/empleados')
-                      ? 'bg-accent text-accent-foreground'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                >
+                <Link href="/admin/empleados/nuevo" className={itemCls(pathname.startsWith('/admin/empleados'))}>
                   <UserPlus className="size-4 shrink-0" strokeWidth={1.75} />
                   Nuevo empleado
                 </Link>
-                <Link
-                  href="/admin/usuarios"
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    pathname.startsWith('/admin/usuarios')
-                      ? 'bg-accent text-accent-foreground'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                >
+                <Link href="/admin/usuarios" className={itemCls(pathname.startsWith('/admin/usuarios'))}>
                   <ShieldCheck className="size-4 shrink-0" strokeWidth={1.75} />
                   Usuarios
                 </Link>
@@ -319,6 +223,32 @@ export default function AppShell({ empresas, sesion, children }: Props) {
             </>
           )}
         </nav>
+
+        {/* Footer: usuario + acciones */}
+        <div className="border-t border-border p-3">
+          <div className="flex items-center gap-2.5 px-1 py-1">
+            <Monograma nombre={sesion.nombre ?? sesion.email} size="sm" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{sesion.nombre ?? sesion.email}</p>
+              <p className="truncate text-[11px] capitalize text-muted-foreground">{sesion.rol}</p>
+            </div>
+            <Link
+              href="/"
+              title="Inicio (módulos)"
+              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Home className="size-4" strokeWidth={1.75} />
+            </Link>
+            <ThemeToggle />
+            <button
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <LogOut className="size-4" strokeWidth={1.75} />
+            </button>
+          </div>
+        </div>
       </aside>
 
       <main className="flex-1 overflow-y-auto">{children}</main>

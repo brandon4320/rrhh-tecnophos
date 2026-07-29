@@ -310,7 +310,7 @@ export default async function AdminUsuariosPage({
         )}
 
         {errorMessage && (
-          <div className="mb-5 rounded-lg border border-red-500/30 bg-red-50 px-4 py-3 text-sm text-red-400">
+          <div className="mb-5 rounded-xl border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger">
             {errorMessage}
           </div>
         )}
@@ -409,7 +409,7 @@ export default async function AdminUsuariosPage({
                     <button
                       type="submit"
                       disabled={managedUser.id === user.id}
-                      className="px-3 py-2 rounded-lg border border-red-500/30 text-sm font-medium text-red-400 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-2 rounded-lg border border-danger/30 text-sm font-medium text-danger hover:bg-danger-subtle disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Eliminar usuario
                     </button>

@@ -65,7 +65,7 @@ export default function AjustesPage() {
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:brightness-110 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50"
             >
               {uploading ? 'Subiendo...' : 'Cambiar logo'}
             </button>

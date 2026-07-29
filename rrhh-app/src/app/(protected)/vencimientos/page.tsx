@@ -1,16 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
-import { getEstadoVencimiento, diasHastaVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
+import { getEstadoVencimiento, diasHastaVencimiento } from '@/types'
 import { format } from 'date-fns'
 import Link from 'next/link'
+import { Monograma } from '@/components/ui/monograma'
+import { EstadoPill } from '@/components/ui/estado-pill'
 import { VencimientosFilters } from './VencimientosFilters'
-
-const EMPRESA_COLORS: Record<string, string> = {
-  'tecnophos-bb': 'text-primary bg-primary/10 border-primary/30',
-  'tecnophos-rosario': 'text-sky-400 bg-sky-50 border-sky-500/30',
-  'tecnophos-necochea': 'text-emerald-700 bg-emerald-50 border-emerald-200',
-  serviwhite: 'text-blue-800 bg-blue-50 border-blue-300',
-  adc: 'text-amber-400 bg-amber-50 border-amber-500/30',
-}
 
 export default async function VencimientosPage({
   searchParams,
@@ -33,7 +27,7 @@ export default async function VencimientosPage({
       `)
       .not('fecha_vencimiento', 'is', null)
       .order('fecha_vencimiento', { ascending: true }),
-    supabase.from('empresas').select('*').order('nombre'),
+    supabase.from('empresas').select('id, nombre, slug').order('nombre'),
     supabase.from('tipos_certificado').select('id, nombre').order('orden'),
   ])
 
@@ -49,10 +43,12 @@ export default async function VencimientosPage({
   })
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-foreground">Vencimientos</h1>
-        <p className="text-sm text-muted-foreground mt-1">{filtered.length} registros encontrados</p>
+    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Vencimientos</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          {filtered.length} {filtered.length === 1 ? 'registro' : 'registros'}
+        </p>
       </div>
 
       <VencimientosFilters
@@ -63,28 +59,28 @@ export default async function VencimientosPage({
         tipos={tipos ?? []}
       />
 
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-sm text-muted-foreground">
+          <div className="py-12 text-center text-sm text-muted-foreground">
             No se encontraron registros con los filtros aplicados.
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-muted">
-                <th className="text-left px-5 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+              <tr className="border-b border-border">
+                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Referencia
                 </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">
                   Empresa
                 </th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Certificado
                 </th>
-                <th className="text-center px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Vencimiento
                 </th>
-                <th className="text-center px-4 py-3 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Estado
                 </th>
                 <th className="px-4 py-3" />
@@ -102,54 +98,48 @@ export default async function VencimientosPage({
                   : cert.vehiculo
                     ? `Vehículo ${cert.vehiculo.patente}`
                     : cert.equipo
-                      ? `Equipo ${cert.equipo.nombre}`
-                      : '(Empresa)'
+                      ? cert.equipo.nombre
+                      : empNombre
                 const detailHref = cert.empleado?.id
                   ? `/legajo/${cert.empleado.id}`
-                  : cert.vehiculo?.empresa?.slug
-                    ? `/empresa/${cert.vehiculo.empresa?.slug}`
-                    : empSlug
-                      ? `/empresa/${empSlug}`
-                      : undefined
+                  : empSlug
+                    ? `/empresa/${empSlug}?vista=documentacion`
+                    : undefined
+                const relativo =
+                  dias < 0
+                    ? `hace ${Math.abs(dias)} ${Math.abs(dias) === 1 ? 'día' : 'días'}`
+                    : dias === 0
+                      ? 'vence hoy'
+                      : `en ${dias} ${dias === 1 ? 'día' : 'días'}`
 
                 return (
-                  <tr key={cert.id} className="hover:bg-accent transition-colors">
-                    <td className="px-5 py-3.5 font-medium text-foreground">{referencia}</td>
-                    <td className="px-4 py-3.5">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${
-                          EMPRESA_COLORS[empSlug] ?? 'text-muted-foreground bg-muted border-border'
-                        }`}
-                      >
-                        {empNombre}
-                      </span>
+                  <tr key={cert.id} className="transition-colors hover:bg-muted/40">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <Monograma nombre={referencia} size="sm" />
+                        <span className="font-medium">{referencia}</span>
+                      </div>
                     </td>
-                    <td className="px-4 py-3.5 text-foreground">
+                    <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{empNombre}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
                       {cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? '—'}
                     </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <p className="font-mono text-foreground">
+                    <td className="px-4 py-3">
+                      <p className="tabular-nums">
                         {format(new Date(cert.fecha_vencimiento!.slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy')}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {dias < 0
-                          ? `hace ${Math.abs(dias)} ${Math.abs(dias) === 1 ? 'día' : 'días'}`
-                          : dias === 0
-                            ? 'vence hoy'
-                            : `en ${dias} ${dias === 1 ? 'día' : 'días'}`}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{relativo}</p>
                     </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${ESTADO_COLORS[estado_]}`}
-                      >
-                        {ESTADO_LABELS[estado_]}
-                      </span>
+                    <td className="px-4 py-3">
+                      <EstadoPill estado={estado_} />
                     </td>
-                    <td className="px-4 py-3.5 text-right">
+                    <td className="px-4 py-3 text-right">
                       {detailHref && (
-                        <Link href={detailHref} className="text-xs text-primary hover:underline">
-                          Legajo →
+                        <Link
+                          href={detailHref}
+                          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                          Abrir
                         </Link>
                       )}
                     </td>

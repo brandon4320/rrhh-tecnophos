@@ -63,23 +63,21 @@ export function VencimientosFilters({
   }
 
   return (
-    <div className="bg-card rounded-xl border border-border p-4 mb-6 flex flex-wrap gap-3 items-center">
-      <span className="text-sm font-medium text-muted-foreground shrink-0">Filtrar por:</span>
-
-      <div className="flex items-center gap-1.5">
+    <div className="mb-6 flex flex-wrap items-center gap-2">
+      <div className="inline-flex items-center gap-1 rounded-xl bg-muted p-1">
         {[
           { value: '', label: 'Todos' },
-          { value: 'vencido', label: 'Vencido' },
+          { value: 'vencido', label: 'Vencidos' },
           { value: 'proximo', label: 'Por vencer' },
-          { value: 'vigente', label: 'Vigente' },
+          { value: 'vigente', label: 'Vigentes' },
         ].map((opt) => (
           <Link
             key={opt.value}
             href={buildUrl({ estado: opt.value || undefined })}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
               (estado ?? '') === opt.value
-                ? 'bg-primary text-white border-primary'
-                : 'bg-card text-muted-foreground border-border hover:border-input'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {opt.label}
@@ -87,12 +85,10 @@ export function VencimientosFilters({
         ))}
       </div>
 
-      <div className="h-4 w-px bg-muted" />
-
       <select
         value={empresa ?? ''}
         onChange={(e) => handleEmpresaChange(e.target.value)}
-        className="px-3 py-1.5 rounded-lg border border-border text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        className="rounded-xl border border-border bg-card px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
       >
         <option value="">Todas las empresas</option>
         {empresas.map((empresaItem) => (
@@ -105,7 +101,7 @@ export function VencimientosFilters({
       <select
         value={tipo ?? ''}
         onChange={(e) => handleTipoChange(e.target.value)}
-        className="px-3 py-1.5 rounded-lg border border-border text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        className="max-w-[240px] rounded-xl border border-border bg-card px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
       >
         <option value="">Todos los certificados</option>
         {tipos.map((tipoItem) => (
@@ -116,8 +112,8 @@ export function VencimientosFilters({
       </select>
 
       {(empresa || tipo || estado) && (
-        <Link href={pathname} className="text-xs text-red-500 hover:underline ml-auto">
-          Limpiar filtros
+        <Link href={pathname} className="px-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+          Limpiar
         </Link>
       )}
     </div>

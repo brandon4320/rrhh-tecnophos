@@ -101,7 +101,7 @@ export default async function NuevoEmpleadoPage({
 
       <div className="bg-card rounded-xl border border-border p-6">
         {errorMessage && (
-          <div className="mb-5 rounded-lg border border-red-500/30 bg-red-50 px-4 py-3 text-sm text-red-400">
+          <div className="mb-5 rounded-xl border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger">
             {errorMessage}
           </div>
         )}

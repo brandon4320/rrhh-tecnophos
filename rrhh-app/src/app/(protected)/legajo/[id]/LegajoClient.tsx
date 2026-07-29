@@ -7,23 +7,17 @@ import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { subirArchivo } from '@/lib/upload-client'
-import { getEstadoVencimiento, ESTADO_COLORS, ESTADO_LABELS } from '@/types'
+import { getEstadoVencimiento } from '@/types'
 import type { Empleado, TipoCertificado, Empresa, Archivo } from '@/types'
 import type { Tables } from '@/types/database'
+import { Monograma } from '@/components/ui/monograma'
+import { EstadoPill } from '@/components/ui/estado-pill'
 import clsx from 'clsx'
 
 /** Certificado tal como lo devuelve la query del legajo (con relaciones). */
 type CertConRelaciones = Tables<'certificados'> & {
   tipo: { nombre: string; orden: number | null } | null
   archivos: Archivo[]
-}
-
-const EMPRESA_COLORS: Record<string, string> = {
-  'tecnophos-bb': 'bg-indigo-500',
-  'tecnophos-rosario': 'bg-sky-500',
-  'tecnophos-necochea': 'bg-emerald-500',
-  serviwhite: 'bg-blue-800',
-  adc: 'bg-amber-500',
 }
 
 interface Props {
@@ -264,28 +258,21 @@ export default function LegajoClient({
   ).length
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <Link href={`/empresa/${slug}`} className="hover:text-muted-foreground transition-colors">
+    <div className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
+        <Link href={`/empresa/${slug}`} className="transition-colors hover:text-foreground">
           {empleado.empresa?.nombre}
         </Link>
         <span>/</span>
-        <span className="text-foreground font-medium">{nombreCompleto}</span>
+        <span className="font-medium text-foreground">{nombreCompleto}</span>
       </div>
 
-      <div className="flex items-start justify-between mb-8 gap-4">
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div
-            className={clsx(
-              'w-12 h-12 rounded-xl flex items-center justify-center text-white font-semibold text-lg',
-              EMPRESA_COLORS[slug] ?? 'bg-slate-600'
-            )}
-          >
-            {(nombreCompleto || 'E')[0].toUpperCase()}
-          </div>
+          <Monograma nombre={nombreCompleto} size="lg" variant="accent" />
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">{nombreCompleto}</h1>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <h1 className="text-2xl font-semibold tracking-tight">{nombreCompleto}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
               <span className="text-sm text-muted-foreground">{empleado.empresa?.nombre}</span>
               {empleadoData.sector && (
                 <>
@@ -293,58 +280,40 @@ export default function LegajoClient({
                   <span className="text-sm text-muted-foreground">{empleadoData.sector}</span>
                 </>
               )}
+              {vencidos > 0 && <EstadoPill estado="vencido" label={`${vencidos} ${vencidos > 1 ? 'vencidos' : 'vencido'}`} />}
+              {proximos > 0 && <EstadoPill estado="proximo" label={`${proximos} por vencer`} />}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap justify-end">
-          {vencidos > 0 && (
-            <span className="flex items-center gap-1.5 text-sm font-medium text-red-400 bg-red-50 border border-red-500/30 rounded-lg px-3 py-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              {vencidos} vencido{vencidos > 1 ? 's' : ''}
-            </span>
-          )}
-          {proximos > 0 && (
-            <span className="flex items-center gap-1.5 text-sm font-medium text-amber-400 bg-amber-50 border border-amber-500/30 rounded-lg px-3 py-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              {proximos} por vencer
-            </span>
-          )}
-          {canEdit && (
-            <>
-              <button
-                onClick={() => setEditingEmpleado((prev) => !prev)}
-                className="flex items-center gap-2 border border-border bg-card hover:bg-accent text-foreground text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                Editar empleado
-              </button>
-              <button
-                onClick={handleDeleteEmpleado}
-                className="flex items-center gap-2 border border-red-500/30 bg-red-50 hover:bg-red-500/15 text-red-400 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                Eliminar empleado
-              </button>
-              <button
-                onClick={() => {
-                  resetForm()
-                  setShowForm(true)
-                }}
-                className="flex items-center gap-2 bg-primary hover:brightness-110 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                Agregar certificado
-              </button>
-            </>
-          )}
-        </div>
+        {canEdit && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              onClick={() => setEditingEmpleado((prev) => !prev)}
+              className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Editar
+            </button>
+            <button
+              onClick={handleDeleteEmpleado}
+              className="rounded-lg border border-danger/30 px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger-subtle"
+            >
+              Eliminar
+            </button>
+            <button
+              onClick={() => {
+                resetForm()
+                setShowForm(true)
+              }}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Agregar certificado
+            </button>
+          </div>
+        )}
       </div>
 
       {canEdit && editingEmpleado && (
@@ -410,7 +379,7 @@ export default function LegajoClient({
             <button
               onClick={handleSaveEmpleado}
               disabled={savingEmpleado}
-              className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
+              className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
             >
               {savingEmpleado ? 'Guardando...' : 'Guardar cambios'}
             </button>
@@ -441,14 +410,6 @@ export default function LegajoClient({
                 className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-accent transition-colors"
                 onClick={() => setActiveCertId(isOpen ? null : cert.id)}
               >
-                <div
-                  className={clsx('w-1.5 h-8 rounded-full shrink-0', {
-                    'bg-red-500': estado === 'vencido',
-                    'bg-amber-400': estado === 'proximo',
-                    'bg-green-500': estado === 'vigente',
-                    'bg-slate-600': estado === 'sin_fecha',
-                  })}
-                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground">
                     {cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? 'Sin tipo'}
@@ -458,16 +419,9 @@ export default function LegajoClient({
                   )}
                 </div>
                 <div className="text-right shrink-0">
-                  <span
-                    className={clsx(
-                      'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border',
-                      ESTADO_COLORS[estado]
-                    )}
-                  >
-                    {ESTADO_LABELS[estado]}
-                  </span>
+                  <EstadoPill estado={estado} />
                   {cert.fecha_vencimiento && (
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-muted-foreground mt-1 tabular-nums">
                       {format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')}
                     </p>
                   )}
@@ -589,7 +543,7 @@ export default function LegajoClient({
                             {canEdit && (
                               <button
                                 onClick={() => handleDeleteArchivo(cert.id, archivo.id)}
-                                className="text-xs text-red-400 hover:text-red-400"
+                                className="text-xs text-danger/80 hover:text-danger"
                               >
                                 Eliminar
                               </button>
@@ -661,7 +615,7 @@ export default function LegajoClient({
 
                       <button
                         onClick={() => handleDelete(cert.id)}
-                        className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-50 transition-colors"
+                        className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg border border-danger/30 text-danger hover:bg-danger-subtle transition-colors"
                       >
                         <svg
                           className="w-3.5 h-3.5"
@@ -803,7 +757,7 @@ export default function LegajoClient({
             <button
               onClick={handleSave}
               disabled={saving || !form.tipo_id}
-              className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
+              className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
             >
               {saving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Agregar certificado'}
             </button>
