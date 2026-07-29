@@ -795,6 +795,35 @@ export type Database = {
           },
         ]
       }
+      activo_secciones: {
+        Row: {
+          created_at: string | null
+          empresa_id: string | null
+          id: string
+          nombre: string
+        }
+        Insert: {
+          created_at?: string | null
+          empresa_id?: string | null
+          id?: string
+          nombre: string
+        }
+        Update: {
+          created_at?: string | null
+          empresa_id?: string | null
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activo_secciones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipos: {
         Row: {
           activo: boolean | null

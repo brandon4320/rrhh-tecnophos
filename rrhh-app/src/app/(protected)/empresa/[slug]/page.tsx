@@ -45,6 +45,7 @@ export default async function EmpresaPage({
     { data: empleados },
     { data: vehiculos },
     { data: equipos },
+    { data: secciones },
     { data: certsEmpresa },
     { data: tiposVehiculo },
     { data: tiposEquipo },
@@ -70,6 +71,11 @@ export default async function EmpresaPage({
       )
       .eq('empresa_id', empresa.id)
       .eq('activo', true)
+      .order('nombre'),
+    supabase
+      .from('activo_secciones')
+      .select('id, nombre')
+      .eq('empresa_id', empresa.id)
       .order('nombre'),
     supabase
       .from('certificados')
@@ -233,6 +239,7 @@ export default async function EmpresaPage({
 
       <EquiposClient
         equipos={equipos ?? []}
+        secciones={secciones ?? []}
         tiposCertificado={tiposEquipo ?? []}
         canEdit={isAdmin || perfil?.rol === 'usuario'}
         empresaSlug={slug}

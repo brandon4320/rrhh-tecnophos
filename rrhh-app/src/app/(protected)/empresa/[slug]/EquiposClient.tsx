@@ -23,8 +23,14 @@ interface EquipoConCerts extends Equipo {
   certificados: CertEquipo[]
 }
 
+interface Seccion {
+  id: string
+  nombre: string
+}
+
 interface Props {
   equipos: EquipoConCerts[]
+  secciones: Seccion[]
   tiposCertificado: TipoCertificado[]
   canEdit: boolean
   empresaSlug: string
@@ -39,13 +45,14 @@ const FORM_EMPTY = {
   alerta_dias: 30,
 }
 
-const EQUIPO_EMPTY = { nombre: '', tipo: '', numero_serie: '', categoria: '' }
+const ITEM_EMPTY = { nombre: '', tipo: '', numero_serie: '' }
 
-// Sugerencias para el datalist de secciones (además de las ya existentes)
-const CATEGORIAS_SUGERIDAS = ['Equipos de medición', 'Matafuegos', 'Herramientas', 'Instalaciones']
+// Sugerencias para el datalist de secciones nuevas
+const SECCIONES_SUGERIDAS = ['Equipos de medición', 'Matafuegos', 'Herramientas', 'Instalaciones']
 
 export default function EquiposClient({
   equipos: initEquipos,
+  secciones: initSecciones,
   tiposCertificado,
   canEdit,
   empresaSlug,
@@ -53,6 +60,7 @@ export default function EquiposClient({
 }: Props) {
   const supabase = createClient()
   const [equipos, setEquipos] = useState(initEquipos)
+  const [secciones, setSecciones] = useState(initSecciones)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editingCert, setEditingCert] = useState<string | null>(null)
   const [addingTo, setAddingTo] = useState<string | null>(null)
@@ -61,23 +69,105 @@ export default function EquiposClient({
   const [error, setError] = useState('')
   const [uploadingCert, setUploadingCert] = useState<string | null>(null)
 
-  // Alta de ítem (con categoría = título de la sección)
-  const [creatingEquipo, setCreatingEquipo] = useState(false)
-  const [equipoForm, setEquipoForm] = useState(EQUIPO_EMPTY)
-  const [savingEquipo, setSavingEquipo] = useState(false)
+  // Alta de sección (solo el título)
+  const [nuevaSeccionOpen, setNuevaSeccionOpen] = useState(false)
+  const [nombreSeccion, setNombreSeccion] = useState('')
+  const [savingSeccion, setSavingSeccion] = useState(false)
 
-  // Secciones = categorías distintas, orden alfabético con "Equipos de medición" primero
-  const categorias = useMemo(() => {
-    const set = new Set(equipos.map((e) => e.categoria || 'Equipos de medición'))
+  // Alta de ítem dentro de una sección (nombre de la sección, o null)
+  const [creandoItemEn, setCreandoItemEn] = useState<string | null>(null)
+  const [itemForm, setItemForm] = useState(ITEM_EMPTY)
+  const [savingItem, setSavingItem] = useState(false)
+
+  // Secciones a mostrar: tabla de secciones ∪ categorías usadas por equipos
+  // (por si quedó algún equipo con categoría sin fila de sección)
+  const nombresSecciones = useMemo(() => {
+    const set = new Set<string>(secciones.map((s) => s.nombre))
+    for (const e of equipos) set.add(e.categoria || 'Equipos de medición')
     return [...set].sort((a, b) =>
       a === 'Equipos de medición' ? -1 : b === 'Equipos de medición' ? 1 : a.localeCompare(b, 'es')
     )
-  }, [equipos])
+  }, [secciones, equipos])
 
-  function abrirAlta(categoria?: string) {
-    setEquipoForm({ ...EQUIPO_EMPTY, categoria: categoria ?? '' })
-    setCreatingEquipo(true)
+  async function handleCrearSeccion() {
+    const nombre = nombreSeccion.trim()
+    if (!nombre) return
+    if (nombresSecciones.some((n) => n.toLowerCase() === nombre.toLowerCase())) {
+      setError('Ya existe una sección con ese nombre.')
+      return
+    }
+    setSavingSeccion(true)
     setError('')
+    const { data, error: err } = await supabase
+      .from('activo_secciones')
+      .insert({ empresa_id: empresaId, nombre })
+      .select('id, nombre')
+      .single()
+
+    setSavingSeccion(false)
+    if (err || !data) {
+      setError('No se pudo crear la sección.')
+      return
+    }
+    setSecciones((prev) => [...prev, data])
+    setNombreSeccion('')
+    setNuevaSeccionOpen(false)
+  }
+
+  async function handleEliminarSeccion(nombre: string) {
+    const fila = secciones.find((s) => s.nombre === nombre)
+    if (!fila) return
+    if (!confirm(`¿Eliminar la sección "${nombre}"?`)) return
+    const { error: err } = await supabase.from('activo_secciones').delete().eq('id', fila.id)
+    if (err) {
+      setError('No se pudo eliminar la sección.')
+      return
+    }
+    setSecciones((prev) => prev.filter((s) => s.id !== fila.id))
+  }
+
+  function abrirAltaItem(seccion: string) {
+    setItemForm(ITEM_EMPTY)
+    setCreandoItemEn(seccion)
+    setError('')
+  }
+
+  async function handleCrearItem() {
+    if (!itemForm.nombre.trim() || !creandoItemEn) return
+    setSavingItem(true)
+    setError('')
+    const { data, error: err } = await supabase
+      .from('equipos')
+      .insert({
+        nombre: itemForm.nombre.trim(),
+        tipo: itemForm.tipo.trim() || null,
+        numero_serie: itemForm.numero_serie.trim() || null,
+        categoria: creandoItemEn,
+        empresa_id: empresaId,
+      })
+      .select('*')
+      .single()
+
+    setSavingItem(false)
+    if (err || !data) {
+      setError('No se pudo crear el ítem')
+      return
+    }
+
+    setEquipos((prev) => [...prev, { ...data, certificados: [] }])
+    setItemForm(ITEM_EMPTY)
+    setCreandoItemEn(null)
+    setExpandedId(data.id)
+  }
+
+  async function handleDeleteEquipo(equipoId: string) {
+    if (!confirm('¿Eliminar este ítem y todos sus certificados?')) return
+    const { error: err } = await supabase.from('equipos').delete().eq('id', equipoId)
+    if (err) {
+      setError('No se pudo eliminar el ítem')
+      return
+    }
+    setEquipos((prev) => prev.filter((e) => e.id !== equipoId))
   }
 
   function openAdd(equipoId: string) {
@@ -97,49 +187,6 @@ export default function EquiposClient({
     })
     setEditingCert(cert.id)
     setAddingTo(null)
-  }
-
-  async function handleCreateEquipo() {
-    if (!equipoForm.nombre.trim()) return
-    if (!equipoForm.categoria.trim()) {
-      setError('Poné el nombre de la sección (ej: Matafuegos).')
-      return
-    }
-    setSavingEquipo(true)
-    setError('')
-    const { data, error: err } = await supabase
-      .from('equipos')
-      .insert({
-        nombre: equipoForm.nombre.trim(),
-        tipo: equipoForm.tipo.trim() || null,
-        numero_serie: equipoForm.numero_serie.trim() || null,
-        categoria: equipoForm.categoria.trim(),
-        empresa_id: empresaId,
-      })
-      .select('*')
-      .single()
-
-    if (err || !data) {
-      setError('No se pudo crear el ítem')
-      setSavingEquipo(false)
-      return
-    }
-
-    setEquipos((prev) => [...prev, { ...data, certificados: [] }])
-    setEquipoForm(EQUIPO_EMPTY)
-    setCreatingEquipo(false)
-    setSavingEquipo(false)
-    setExpandedId(data.id)
-  }
-
-  async function handleDeleteEquipo(equipoId: string) {
-    if (!confirm('¿Eliminar este ítem y todos sus certificados?')) return
-    const { error: err } = await supabase.from('equipos').delete().eq('id', equipoId)
-    if (err) {
-      setError('No se pudo eliminar el ítem')
-      return
-    }
-    setEquipos((prev) => prev.filter((e) => e.id !== equipoId))
   }
 
   async function handleSave(equipoId: string) {
@@ -490,116 +537,158 @@ export default function EquiposClient({
 
   return (
     <div className="mb-8 space-y-8">
-      {creatingEquipo && canEdit && (
-        <div className="bg-card rounded-xl border border-primary/30 p-4">
-          <p className="text-sm font-medium text-foreground mb-3">Nuevo ítem</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1">Sección</label>
-              <input
-                type="text"
-                list="categorias-secciones"
-                value={equipoForm.categoria}
-                onChange={(e) => setEquipoForm((f) => ({ ...f, categoria: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Ej: Matafuegos"
-              />
-              <datalist id="categorias-secciones">
-                {[...new Set([...categorias, ...CATEGORIAS_SUGERIDAS])].map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1">Nombre / identificador</label>
-              <input
-                type="text"
-                value={equipoForm.nombre}
-                onChange={(e) => setEquipoForm((f) => ({ ...f, nombre: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Ej: Matafuego ABC 5kg — Galpón"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1">Tipo / marca</label>
-              <input
-                type="text"
-                value={equipoForm.tipo}
-                onChange={(e) => setEquipoForm((f) => ({ ...f, tipo: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Ej: Draeger / ABC / CO2 (opcional)"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-foreground mb-1">N° de serie</label>
-              <input
-                type="text"
-                value={equipoForm.numero_serie}
-                onChange={(e) => setEquipoForm((f) => ({ ...f, numero_serie: e.target.value }))}
-                className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Opcional"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={handleCreateEquipo}
-              disabled={savingEquipo || !equipoForm.nombre.trim()}
-              className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg"
-            >
-              {savingEquipo ? 'Creando...' : 'Crear ítem'}
-            </button>
-            <button
-              onClick={() => {
-                setCreatingEquipo(false)
-                setEquipoForm(EQUIPO_EMPTY)
-              }}
-              className="text-xs text-muted-foreground px-3 py-2"
-            >
-              Cancelar
-            </button>
-          </div>
-          {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-        </div>
-      )}
+      {nombresSecciones.map((nombre) => {
+        const items = equipos.filter((e) => (e.categoria || 'Equipos de medición') === nombre)
+        const agregandoAca = creandoItemEn === nombre
 
-      {categorias.map((cat) => {
-        const items = equipos.filter((e) => (e.categoria || 'Equipos de medición') === cat)
         return (
-          <div key={cat}>
+          <div key={nombre}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-foreground">{cat}</h2>
-              {canEdit && (
+              <h2 className="text-base font-semibold text-foreground">{nombre}</h2>
+              {canEdit && !agregandoAca && (
                 <button
-                  onClick={() => abrirAlta(cat)}
+                  onClick={() => abrirAltaItem(nombre)}
                   className="text-xs font-medium text-primary hover:text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors"
                 >
-                  + Agregar a {cat}
+                  + Agregar ítem
                 </button>
               )}
             </div>
-            <div className="space-y-3">{items.map((eq) => renderEquipoCard(eq))}</div>
+
+            <div className="space-y-3">
+              {agregandoAca && canEdit && (
+                <div className="bg-card rounded-xl border border-primary/30 p-4">
+                  <p className="text-sm font-medium text-foreground mb-3">Nuevo ítem en {nombre}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Nombre / identificador</label>
+                      <input
+                        type="text"
+                        value={itemForm.nombre}
+                        onChange={(e) => setItemForm((f) => ({ ...f, nombre: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleCrearItem() }}
+                        className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        placeholder="Ej: Matafuego ABC 5kg — Galpón"
+                        autoFocus
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Tipo / marca</label>
+                      <input
+                        type="text"
+                        value={itemForm.tipo}
+                        onChange={(e) => setItemForm((f) => ({ ...f, tipo: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        placeholder="Ej: ABC / CO2 (opcional)"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">N° de serie</label>
+                      <input
+                        type="text"
+                        value={itemForm.numero_serie}
+                        onChange={(e) => setItemForm((f) => ({ ...f, numero_serie: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        placeholder="Opcional"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={handleCrearItem}
+                      disabled={savingItem || !itemForm.nombre.trim()}
+                      className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg"
+                    >
+                      {savingItem ? 'Creando...' : 'Crear ítem'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCreandoItemEn(null)
+                        setItemForm(ITEM_EMPTY)
+                      }}
+                      className="text-xs text-muted-foreground px-3 py-2"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                  {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+                </div>
+              )}
+
+              {items.map((eq) => renderEquipoCard(eq))}
+
+              {items.length === 0 && !agregandoAca && (
+                <div className="bg-card rounded-xl border border-dashed border-border px-5 py-6 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Sin ítems en esta sección.
+                    {canEdit && ' Agregá el primero con "+ Agregar ítem".'}
+                  </p>
+                  {canEdit && secciones.some((s) => s.nombre === nombre) && (
+                    <button
+                      onClick={() => handleEliminarSeccion(nombre)}
+                      className="mt-2 text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                    >
+                      Eliminar sección
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )
       })}
 
-      {equipos.length === 0 && !creatingEquipo && (
-        <div className="bg-card rounded-xl border border-dashed border-border px-5 py-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            Sin equipos ni secciones cargadas.
-            {canEdit && ' Creá una sección (ej: Matafuegos) con "Nueva sección".'}
-          </p>
-        </div>
-      )}
-
-      {canEdit && !creatingEquipo && (
-        <button
-          onClick={() => abrirAlta()}
-          className="w-full rounded-xl border border-dashed border-border px-5 py-3 text-sm font-medium text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
-        >
-          + Nueva sección (ej: Matafuegos, Herramientas…)
-        </button>
+      {canEdit && (
+        nuevaSeccionOpen ? (
+          <div className="bg-card rounded-xl border border-primary/30 p-4">
+            <p className="text-sm font-medium text-foreground mb-3">Nueva sección</p>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex-1 min-w-[220px]">
+                <label className="block text-xs font-medium text-foreground mb-1">Título de la sección</label>
+                <input
+                  type="text"
+                  list="secciones-sugeridas"
+                  value={nombreSeccion}
+                  onChange={(e) => setNombreSeccion(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCrearSeccion() }}
+                  className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="Ej: Matafuegos"
+                  autoFocus
+                />
+                <datalist id="secciones-sugeridas">
+                  {SECCIONES_SUGERIDAS.filter((s) => !nombresSecciones.includes(s)).map((s) => (
+                    <option key={s} value={s} />
+                  ))}
+                </datalist>
+              </div>
+              <button
+                onClick={handleCrearSeccion}
+                disabled={savingSeccion || !nombreSeccion.trim()}
+                className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg"
+              >
+                {savingSeccion ? 'Creando...' : 'Crear sección'}
+              </button>
+              <button
+                onClick={() => {
+                  setNuevaSeccionOpen(false)
+                  setNombreSeccion('')
+                  setError('')
+                }}
+                className="text-xs text-muted-foreground px-3 py-2"
+              >
+                Cancelar
+              </button>
+            </div>
+            {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+          </div>
+        ) : (
+          <button
+            onClick={() => { setNuevaSeccionOpen(true); setError('') }}
+            className="w-full rounded-xl border border-dashed border-border px-5 py-3 text-sm font-medium text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+          >
+            + Nueva sección (ej: Matafuegos, Herramientas…)
+          </button>
+        )
       )}
     </div>
   )
