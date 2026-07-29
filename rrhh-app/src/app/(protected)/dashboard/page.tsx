@@ -12,6 +12,7 @@ const EMPRESA_COLORS: Record<string, string> = {
   'tecnophos-bb': 'bg-indigo-500',
   'tecnophos-rosario': 'bg-sky-500',
   'tecnophos-necochea': 'bg-emerald-500',
+  serviwhite: 'bg-blue-800',
   adc: 'bg-amber-500',
 }
 

@@ -8,6 +8,7 @@ const EMPRESA_COLORS: Record<string, string> = {
   'tecnophos-bb': 'text-primary bg-primary/10 border-primary/30',
   'tecnophos-rosario': 'text-sky-400 bg-sky-50 border-sky-500/30',
   'tecnophos-necochea': 'text-emerald-700 bg-emerald-50 border-emerald-200',
+  serviwhite: 'text-blue-800 bg-blue-50 border-blue-300',
   adc: 'text-amber-400 bg-amber-50 border-amber-500/30',
 }
 

@@ -49,6 +49,9 @@ export default async function HubPage() {
             <span className="h-8 w-px bg-border" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo-adc.png" alt="ADC S.R.L. Fumigation" className="h-9 w-auto" />
+            <span className="h-8 w-px bg-border" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-serviwhite.png" alt="Serviwhite" className="hidden h-5 w-auto sm:inline-block" />
             <span className="ml-1 hidden h-6 w-px bg-border sm:inline-block" />
             <span className="hidden text-sm font-medium text-muted-foreground sm:inline">Gestión</span>
           </div>

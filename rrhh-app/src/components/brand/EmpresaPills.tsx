@@ -3,6 +3,7 @@ import type { EmpresaMarca } from '@/config/modules'
 const MARCA: Record<EmpresaMarca, { label: string; dot: string }> = {
   tecnophos: { label: 'Tecnophos', dot: '#1d4ed8' },
   adc: { label: 'ADC', dot: '#F26F21' },
+  serviwhite: { label: 'Serviwhite', dot: '#001080' },
 }
 
 interface Props {

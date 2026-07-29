@@ -8,7 +8,7 @@ import type { Rol } from '@/lib/auth/roles'
 export type ModuloKey = 'rrhh' | 'limpieza' | 'mantenimiento' | 'comercial'
 
 /** Empresas dueñas de un módulo (para mostrar marca en el menú). */
-export type EmpresaMarca = 'tecnophos' | 'adc'
+export type EmpresaMarca = 'tecnophos' | 'adc' | 'serviwhite'
 
 export interface ModuloDef {
   key: ModuloKey
@@ -32,7 +32,7 @@ export const MODULOS: ModuloDef[] = [
     href: '/dashboard',
     icon: 'IdCard',
     roles: ['admin', 'usuario'],
-    empresas: ['tecnophos', 'adc'],
+    empresas: ['tecnophos', 'adc', 'serviwhite'],
     enabled: true,
   },
   {
@@ -60,7 +60,7 @@ export const MODULOS: ModuloDef[] = [
     href: '/comercial',
     icon: 'BriefcaseBusiness',
     roles: ['admin', 'direccion', 'gerente_comercial', 'vendedor', 'asistente_comercial'],
-    empresas: ['tecnophos', 'adc'],
+    empresas: ['tecnophos', 'adc', 'serviwhite'],
     enabled: true,
   },
 ]

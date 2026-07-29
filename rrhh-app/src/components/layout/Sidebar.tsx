@@ -22,6 +22,7 @@ const EMPRESA_COLORS: Record<string, string> = {
   'tecnophos-bb': 'bg-indigo-500',
   'tecnophos-rosario': 'bg-sky-500',
   'tecnophos-necochea': 'bg-emerald-500',
+  serviwhite: 'bg-blue-800',
   adc: 'bg-amber-500',
 }
 
@@ -63,6 +64,9 @@ export default function Sidebar({ empresas, perfil, user }: Props) {
         <span className="h-8 w-px bg-white/15" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo-adc-blanco.png" alt="ADC S.R.L." className="h-9 w-auto" />
+        <span className="h-8 w-px bg-white/15" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-serviwhite-iso-blanco.png" alt="Serviwhite" className="h-7 w-auto" />
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
