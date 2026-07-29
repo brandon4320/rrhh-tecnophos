@@ -4,12 +4,13 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================
-   Sistema de diseño — SaaS B2B sobrio (estilo Tratta)
-   Toggle claro/oscuro. Bordes cuadrados, sin glow. Sidebar
-   siempre oscura. Acento azul.
+   Sistema de diseño — "Gestión" minimal empresa-céntrico.
+   Un solo acento (índigo) + semánticos (success/warning/danger)
+   como ÚNICOS colores de estado. Claro por defecto, toggle dark.
+   Cards redondeadas (radius 12px), rail oscuro + panel claro.
    ============================================================ */
 :root {
-  --radius: 0.375rem;            /* cuadrado: ~6px */
+  --radius: 0.75rem;             /* 12px: cards rounded-2xl, controles lg */
 
   --background: #f6f7f9;
   --foreground: #0f172a;         /* slate-900 */
@@ -19,26 +20,41 @@
   --popover: #ffffff;
   --popover-foreground: #0f172a;
 
-  --primary: #2563eb;
+  --primary: #4f46e5;            /* índigo-600: único acento */
   --primary-foreground: #ffffff;
 
   --secondary: #f1f5f9;          /* slate-100 */
   --secondary-foreground: #0f172a;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;   /* slate-500 */
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
+  --accent: #eef2ff;             /* indigo-50: tint del acento */
+  --accent-foreground: #4f46e5;
 
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
 
+  /* Semánticos de estado (única fuente para vencido/próximo/ok) */
+  --success: #0d9488;            /* teal-600 */
+  --success-subtle: #ccfbf1;     /* teal-100 */
+  --warning: #ea580c;            /* orange-600 */
+  --warning-subtle: #ffedd5;     /* orange-100 */
+  --danger: #dc2626;             /* red-600 */
+  --danger-subtle: #fee2e2;      /* red-100 */
+
   --border: #e2e8f0;             /* slate-200 */
   --input: #e2e8f0;
-  --ring: #2563eb;
+  --ring: #4f46e5;
 
-  /* Sidebar: oscura también en modo claro (estilo Tratta) */
+  /* Rail oscuro (columna de íconos) + panel claro */
   --sidebar: #0b1220;
   --sidebar-foreground: #94a3b8;
+  --sidebar-border: rgba(148, 163, 184, 0.14);
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-primary: #6366f1;
+
+  /* Superficie oscura para hero cards (mismo navy del rail) */
+  --surface-dark: #0b1220;
+  --surface-dark-foreground: #f8fafc;
 
   --input-background: #ffffff;
   color-scheme: light;
@@ -53,25 +69,38 @@
   --popover: #0b1628;
   --popover-foreground: #f8fafc;
 
-  --primary: #3b82f6;
+  --primary: #6366f1;            /* índigo-500 */
   --primary-foreground: #ffffff;
 
   --secondary: #101e33;
   --secondary-foreground: #f8fafc;
   --muted: #101e33;
   --muted-foreground: #94a3b8;
-  --accent: #101e33;
-  --accent-foreground: #f8fafc;
+  --accent: rgba(99, 102, 241, 0.14);
+  --accent-foreground: #a5b4fc;
 
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
 
+  --success: #2dd4bf;            /* teal-400 */
+  --success-subtle: rgba(45, 212, 191, 0.14);
+  --warning: #fb923c;            /* orange-400 */
+  --warning-subtle: rgba(251, 146, 60, 0.14);
+  --danger: #f87171;             /* red-400 */
+  --danger-subtle: rgba(248, 113, 113, 0.14);
+
   --border: rgba(148, 163, 184, 0.16);
   --input: rgba(148, 163, 184, 0.16);
-  --ring: #3b82f6;
+  --ring: #6366f1;
 
   --sidebar: #050b16;
   --sidebar-foreground: #94a3b8;
+  --sidebar-border: rgba(148, 163, 184, 0.12);
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-primary: #6366f1;
+
+  --surface-dark: #0b1628;
+  --surface-dark-foreground: #f8fafc;
 
   --input-background: #0b1628;
   color-scheme: dark;
@@ -99,11 +128,24 @@
   --color-ring: var(--ring);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary: var(--sidebar-primary);
 
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+
+  --color-surface-dark: var(--surface-dark);
+  --color-surface-dark-foreground: var(--surface-dark-foreground);
+
+  --radius-sm: calc(var(--radius) - 6px);   /* 6px  */
+  --radius-md: calc(var(--radius) - 4px);   /* 8px  */
+  --radius-lg: calc(var(--radius) - 2px);   /* 10px */
+  --radius-xl: var(--radius);               /* 12px */
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

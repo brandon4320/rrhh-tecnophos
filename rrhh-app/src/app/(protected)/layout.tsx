@@ -1,38 +1,53 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import Sidebar from '@/components/layout/Sidebar'
+import { getSesion } from '@/lib/auth/session'
+import { tieneRol, RRHH_ROLES } from '@/lib/auth/roles'
+import AppShell, { type EmpresaNav } from '@/components/layout/AppShell'
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) redirect('/login')
-
-  const { data: perfil } = await supabase
-    .from('perfiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  const sesion = await getSesion()
+  if (!sesion) redirect('/login')
 
   // Acceso a RRHH solo para roles RRHH (admin/usuario). El resto (Operaciones/UNIPAR)
   // va a su módulo — no puede entrar a las pantallas de RRHH.
-  if (!['admin', 'usuario'].includes(perfil?.rol ?? '')) {
-    redirect('/')
-  }
+  if (!tieneRol(sesion.rol, RRHH_ROLES)) redirect('/')
+
+  const supabase = await createClient()
 
   // Si el perfil tiene empresa_acceso, solo muestra esa empresa
-  const empresasQuery = supabase.from('empresas').select('*').order('nombre')
-  if (perfil?.empresa_acceso) {
-    empresasQuery.eq('id', perfil.empresa_acceso)
-  }
-  const { data: empresas } = await empresasQuery
+  const empresasQuery = supabase.from('empresas').select('id, nombre, slug').order('nombre')
+  if (sesion.empresaAcceso) empresasQuery.eq('id', sesion.empresaAcceso)
+
+  const [{ data: empresas }, { data: empleados }] = await Promise.all([
+    empresasQuery,
+    supabase.from('empleados').select('empresa_id, sector').eq('activo', true),
+  ])
+
+  // Conteos por empresa y por sector para el panel lateral
+  const nav: EmpresaNav[] = (empresas ?? []).map((e) => {
+    const propios = (empleados ?? []).filter((emp) => emp.empresa_id === e.id)
+    const porSector = new Map<string, number>()
+    for (const emp of propios) {
+      const s = emp.sector?.trim() || 'General'
+      porSector.set(s, (porSector.get(s) ?? 0) + 1)
+    }
+    return {
+      id: e.id,
+      nombre: e.nombre,
+      slug: e.slug,
+      total: propios.length,
+      sectores: [...porSector.entries()]
+        .map(([nombre, count]) => ({ nombre, count }))
+        .sort((a, b) => b.count - a.count),
+    }
+  })
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
-      <Sidebar empresas={empresas ?? []} perfil={perfil} user={user} />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
-    </div>
+    <AppShell
+      empresas={nav}
+      sesion={{ nombre: sesion.nombre, email: sesion.email, rol: sesion.rol }}
+    >
+      {children}
+    </AppShell>
   )
 }
