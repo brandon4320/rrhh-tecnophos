@@ -33,6 +33,27 @@ interface Props {
 
 const STORAGE_KEY = 'empresa_activa'
 
+// Isologos por empresa (las 3 sedes Tecnophos comparten marca)
+const LOGO_EMPRESA: Record<string, string> = {
+  'tecnophos-bb': '/logo-tecnophos-iso.png',
+  'tecnophos-rosario': '/logo-tecnophos-iso.png',
+  'tecnophos-necochea': '/logo-tecnophos-iso.png',
+  adc: '/logo-adc.png',
+  serviwhite: '/logo-serviwhite-iso.png',
+}
+
+function LogoEmpresa({ slug, nombre, size }: { slug: string; nombre: string; size: 'sm' | 'md' }) {
+  const src = LOGO_EMPRESA[slug]
+  const cls = size === 'md' ? 'size-9 p-1' : 'size-7 p-0.5'
+  if (!src) return <Monograma nombre={nombre} size={size} />
+  return (
+    <span className={`inline-flex shrink-0 items-center justify-center rounded-lg border border-border bg-white ${cls}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={nombre} className="max-h-full max-w-full object-contain" />
+    </span>
+  )
+}
+
 export default function AppShell({ empresas, sesion, children }: Props) {
   const pathname = usePathname()
   const router = useRouter()
@@ -130,7 +151,7 @@ export default function AppShell({ empresas, sesion, children }: Props) {
               onClick={() => setSelectorOpen((v) => !v)}
               className="flex w-full items-center gap-3 rounded-xl border border-border bg-background px-3 py-2.5 text-left transition-colors hover:border-input"
             >
-              <Monograma nombre={activa.nombre} variant="accent" size="md" />
+              <LogoEmpresa slug={activa.slug} nombre={activa.nombre} size="md" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{activa.nombre}</span>
                 <span className="block text-xs text-muted-foreground">
@@ -150,7 +171,7 @@ export default function AppShell({ empresas, sesion, children }: Props) {
                       onClick={() => cambiarEmpresa(e.slug)}
                       className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted"
                     >
-                      <Monograma nombre={e.nombre} size="sm" />
+                      <LogoEmpresa slug={e.slug} nombre={e.nombre} size="sm" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm">{e.nombre}</span>
                         <span className="block text-[11px] text-muted-foreground">{e.total} empleados</span>
