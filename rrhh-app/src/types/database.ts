@@ -798,6 +798,7 @@ export type Database = {
       equipos: {
         Row: {
           activo: boolean | null
+          categoria: string
           created_at: string | null
           descripcion: string | null
           empresa_id: string | null
@@ -809,6 +810,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean | null
+          categoria?: string
           created_at?: string | null
           descripcion?: string | null
           empresa_id?: string | null
@@ -820,6 +822,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean | null
+          categoria?: string
           created_at?: string | null
           descripcion?: string | null
           empresa_id?: string | null

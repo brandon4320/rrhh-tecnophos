@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { subirArchivo } from '@/lib/upload-client'
@@ -39,7 +39,10 @@ const FORM_EMPTY = {
   alerta_dias: 30,
 }
 
-const EQUIPO_EMPTY = { nombre: '', tipo: 'Draeger', numero_serie: '' }
+const EQUIPO_EMPTY = { nombre: '', tipo: '', numero_serie: '', categoria: '' }
+
+// Sugerencias para el datalist de secciones (además de las ya existentes)
+const CATEGORIAS_SUGERIDAS = ['Equipos de medición', 'Matafuegos', 'Herramientas', 'Instalaciones']
 
 export default function EquiposClient({
   equipos: initEquipos,
@@ -58,10 +61,24 @@ export default function EquiposClient({
   const [error, setError] = useState('')
   const [uploadingCert, setUploadingCert] = useState<string | null>(null)
 
-  // Alta de equipo
+  // Alta de ítem (con categoría = título de la sección)
   const [creatingEquipo, setCreatingEquipo] = useState(false)
   const [equipoForm, setEquipoForm] = useState(EQUIPO_EMPTY)
   const [savingEquipo, setSavingEquipo] = useState(false)
+
+  // Secciones = categorías distintas, orden alfabético con "Equipos de medición" primero
+  const categorias = useMemo(() => {
+    const set = new Set(equipos.map((e) => e.categoria || 'Equipos de medición'))
+    return [...set].sort((a, b) =>
+      a === 'Equipos de medición' ? -1 : b === 'Equipos de medición' ? 1 : a.localeCompare(b, 'es')
+    )
+  }, [equipos])
+
+  function abrirAlta(categoria?: string) {
+    setEquipoForm({ ...EQUIPO_EMPTY, categoria: categoria ?? '' })
+    setCreatingEquipo(true)
+    setError('')
+  }
 
   function openAdd(equipoId: string) {
     setForm(FORM_EMPTY)
@@ -84,6 +101,10 @@ export default function EquiposClient({
 
   async function handleCreateEquipo() {
     if (!equipoForm.nombre.trim()) return
+    if (!equipoForm.categoria.trim()) {
+      setError('Poné el nombre de la sección (ej: Matafuegos).')
+      return
+    }
     setSavingEquipo(true)
     setError('')
     const { data, error: err } = await supabase
@@ -92,13 +113,14 @@ export default function EquiposClient({
         nombre: equipoForm.nombre.trim(),
         tipo: equipoForm.tipo.trim() || null,
         numero_serie: equipoForm.numero_serie.trim() || null,
+        categoria: equipoForm.categoria.trim(),
         empresa_id: empresaId,
       })
       .select('*')
       .single()
 
     if (err || !data) {
-      setError('No se pudo crear el equipo')
+      setError('No se pudo crear el ítem')
       setSavingEquipo(false)
       return
     }
@@ -111,10 +133,10 @@ export default function EquiposClient({
   }
 
   async function handleDeleteEquipo(equipoId: string) {
-    if (!confirm('¿Eliminar este equipo y todos sus certificados?')) return
+    if (!confirm('¿Eliminar este ítem y todos sus certificados?')) return
     const { error: err } = await supabase.from('equipos').delete().eq('id', equipoId)
     if (err) {
-      setError('No se pudo eliminar el equipo')
+      setError('No se pudo eliminar el ítem')
       return
     }
     setEquipos((prev) => prev.filter((e) => e.id !== equipoId))
@@ -245,43 +267,268 @@ export default function EquiposClient({
     }
   }
 
-  return (
-    <div className="mb-8">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-foreground">Equipos de medición</h2>
-        {canEdit && !creatingEquipo && (
-          <button
-            onClick={() => setCreatingEquipo(true)}
-            className="text-xs font-medium text-primary hover:text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors"
-          >
-            + Nuevo equipo
-          </button>
+  function renderEquipoCard(eq: EquipoConCerts) {
+    const isOpen = expandedId === eq.id
+    const isAddingHere = addingTo === eq.id
+
+    const worstEstado =
+      eq.certificados.length > 0
+        ? eq.certificados.reduce((worst, c) => {
+            const e = getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias)
+            if (e === 'vencido') return 'vencido'
+            if (e === 'proximo' && worst !== 'vencido') return 'proximo'
+            return worst
+          }, 'vigente' as string)
+        : 'sin_fecha'
+
+    const estadoColor =
+      {
+        vencido: 'bg-red-500',
+        proximo: 'bg-amber-400',
+        vigente: 'bg-green-500',
+        sin_fecha: 'bg-slate-600',
+      }[worstEstado] ?? 'bg-slate-600'
+
+    const subtitulo = [eq.tipo, eq.numero_serie ? `N° ${eq.numero_serie}` : null]
+      .filter(Boolean)
+      .join(' · ')
+
+    return (
+      <div key={eq.id} className="bg-card rounded-xl border border-border overflow-hidden">
+        <div
+          className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-accent transition-colors"
+          onClick={() => setExpandedId(isOpen ? null : eq.id)}
+        >
+          <span className={clsx('w-2 h-2 rounded-full shrink-0', estadoColor)} />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-foreground">{eq.nombre}</p>
+            {subtitulo && <p className="text-xs text-muted-foreground">{subtitulo}</p>}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              {eq.certificados.length} certificado
+              {eq.certificados.length !== 1 ? 's' : ''}
+            </span>
+
+            {canEdit && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openAdd(eq.id)
+                }}
+                className="text-xs font-medium text-primary hover:text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors"
+              >
+                + Agregar
+              </button>
+            )}
+
+            <svg
+              className={clsx('w-4 h-4 text-muted-foreground transition-transform', isOpen && 'rotate-180')}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </div>
+        </div>
+
+        {isOpen && (
+          <div className="border-t border-border bg-muted px-5 py-4">
+            <div className="space-y-2 mb-4">
+              {eq.certificados.length === 0 && (
+                <p className="text-xs text-muted-foreground py-2">Sin certificados. Agregá el primero.</p>
+              )}
+
+              {eq.certificados.map((cert) => {
+                const estado = getEstadoVencimiento(cert.fecha_vencimiento, cert.alerta_dias)
+                const isEditing = editingCert === cert.id
+
+                return (
+                  <div key={cert.id} className="bg-card rounded-lg border border-border overflow-hidden">
+                    {!isEditing && (
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            {cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? 'Sin tipo'}
+                          </p>
+                          {cert.notas && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">{cert.notas}</p>
+                          )}
+                        </div>
+
+                        <span
+                          className={clsx(
+                            'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border shrink-0',
+                            ESTADO_COLORS[estado]
+                          )}
+                        >
+                          {cert.fecha_vencimiento
+                            ? format(new Date(cert.fecha_vencimiento.slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy')
+                            : ESTADO_LABELS[estado]}
+                        </span>
+
+                        {canEdit && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              onClick={() => openEdit(cert)}
+                              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleDelete(eq.id, cert.id)}
+                              className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {!isEditing && (
+                      <div className="border-t border-border px-4 py-2.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {(cert.archivos ?? []).map((a) => (
+                            <span key={a.id} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
+                              <button type="button" onClick={() => verArchivo(a.path)} className="max-w-[160px] truncate text-left text-primary hover:underline">{a.nombre}</button>
+                              {canEdit && (
+                                <button onClick={() => handleDeleteArchivo(eq.id, cert.id, a.id)} className="text-muted-foreground hover:text-red-500" aria-label="Eliminar archivo">×</button>
+                              )}
+                            </span>
+                          ))}
+                          {(cert.archivos ?? []).length === 0 && (
+                            <span className="text-xs text-muted-foreground">Sin archivos</span>
+                          )}
+                          {canEdit && (
+                            <label className="inline-flex cursor-pointer items-center rounded-md border border-input px-2 py-1 text-xs text-muted-foreground hover:bg-accent">
+                              {uploadingCert === cert.id ? 'Subiendo…' : '+ Adjuntar'}
+                              <input type="file" accept="application/pdf,image/*" className="hidden" disabled={uploadingCert === cert.id}
+                                onChange={(e) => {
+                                  if (e.target.files?.length) handleUploadArchivo(eq.id, cert.id, e.target.files)
+                                  e.target.value = ''
+                                }} />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {isEditing && (
+                      <div className="px-4 py-4">
+                        {renderFormFields()}
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={() => handleSave(eq.id)}
+                            disabled={saving || !form.tipo_id}
+                            className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg"
+                          >
+                            {saving ? 'Guardando...' : 'Guardar'}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingCert(null)
+                              setForm(FORM_EMPTY)
+                            }}
+                            className="text-xs text-muted-foreground px-3 py-2"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                        {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {isAddingHere && canEdit && (
+              <div className="bg-card rounded-lg border border-primary/30 p-4">
+                <p className="text-sm font-medium text-foreground mb-3">Nuevo certificado</p>
+                {renderFormFields()}
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => handleSave(eq.id)}
+                    disabled={saving || !form.tipo_id}
+                    className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg"
+                  >
+                    {saving ? 'Guardando...' : 'Agregar'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAddingTo(null)
+                      setForm(FORM_EMPTY)
+                    }}
+                    className="text-xs text-muted-foreground px-3 py-2"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+                {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+              </div>
+            )}
+
+            {canEdit && (
+              <div className="mt-3 text-right">
+                <button
+                  onClick={() => handleDeleteEquipo(eq.id)}
+                  className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                >
+                  Eliminar ítem
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
+    )
+  }
 
+  return (
+    <div className="mb-8 space-y-8">
       {creatingEquipo && canEdit && (
-        <div className="bg-card rounded-xl border border-primary/30 p-4 mb-3">
-          <p className="text-sm font-medium text-foreground mb-3">Nuevo equipo</p>
+        <div className="bg-card rounded-xl border border-primary/30 p-4">
+          <p className="text-sm font-medium text-foreground mb-3">Nuevo ítem</p>
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1">Sección</label>
+              <input
+                type="text"
+                list="categorias-secciones"
+                value={equipoForm.categoria}
+                onChange={(e) => setEquipoForm((f) => ({ ...f, categoria: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Ej: Matafuegos"
+              />
+              <datalist id="categorias-secciones">
+                {[...new Set([...categorias, ...CATEGORIAS_SUGERIDAS])].map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </div>
+            <div>
               <label className="block text-xs font-medium text-foreground mb-1">Nombre / identificador</label>
               <input
                 type="text"
                 value={equipoForm.nombre}
                 onChange={(e) => setEquipoForm((f) => ({ ...f, nombre: e.target.value }))}
                 className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Ej: Draeger Pac 8000"
+                placeholder="Ej: Matafuego ABC 5kg — Galpón"
                 autoFocus
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1">Tipo</label>
+              <label className="block text-xs font-medium text-foreground mb-1">Tipo / marca</label>
               <input
                 type="text"
                 value={equipoForm.tipo}
                 onChange={(e) => setEquipoForm((f) => ({ ...f, tipo: e.target.value }))}
                 className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Ej: Draeger"
+                placeholder="Ej: Draeger / ABC / CO2 (opcional)"
               />
             </div>
             <div>
@@ -301,7 +548,7 @@ export default function EquiposClient({
               disabled={savingEquipo || !equipoForm.nombre.trim()}
               className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg"
             >
-              {savingEquipo ? 'Creando...' : 'Crear equipo'}
+              {savingEquipo ? 'Creando...' : 'Crear ítem'}
             </button>
             <button
               onClick={() => {
@@ -317,234 +564,43 @@ export default function EquiposClient({
         </div>
       )}
 
+      {categorias.map((cat) => {
+        const items = equipos.filter((e) => (e.categoria || 'Equipos de medición') === cat)
+        return (
+          <div key={cat}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-foreground">{cat}</h2>
+              {canEdit && (
+                <button
+                  onClick={() => abrirAlta(cat)}
+                  className="text-xs font-medium text-primary hover:text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors"
+                >
+                  + Agregar a {cat}
+                </button>
+              )}
+            </div>
+            <div className="space-y-3">{items.map((eq) => renderEquipoCard(eq))}</div>
+          </div>
+        )
+      })}
+
       {equipos.length === 0 && !creatingEquipo && (
         <div className="bg-card rounded-xl border border-dashed border-border px-5 py-8 text-center">
           <p className="text-sm text-muted-foreground">
-            Sin equipos de medición cargados.
-            {canEdit && ' Agregá el primero con “Nuevo equipo”.'}
+            Sin equipos ni secciones cargadas.
+            {canEdit && ' Creá una sección (ej: Matafuegos) con "Nueva sección".'}
           </p>
         </div>
       )}
 
-      <div className="space-y-3">
-        {equipos.map((eq) => {
-          const isOpen = expandedId === eq.id
-          const isAddingHere = addingTo === eq.id
-
-          const worstEstado =
-            eq.certificados.length > 0
-              ? eq.certificados.reduce((worst, c) => {
-                  const e = getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias)
-                  if (e === 'vencido') return 'vencido'
-                  if (e === 'proximo' && worst !== 'vencido') return 'proximo'
-                  return worst
-                }, 'vigente' as string)
-              : 'sin_fecha'
-
-          const estadoColor =
-            {
-              vencido: 'bg-red-500',
-              proximo: 'bg-amber-400',
-              vigente: 'bg-green-500',
-              sin_fecha: 'bg-slate-600',
-            }[worstEstado] ?? 'bg-slate-600'
-
-          const subtitulo = [eq.tipo, eq.numero_serie ? `N° ${eq.numero_serie}` : null]
-            .filter(Boolean)
-            .join(' · ')
-
-          return (
-            <div key={eq.id} className="bg-card rounded-xl border border-border overflow-hidden">
-              <div
-                className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-accent transition-colors"
-                onClick={() => setExpandedId(isOpen ? null : eq.id)}
-              >
-                <span className={clsx('w-2 h-2 rounded-full shrink-0', estadoColor)} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground">{eq.nombre}</p>
-                  {subtitulo && <p className="text-xs text-muted-foreground">{subtitulo}</p>}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">
-                    {eq.certificados.length} certificado
-                    {eq.certificados.length !== 1 ? 's' : ''}
-                  </span>
-
-                  {canEdit && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openAdd(eq.id)
-                      }}
-                      className="text-xs font-medium text-primary hover:text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors"
-                    >
-                      + Agregar
-                    </button>
-                  )}
-
-                  <svg
-                    className={clsx('w-4 h-4 text-muted-foreground transition-transform', isOpen && 'rotate-180')}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                  </svg>
-                </div>
-              </div>
-
-              {isOpen && (
-                <div className="border-t border-border bg-muted px-5 py-4">
-                  <div className="space-y-2 mb-4">
-                    {eq.certificados.length === 0 && (
-                      <p className="text-xs text-muted-foreground py-2">Sin certificados. Agregá el primero.</p>
-                    )}
-
-                    {eq.certificados.map((cert) => {
-                      const estado = getEstadoVencimiento(cert.fecha_vencimiento, cert.alerta_dias)
-                      const isEditing = editingCert === cert.id
-
-                      return (
-                        <div key={cert.id} className="bg-card rounded-lg border border-border overflow-hidden">
-                          {!isEditing && (
-                            <div className="flex items-center gap-3 px-4 py-3">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground">
-                                  {cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? 'Sin tipo'}
-                                </p>
-                                {cert.notas && (
-                                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{cert.notas}</p>
-                                )}
-                              </div>
-
-                              <span
-                                className={clsx(
-                                  'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border shrink-0',
-                                  ESTADO_COLORS[estado]
-                                )}
-                              >
-                                {cert.fecha_vencimiento
-                                  ? format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')
-                                  : ESTADO_LABELS[estado]}
-                              </span>
-
-                              {canEdit && (
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <button
-                                    onClick={() => openEdit(cert)}
-                                    className="text-xs text-muted-foreground hover:text-primary transition-colors"
-                                  >
-                                    Editar
-                                  </button>
-                                  <button
-                                    onClick={() => handleDelete(eq.id, cert.id)}
-                                    className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
-                                  >
-                                    Eliminar
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {!isEditing && (
-                            <div className="border-t border-border px-4 py-2.5">
-                              <div className="flex flex-wrap items-center gap-2">
-                                {(cert.archivos ?? []).map((a) => (
-                                  <span key={a.id} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
-                                    <button type="button" onClick={() => verArchivo(a.path)} className="max-w-[160px] truncate text-left text-primary hover:underline">{a.nombre}</button>
-                                    {canEdit && (
-                                      <button onClick={() => handleDeleteArchivo(eq.id, cert.id, a.id)} className="text-muted-foreground hover:text-red-500" aria-label="Eliminar archivo">×</button>
-                                    )}
-                                  </span>
-                                ))}
-                                {(cert.archivos ?? []).length === 0 && (
-                                  <span className="text-xs text-muted-foreground">Sin archivos</span>
-                                )}
-                                {canEdit && (
-                                  <label className="inline-flex cursor-pointer items-center rounded-md border border-input px-2 py-1 text-xs text-muted-foreground hover:bg-accent">
-                                    {uploadingCert === cert.id ? 'Subiendo…' : '+ Adjuntar'}
-                                    <input type="file" accept="application/pdf,image/*" className="hidden" disabled={uploadingCert === cert.id}
-                                      onChange={(e) => { if (e.target.files?.length) handleUploadArchivo(eq.id, cert.id, e.target.files) }} />
-                                  </label>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {isEditing && (
-                            <div className="px-4 py-4">
-                              {renderFormFields()}
-                              <div className="flex gap-2 mt-3">
-                                <button
-                                  onClick={() => handleSave(eq.id)}
-                                  disabled={saving || !form.tipo_id}
-                                  className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg"
-                                >
-                                  {saving ? 'Guardando...' : 'Guardar'}
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setEditingCert(null)
-                                    setForm(FORM_EMPTY)
-                                  }}
-                                  className="text-xs text-muted-foreground px-3 py-2"
-                                >
-                                  Cancelar
-                                </button>
-                              </div>
-                              {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {isAddingHere && canEdit && (
-                    <div className="bg-card rounded-lg border border-primary/30 p-4">
-                      <p className="text-sm font-medium text-foreground mb-3">Nuevo certificado</p>
-                      {renderFormFields()}
-                      <div className="flex gap-2 mt-3">
-                        <button
-                          onClick={() => handleSave(eq.id)}
-                          disabled={saving || !form.tipo_id}
-                          className="bg-primary hover:brightness-110 disabled:opacity-50 text-white text-xs font-medium px-4 py-2 rounded-lg"
-                        >
-                          {saving ? 'Guardando...' : 'Agregar'}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setAddingTo(null)
-                            setForm(FORM_EMPTY)
-                          }}
-                          className="text-xs text-muted-foreground px-3 py-2"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                      {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-                    </div>
-                  )}
-
-                  {canEdit && (
-                    <div className="mt-3 text-right">
-                      <button
-                        onClick={() => handleDeleteEquipo(eq.id)}
-                        className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
-                      >
-                        Eliminar equipo
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+      {canEdit && !creatingEquipo && (
+        <button
+          onClick={() => abrirAlta()}
+          className="w-full rounded-xl border border-dashed border-border px-5 py-3 text-sm font-medium text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+        >
+          + Nueva sección (ej: Matafuegos, Herramientas…)
+        </button>
+      )}
     </div>
   )
 
@@ -576,7 +632,7 @@ export default function EquiposClient({
               value={form.tipo_nombre_custom}
               onChange={(e) => setForm((f) => ({ ...f, tipo_nombre_custom: e.target.value }))}
               className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="Ej: Calibración anual"
+              placeholder="Ej: Recarga anual"
             />
           </div>
         )}
