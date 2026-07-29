@@ -103,7 +103,7 @@ export default function AppShell({ empresas, sesion, children }: Props) {
         { key: 'resumen', label: 'Resumen', href: `/empresa/${activa.slug}`, active: pathname === `/empresa/${activa.slug}` },
         { key: 'empleados', label: 'Empleados', href: `/empleados?empresa=${activa.slug}`, active: false },
         { key: 'vencimientos', label: 'Vencimientos', href: `/vencimientos?empresa=${activa.slug}`, active: false },
-        { key: 'documentacion', label: 'Documentación', href: `/empresa/${activa.slug}#documentacion`, active: false },
+        { key: 'documentacion', label: 'Documentación', href: `/empresa/${activa.slug}?vista=documentacion`, active: false },
       ]
     : []
 
