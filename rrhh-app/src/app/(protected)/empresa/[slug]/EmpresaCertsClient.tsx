@@ -46,9 +46,27 @@ interface Props {
   canEdit: boolean
   empresaSlug: string
   empresaId: string
+  /** Título de la sección. Default: habilitaciones de empresa. */
+  titulo?: string
+  /** Nombre del documento en singular, para textos ("habilitación", "programa"). */
+  etiqueta?: string
+  /** Placeholder del campo nombre en el alta. */
+  placeholderNombre?: string
+  /** certificados.categoria con el que se crean los documentos de esta sección
+   *  (null = habilitación clásica; 'programa_seguridad' = programas de seguridad). */
+  categoria?: string | null
 }
 
-export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlug, empresaId }: Props) {
+export default function EmpresaCertsClient({
+  certs: initial,
+  canEdit,
+  empresaSlug,
+  empresaId,
+  titulo = 'Habilitaciones de empresa',
+  etiqueta = 'habilitación',
+  placeholderNombre = 'Ej: Registro de Inscripción Santa Fe',
+  categoria = null,
+}: Props) {
   const supabase = createClient()
   const [certs, setCerts] = useState<CertEmpresa[]>(initial)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -119,6 +137,7 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
       .from('certificados')
       .insert({
         empresa_id: empresaId,
+        categoria,
         tipo_nombre_custom: newForm.nombre.trim(),
         fecha_vencimiento: newForm.fecha_vencimiento || null,
         numero_documento: newForm.numero_documento || null,
@@ -129,7 +148,7 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
       .single()
 
     if (err) {
-      setErrorNew('No se pudo crear la habilitación.')
+      setErrorNew(`No se pudo crear la ${etiqueta}.`)
       setSavingNew(false)
       return
     }
@@ -141,7 +160,7 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
   }
 
   async function handleDelete(certId: string) {
-    if (!confirm('¿Eliminar esta habilitación?')) return
+    if (!confirm(`¿Eliminar esta ${etiqueta}?`)) return
     const { error: err } = await supabase.from('certificados').delete().eq('id', certId)
     if (!err) setCerts((prev) => prev.filter((c) => c.id !== certId))
   }
@@ -190,7 +209,7 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-foreground">Habilitaciones de empresa</h2>
+        <h2 className="text-base font-semibold text-foreground">{titulo}</h2>
         {canEdit && !showNewForm && (
           <button
             onClick={() => { setShowNewForm(true); setNewForm(FORM_EMPTY); setErrorNew('') }}
@@ -207,7 +226,7 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
       {/* Formulario de nueva habilitación */}
       {showNewForm && canEdit && (
         <div className="mb-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
-          <p className="text-sm font-medium text-foreground mb-3">Nueva habilitación</p>
+          <p className="text-sm font-medium text-foreground mb-3">Nueva {etiqueta}</p>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div className="col-span-2">
               <label className="block text-xs font-medium text-foreground mb-1">Nombre *</label>
@@ -216,7 +235,7 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
                 value={newForm.nombre}
                 onChange={(e) => setNewForm((f) => ({ ...f, nombre: e.target.value }))}
                 className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-card"
-                placeholder="Ej: Registro de Inscripción Santa Fe"
+                placeholder={placeholderNombre}
                 autoFocus
               />
             </div>
@@ -268,7 +287,7 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
               disabled={savingNew}
               className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg transition-colors"
             >
-              {savingNew ? 'Guardando...' : 'Agregar habilitación'}
+              {savingNew ? 'Guardando...' : `Agregar ${etiqueta}`}
             </button>
             <button
               onClick={() => { setShowNewForm(false); setNewForm(FORM_EMPTY); setErrorNew('') }}
@@ -282,7 +301,7 @@ export default function EmpresaCertsClient({ certs: initial, canEdit, empresaSlu
 
       {certs.length === 0 && !showNewForm && (
         <div className="rounded-xl border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
-          Sin habilitaciones registradas.{' '}
+          Sin {etiqueta === 'habilitación' ? 'habilitaciones' : 'programas'} registrados.{' '}
           {canEdit && (
             <button
               onClick={() => { setShowNewForm(true); setNewForm(FORM_EMPTY) }}

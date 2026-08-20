@@ -106,7 +106,11 @@ export default async function EmpresaPage({
 
   const vista = sp.vista === 'documentacion' ? 'documentacion' : 'resumen'
 
-  /* ── Vista Documentación: habilitaciones + vehículos + secciones de activos ── */
+  // Documentos de empresa por categoría (null = habilitación clásica)
+  const habilitaciones = (certsEmpresa ?? []).filter((c) => c.categoria !== 'programa_seguridad')
+  const programasSeguridad = (certsEmpresa ?? []).filter((c) => c.categoria === 'programa_seguridad')
+
+  /* ── Vista Documentación: habilitaciones + programas + vehículos + activos ── */
   if (vista === 'documentacion') {
     return (
       <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8" id="documentacion">
@@ -114,15 +118,28 @@ export default async function EmpresaPage({
           <Monograma nombre={empresa.nombre} size="lg" variant="accent" />
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Documentación</h1>
-            <p className="text-sm text-muted-foreground">{empresa.nombre} · habilitaciones, vehículos y activos</p>
+            <p className="text-sm text-muted-foreground">
+              {empresa.nombre} · habilitaciones, programas de seguridad, vehículos y activos
+            </p>
           </div>
         </div>
 
         <EmpresaCertsClient
-          certs={certsEmpresa ?? []}
+          certs={habilitaciones}
           canEdit={canEdit}
           empresaSlug={slug}
           empresaId={empresa.id}
+        />
+
+        <EmpresaCertsClient
+          certs={programasSeguridad}
+          canEdit={canEdit}
+          empresaSlug={slug}
+          empresaId={empresa.id}
+          titulo="Programas de seguridad"
+          etiqueta="programa"
+          placeholderNombre="Ej: Programa de Seguridad e Higiene — Bunge PGSM"
+          categoria="programa_seguridad"
         />
 
         <VehiculosClient

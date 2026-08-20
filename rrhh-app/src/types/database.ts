@@ -63,6 +63,7 @@ export type Database = {
       certificados: {
         Row: {
           alerta_dias: number | null
+          categoria: string | null
           created_at: string | null
           empleado_id: string | null
           empresa_id: string | null
@@ -79,6 +80,7 @@ export type Database = {
         }
         Insert: {
           alerta_dias?: number | null
+          categoria?: string | null
           created_at?: string | null
           empleado_id?: string | null
           empresa_id?: string | null
@@ -95,6 +97,7 @@ export type Database = {
         }
         Update: {
           alerta_dias?: number | null
+          categoria?: string | null
           created_at?: string | null
           empleado_id?: string | null
           empresa_id?: string | null
