@@ -147,6 +147,7 @@ export default async function EmpresaPage({
           tiposCertificado={tiposVehiculo ?? []}
           canEdit={canEdit}
           empresaSlug={slug}
+          empresaId={empresa.id}
         />
 
         <EquiposClient
