@@ -29,6 +29,7 @@ interface Props {
   tiposCertificado: TipoCertificado[]
   canEdit: boolean
   empresaSlug: string
+  empresaId: string
 }
 
 const FORM_EMPTY = {
@@ -39,11 +40,17 @@ const FORM_EMPTY = {
   alerta_dias: 30,
 }
 
+const VEH_EMPTY = {
+  patente: '',
+  descripcion: '',
+}
+
 export default function VehiculosClient({
   vehiculos: initVehiculos,
   tiposCertificado,
   canEdit,
   empresaSlug,
+  empresaId,
 }: Props) {
   const supabase = createClient()
   const [vehiculos, setVehiculos] = useState(initVehiculos)
@@ -54,6 +61,62 @@ export default function VehiculosClient({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [uploadingCert, setUploadingCert] = useState<string | null>(null)
+  const [showNewVeh, setShowNewVeh] = useState(false)
+  const [vehForm, setVehForm] = useState(VEH_EMPTY)
+  const [savingVeh, setSavingVeh] = useState(false)
+  const [errorVeh, setErrorVeh] = useState('')
+
+  function openNewVeh() {
+    setVehForm(VEH_EMPTY)
+    setErrorVeh('')
+    setShowNewVeh(true)
+  }
+
+  function closeNewVeh() {
+    setVehForm(VEH_EMPTY)
+    setErrorVeh('')
+    setShowNewVeh(false)
+  }
+
+  async function handleCrearVehiculo() {
+    const patente = vehForm.patente.trim().toUpperCase()
+    if (!patente) {
+      setErrorVeh('La patente es requerida.')
+      return
+    }
+    if (vehiculos.some((v) => v.patente.trim().toUpperCase() === patente)) {
+      setErrorVeh('Ya existe un vehículo con esa patente.')
+      return
+    }
+
+    setSavingVeh(true)
+    setErrorVeh('')
+
+    const { data, error: err } = await supabase
+      .from('vehiculos')
+      .insert({
+        empresa_id: empresaId,
+        patente,
+        descripcion: vehForm.descripcion.trim() || null,
+        activo: true,
+      })
+      .select('*')
+      .single()
+
+    setSavingVeh(false)
+
+    if (err || !data) {
+      setErrorVeh('No se pudo crear el vehículo.')
+      return
+    }
+
+    // Mismo criterio que la query del server: .order('patente')
+    setVehiculos((prev) =>
+      [...prev, { ...data, certificados: [] }].sort((a, b) => a.patente.localeCompare(b.patente, 'es'))
+    )
+    closeNewVeh()
+    setExpandedId(data.id)
+  }
 
   function openAdd(vehiculoId: string) {
     setForm(FORM_EMPTY)
@@ -202,11 +265,79 @@ export default function VehiculosClient({
     }
   }
 
-  if (vehiculos.length === 0) return null
-
   return (
     <div className="mb-8">
-      <h2 className="text-base font-semibold text-foreground mb-3">Vehículos</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-base font-semibold text-foreground">Vehículos</h2>
+        {canEdit && !showNewVeh && (
+          <button
+            onClick={openNewVeh}
+            className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Agregar
+          </button>
+        )}
+      </div>
+
+      {/* Formulario de nuevo vehículo */}
+      {showNewVeh && canEdit && (
+        <div className="mb-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <p className="text-sm font-medium text-foreground mb-3">Nuevo vehículo</p>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1">Patente *</label>
+              <input
+                type="text"
+                value={vehForm.patente}
+                onChange={(e) => setVehForm((f) => ({ ...f, patente: e.target.value.toUpperCase() }))}
+                className="w-full px-3 py-2 rounded-lg border border-input text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring bg-card"
+                placeholder="Ej: AD113UY"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1">Descripción</label>
+              <input
+                type="text"
+                value={vehForm.descripcion}
+                onChange={(e) => setVehForm((f) => ({ ...f, descripcion: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-card"
+                placeholder="Ej: Ford Ranger — Bahía Blanca"
+              />
+            </div>
+          </div>
+          {errorVeh && <p className="text-xs text-danger mb-2">{errorVeh}</p>}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleCrearVehiculo}
+              disabled={savingVeh}
+              className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              {savingVeh ? 'Guardando...' : 'Agregar vehículo'}
+            </button>
+            <button
+              onClick={closeNewVeh}
+              className="text-xs text-muted-foreground hover:text-foreground px-2 py-2"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {vehiculos.length === 0 && !showNewVeh && (
+        <div className="rounded-xl border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
+          Sin vehículos registrados.{' '}
+          {canEdit && (
+            <button onClick={openNewVeh} className="text-primary hover:underline">
+              Agregar el primero
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="space-y-3">
         {vehiculos.map((veh) => {
