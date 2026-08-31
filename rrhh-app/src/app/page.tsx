@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard } from 'lucide-react'
+import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard, Bug, ExternalLink } from 'lucide-react'
 import { requireSesion } from '@/lib/auth/session'
 import { modulosPara } from '@/config/modules'
 import { createClient } from '@/lib/supabase/server'
@@ -142,6 +142,16 @@ export default async function HubPage() {
                       <span className="min-w-0 flex-1 truncate">Operaciones · UNIPAR</span>
                       <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                     </Link>
+                  )}
+
+                  {/* App de control de plagas: página estática autocontenida en public/
+                      (los datos viven en el dispositivo del operario, no usa Supabase). */}
+                  {marca.key === 'adc' && puedeOps && (
+                    <a href="/control-plagas.html" target="_blank" rel="noopener noreferrer" className={filaCls}>
+                      <Bug className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <span className="min-w-0 flex-1 truncate">Control de Plagas</span>
+                      <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
+                    </a>
                   )}
 
                   {puedeComercial && (

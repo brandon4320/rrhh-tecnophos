@@ -1,0 +1,1526 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Control de Plagas ADC</title>
+<style>
+  :root {
+    --bg: #F6F5F1; --surface: #FFFFFF; --surface-2: #EFEDE6;
+    --ink: #22302B; --ink-2: #5C6963; --ink-3: #8B958F; --line: #DDDAD0;
+    --accent: #1B6E5A; --accent-ink: #FFFFFF; --accent-soft: #E3EFEA;
+    --ok: #2E7D4F;   --ok-soft: #E2F0E6;
+    --warn: #B97A18; --warn-soft: #F7ECD8;
+    --bad: #B3382E;  --bad-soft: #F7E2E0;
+    --det: #C05621;  --det-soft: #F8E7DC;
+    --ocu: #2C5F8A;  --ocu-soft: #E1EBF3;
+    --peg: #6B4FA3;  --peg-soft: #EAE4F4;
+    --shadow: 0 1px 3px rgba(34,48,43,.08), 0 4px 16px rgba(34,48,43,.06);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 17px; line-height: 1.55; -webkit-tap-highlight-color: transparent;
+  }
+  h1 { font-size: 25px; font-weight: 700; }
+  h2 { font-size: 20px; font-weight: 650; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 0 18px 60px; }
+
+  .topbar {
+    display: flex; align-items: center; gap: 12px; padding: 12px 18px;
+    border-bottom: 1px solid var(--line); background: var(--surface);
+    position: sticky; top: 0; z-index: 20;
+  }
+  .brand { font-weight: 750; font-size: 16px; letter-spacing: .02em; }
+  .brand small { display: block; font-weight: 550; font-size: 11.5px; color: var(--ink-2); letter-spacing: .07em; text-transform: uppercase; }
+  .topbar .who { margin-left: auto; display: none; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; color: var(--ink-2); }
+  .who .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+
+  .screen { display: none; }
+  .screen.on { display: block; animation: fade .16s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .screen.on { animation: none; } }
+
+  .screen-head { padding: 26px 0 16px; }
+  .lead { color: var(--ink-2); margin-top: 4px; }
+  .eyebrow { font-size: 12px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 540px) { .row-2 { grid-template-columns: 1fr; } }
+
+  button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+  button:focus-visible, .chip:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .big-btn {
+    display: flex; align-items: center; gap: 14px; width: 100%;
+    min-height: 64px; padding: 14px 18px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: var(--shadow); text-align: left; transition: transform .06s ease;
+  }
+  .big-btn:active { transform: scale(.985); }
+  .big-btn .t { font-weight: 650; font-size: 18px; }
+  .big-btn .s { color: var(--ink-2); font-size: 14.5px; }
+  .big-btn .icon {
+    width: 46px; height: 46px; border-radius: 12px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 21px; font-weight: 700; background: var(--accent-soft); color: var(--accent);
+  }
+  .big-btn.coral .icon { background: var(--det-soft); color: var(--det); }
+  .big-btn.gris .icon { background: var(--surface-2); color: var(--ink-2); }
+  .big-btn .arrow { margin-left: auto; color: var(--ink-3); font-size: 20px; }
+  .name-btn .avatar {
+    width: 46px; height: 46px; border-radius: 50%; flex: none;
+    background: var(--accent); color: var(--accent-ink);
+    display: flex; align-items: center; justify-content: center; font-weight: 750; font-size: 18px;
+  }
+
+  .primary {
+    display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+    min-height: 56px; padding: 14px 20px; background: var(--accent); color: var(--accent-ink);
+    border-radius: 14px; font-weight: 650; font-size: 17px;
+  }
+  .primary.rojo { background: var(--bad); }
+  .ghost {
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    min-height: 50px; padding: 12px 18px; border: 1px solid var(--line); border-radius: 14px;
+    background: var(--surface); font-weight: 600; font-size: 15.5px; color: var(--ink-2);
+  }
+  .backlink { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-weight: 600; font-size: 15px; padding: 10px 0; margin-top: 14px; }
+  .linkline { display: flex; gap: 22px; flex-wrap: wrap; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
+
+  .progress-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .progress-row .num { font-size: 21px; font-weight: 750; font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0%; background: var(--accent); border-radius: 4px; transition: width .2s ease; }
+
+  .st-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 9px; margin-top: 14px; }
+  .st {
+    min-height: 60px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    font-variant-numeric: tabular-nums; padding: 4px 2px;
+  }
+  .st .num { font-size: 18px; font-weight: 650; }
+  .st .tag { font-size: 10.5px; font-weight: 600; letter-spacing: .03em; color: var(--ink-3); text-align: center; }
+  .st[data-e="B"] { background: var(--ok-soft); border-color: var(--ok); }   .st[data-e="B"] .tag { color: var(--ok); }
+  .st[data-e="C"] { background: var(--warn-soft); border-color: var(--warn); } .st[data-e="C"] .tag { color: var(--warn); }
+  .st[data-e="N"] { background: var(--bad-soft); border-color: var(--bad); }  .st[data-e="N"] .tag { color: var(--bad); }
+  .st[data-e="D"] { background: var(--det-soft); border-color: var(--det); }  .st[data-e="D"] .tag { color: var(--det); }
+  .st[data-e="O"] { background: var(--ocu-soft); border-color: var(--ocu); }  .st[data-e="O"] .tag { color: var(--ocu); }
+  .st[data-e="X"] { background: var(--peg-soft); border-color: var(--peg); }  .st[data-e="X"] .tag { color: var(--peg); }
+  .st.mini { min-height: 46px; pointer-events: none; }
+  .st.mini .num { font-size: 15px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; font-size: 13px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 11px; height: 11px; border-radius: 4px; display: inline-block; }
+
+  .sheet-veil { position: fixed; inset: 0; background: rgba(15,22,19,.45); display: none; align-items: flex-end; justify-content: center; z-index: 50; }
+  .sheet-veil.on { display: flex; }
+  .sheet { width: 100%; max-width: 780px; background: var(--surface); border-radius: 22px 22px 0 0; padding: 20px 20px 28px; box-shadow: 0 -8px 40px rgba(0,0,0,.25); max-height: 85vh; overflow-y: auto; }
+  .sheet h2 { display: flex; align-items: baseline; gap: 10px; }
+  .sheet h2 .num { font-size: 28px; font-weight: 750; }
+  .estados { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  @media (min-width: 620px) { .estados { grid-template-columns: repeat(3, 1fr); } }
+  .e-btn {
+    min-height: 70px; border-radius: 14px; border: 1.5px solid var(--line);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    background: var(--surface); font-weight: 650; font-size: 16px;
+  }
+  .e-btn small { font-weight: 500; font-size: 12.5px; opacity: .8; }
+  .e-btn.eB { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+  .e-btn.eC { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+  .e-btn.eN { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+  .e-btn.eD { background: var(--det-soft); border-color: var(--det); color: var(--det); }
+  .e-btn.eO { background: var(--ocu-soft); border-color: var(--ocu); color: var(--ocu); }
+  .e-btn.eX { background: var(--peg-soft); border-color: var(--peg); color: var(--peg); }
+
+  label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+  textarea, input[type="text"], input[type="number"], input[type="date"] {
+    width: 100%; padding: 13px; font: inherit; border: 1.5px solid var(--line);
+    border-radius: 12px; background: var(--surface); color: var(--ink);
+  }
+  textarea:focus, input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  textarea { min-height: 100px; resize: vertical; }
+  .field-err { color: var(--bad); font-weight: 600; font-size: 14.5px; display: none; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip { padding: 11px 17px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); font-weight: 600; font-size: 15px; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+  .sum-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .sum-row:last-child { border-bottom: none; }
+  .sum-row .num { font-size: 19px; font-weight: 750; font-variant-numeric: tabular-nums; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; }
+  .pill i { width: 11px; height: 11px; border-radius: 4px; }
+
+  .alert { display: flex; gap: 12px; align-items: flex-start; background: var(--warn-soft); border: 1px solid var(--warn); border-radius: 14px; padding: 13px 15px; font-size: 15px; }
+  .alert b { color: var(--warn); }
+  .alert.suave { background: var(--surface); border-color: var(--line); color: var(--ink-2); }
+
+  .hist-item { display: block; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .hist-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .badge { font-size: 12px; font-weight: 700; letter-spacing: .04em; padding: 3px 10px; border-radius: 999px; }
+  .badge.desrat { background: var(--accent-soft); color: var(--accent); }
+  .badge.orden { background: var(--det-soft); color: var(--det); }
+  .hist-fecha { margin-left: auto; color: var(--ink-3); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  .hist-tit { font-weight: 650; font-size: 16.5px; margin-top: 4px; }
+  .hist-sub { color: var(--ink-2); font-size: 14px; margin-top: 2px; }
+
+  .done-mark { width: 80px; height: 80px; border-radius: 50%; background: var(--ok-soft); border: 2px solid var(--ok); color: var(--ok); display: flex; align-items: center; justify-content: center; font-size: 38px; margin: 0 auto 16px; }
+  .center { text-align: center; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: var(--bg); padding: 12px 20px; border-radius: 12px;
+    font-weight: 600; font-size: 15px; opacity: 0; pointer-events: none; transition: all .25s ease;
+    z-index: 90; max-width: 90vw; text-align: center;
+  }
+  .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .modal-veil { position: fixed; inset: 0; background: rgba(15,22,19,.45); display: none; align-items: center; justify-content: center; z-index: 60; padding: 20px; }
+  .modal-veil.on { display: flex; }
+  .modal { width: 100%; max-width: 440px; background: var(--surface); border-radius: 18px; padding: 22px; }
+  .modal h2 { margin-bottom: 8px; }
+  .modal p { color: var(--ink-2); font-size: 15.5px; }
+  .modal .stack { margin-top: 18px; }
+
+  .ajuste-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .ajuste-item:last-child { border-bottom: none; }
+  .ajuste-item .nom { font-weight: 600; flex: 1; }
+  .ajuste-item .meta { color: var(--ink-2); font-size: 14px; }
+  .mini-btn { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: 14px; color: var(--ink-2); }
+  .mini-btn.rojo { color: var(--bad); border-color: var(--bad-soft); }
+
+  .section-title { display: flex; align-items: baseline; justify-content: space-between; margin: 24px 0 10px; }
+  .section-title h2 { font-size: 18px; }
+  .section-title span { font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+  #printArea { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; left: 0; top: 0; width: 100%; background: #fff; color: #000; font-size: 12px; }
+    .no-print { display: none !important; }
+  }
+  .pl-hoja { padding: 24px; font-family: Arial, sans-serif; color: #000; }
+  .pl-head { display: flex; border: 1.5px solid #000; }
+  .pl-logo { padding: 10px 16px; border-right: 1.5px solid #000; font-weight: 800; font-size: 20px; }
+  .pl-logo small { display: block; font-size: 10px; letter-spacing: 2px; font-weight: 600; }
+  .pl-titulo { flex: 1; padding: 8px 12px; }
+  .pl-titulo div { border-bottom: 1px solid #000; padding: 2px 0; font-size: 11px; }
+  .pl-titulo div:last-child { border-bottom: none; font-weight: 700; }
+  .pl-meta { width: 150px; border-left: 1.5px solid #000; padding: 8px 12px; font-size: 11px; }
+  .pl-refs { display: flex; gap: 20px; margin: 10px 0; font-size: 10.5px; }
+  .pl-refs b { font-size: 11px; }
+  .pl-info { border: 1px solid #000; padding: 6px 10px; margin-bottom: 10px; font-size: 11.5px; display: flex; gap: 26px; flex-wrap: wrap; }
+  .pl-tabla { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  .pl-tabla td, .pl-tabla th { border: 1px solid #000; padding: 3px 6px; font-size: 10.5px; text-align: center; }
+  .pl-tabla th { background: #ddd; }
+  .pl-obs { border: 1px solid #000; min-height: 70px; padding: 6px 10px; font-size: 11.5px; margin-bottom: 30px; }
+  .pl-obs b { display: block; margin-bottom: 4px; }
+  .pl-firmas { display: flex; justify-content: space-around; margin-top: 46px; }
+  .pl-firmas div { border-top: 1px solid #000; padding: 4px 30px 0; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="topbar no-print">
+  <div class="brand">ADC Fumigación<small>Control de plagas</small></div>
+  <div class="who" id="whoBadge"><span class="dot"></span><span id="whoName"></span></div>
+</div>
+
+<div class="wrap no-print">
+
+  <section class="screen" id="scr-quien">
+    <div class="screen-head">
+      <h1>¿Quién reporta?</h1>
+      <p class="lead">Tocá tu nombre para empezar.</p>
+    </div>
+    <div class="stack" id="nameList"></div>
+    <button class="backlink" onclick="go('scr-ajustes')">⚙ Ajustes del sistema</button>
+  </section>
+
+  <section class="screen" id="scr-planta">
+    <div class="screen-head">
+      <h1>¿En qué planta vas a trabajar?</h1>
+    </div>
+    <div class="stack" id="plantaList"></div>
+    <button class="backlink" onclick="go('scr-quien')">‹ Cambiar de operario</button>
+  </section>
+
+  <section class="screen" id="scr-menu">
+    <div class="screen-head">
+      <div class="eyebrow" id="menuPlanta"></div>
+      <h1>¿Qué vas a hacer?</h1>
+    </div>
+    <div id="avisos" class="stack" style="margin-bottom:12px"></div>
+    <div class="stack">
+      <button class="big-btn" onclick="renderSectores(); go('scr-sector')">
+        <span class="icon">◉</span>
+        <span><span class="t">Desratización</span><br><span class="s">Recorrido de estaciones de cebado y trampas UV</span></span>
+        <span class="arrow">›</span>
+      </button>
+      <button class="big-btn coral" onclick="abrirOrden()">
+        <span class="icon">✦</span>
+        <span><span class="t">Servicio esporádico</span><br><span class="s">Aspersión, fumigación o tarea puntual a pedido</span></span>
+        <span class="arrow">›</span>
+      </button>
+      <button class="big-btn gris" onclick="renderHistorial(); go('scr-historial')">
+        <span class="icon">≡</span>
+        <span><span class="t">Historial</span><br><span class="s">Registros y órdenes guardadas</span></span>
+        <span class="arrow">›</span>
+      </button>
+    </div>
+    <div class="linkline">
+      <button class="backlink" onclick="irAPlantas()">‹ Cambiar de planta</button>
+      <button class="backlink" onclick="go('scr-quien')">‹ Cambiar de operario</button>
+      <button class="backlink" onclick="go('scr-ajustes')">⚙ Ajustes</button>
+    </div>
+  </section>
+
+  <section class="screen" id="scr-sector">
+    <div class="screen-head">
+      <div class="eyebrow">Desratización</div>
+      <h1>Elegí el sector</h1>
+    </div>
+    <div class="stack" id="sectorList"></div>
+    <button class="backlink" onclick="go('scr-menu')">‹ Volver</button>
+  </section>
+
+  <section class="screen" id="scr-recorrido">
+    <div class="screen-head">
+      <div class="eyebrow" id="recEyebrow">Desratización</div>
+      <h1 id="recTitle">Sector</h1>
+    </div>
+    <div class="card">
+      <div class="progress-row"><span>Estaciones revisadas</span><span class="num" id="recCount">0 / 0</span></div>
+      <div class="bar"><i id="recBar"></i></div>
+      <div class="st-grid" id="stGrid"></div>
+      <div class="legend">
+        <span><i style="background:var(--ok)"></i>Bien</span>
+        <span><i style="background:var(--warn)"></i>Consumido</span>
+        <span><i style="background:var(--bad)"></i>Faltante</span>
+        <span><i style="background:var(--det)"></i>Deteriorado</span>
+        <span><i style="background:var(--ocu)"></i>Oculto</span>
+        <span><i style="background:var(--peg)"></i>Cambio de pegamento</span>
+      </div>
+    </div>
+    <div id="uvBlock" style="display:none">
+      <div class="section-title"><h2>Trampas UV</h2><span id="uvCount"></span></div>
+      <div class="card"><div class="st-grid" id="uvGrid" style="margin-top:0"></div></div>
+    </div>
+    <div class="stack" style="margin-top:16px">
+      <button class="ghost" onclick="markRestantes()">Marcar las restantes como “Bien”</button>
+      <button class="primary" onclick="goResumen()">Continuar al resumen ›</button>
+    </div>
+    <button class="backlink" onclick="confirmar('¿Salir del recorrido?', 'Lo marcado queda guardado como borrador y podés continuarlo después.', () => go('scr-menu'))">‹ Salir (queda como borrador)</button>
+  </section>
+
+  <section class="screen" id="scr-resumen">
+    <div class="screen-head">
+      <div class="eyebrow" id="resEyebrow">Desratización</div>
+      <h1>Resumen del recorrido</h1>
+    </div>
+    <div id="resAlert" style="display:none; margin-bottom:14px" class="alert"><span>⚠️</span><span><b>Atención:</b> <span id="resAlertTxt"></span></span></div>
+    <div class="card" id="resCard"></div>
+    <div style="margin-top:16px">
+      <label for="obsGral">Novedades de los distintos sectores</label>
+      <textarea id="obsGral" placeholder="Ej.: estación 41 movida por obra en el sector, se reubicó a 2 metros…"></textarea>
+    </div>
+    <div class="stack" style="margin-top:16px">
+      <button class="primary" onclick="guardarRegistro()">Guardar registro</button>
+    </div>
+    <button class="backlink" onclick="go('scr-recorrido')">‹ Volver al recorrido</button>
+  </section>
+
+  <section class="screen" id="scr-orden">
+    <div class="screen-head">
+      <div class="eyebrow">Servicio esporádico</div>
+      <h1>Nueva orden de trabajo</h1>
+      <p class="lead">Orden <strong id="ordenNumPreview"></strong> · se numera sola</p>
+    </div>
+    <div class="stack">
+      <div>
+        <label>Tipo de tarea</label>
+        <div class="chips" id="chipsTipo">
+          <button class="chip" data-v="Aspersión con líquido">Aspersión con líquido</button>
+          <button class="chip" data-v="Fumigación de dípteros">Fumigación de dípteros</button>
+          <button class="chip" data-v="Tratamiento de pruebas">Tratamiento de pruebas</button>
+          <button class="chip" data-v="Tarea puntual">Tarea puntual</button>
+        </div>
+      </div>
+      <div>
+        <label>Sectores donde se trabajó</label>
+        <div class="chips" id="chipsSector"></div>
+      </div>
+      <div><label for="obsOrden">Observaciones</label><textarea id="obsOrden" placeholder="Pedido por Higiene y Seguridad, motivo, detalles de la aplicación…"></textarea></div>
+      <p class="field-err" id="ordenError">Completá el tipo de tarea y al menos un sector.</p>
+      <button class="primary" onclick="guardarOrden()">Guardar orden de trabajo</button>
+    </div>
+    <button class="backlink" onclick="go('scr-menu')">‹ Volver</button>
+  </section>
+
+  <section class="screen" id="scr-firma">
+    <div class="screen-head">
+      <div class="eyebrow" id="firmaEyebrow">Orden de trabajo</div>
+      <h1>Firma del supervisor</h1>
+      <p class="lead">Pedile al supervisor que firme con el dedo en el recuadro. Sin la firma no se puede enviar el reporte.</p>
+    </div>
+    <div class="card" style="padding:10px">
+      <canvas id="firmaCanvas" style="width:100%; height:240px; border:1.5px dashed var(--line); border-radius:12px; touch-action:none; background:var(--surface)"></canvas>
+      <button class="mini-btn" style="margin-top:10px" onclick="limpiarFirma()">Borrar y firmar de nuevo</button>
+    </div>
+    <div style="margin-top:14px">
+      <label for="firmanteInput">Aclaración (nombre del supervisor)</label>
+      <input type="text" id="firmanteInput" placeholder="Nombre y apellido">
+    </div>
+    <p class="field-err" id="firmaError">Falta la firma en el recuadro.</p>
+    <div class="stack" style="margin-top:16px">
+      <button class="primary" onclick="guardarFirma()">Guardar firma</button>
+      <button class="ghost" onclick="firmarDespues()">Firmar después</button>
+    </div>
+  </section>
+
+  <section class="screen" id="scr-listo">
+    <div class="screen-head center" style="padding-top:48px">
+      <div class="done-mark">✓</div>
+      <h1 id="listoTitle">Registro guardado</h1>
+      <p class="lead" id="listoSub"></p>
+    </div>
+    <div class="stack" style="max-width:440px; margin:10px auto 0">
+      <button class="primary" id="listoMail">Enviar reporte por mail</button>
+      <button class="ghost" id="listoCompartir">Enviar por WhatsApp</button>
+      <button class="ghost" id="listoPdf">Ver planilla / guardar PDF</button>
+      <button class="ghost" onclick="go('scr-menu')">Volver al inicio</button>
+    </div>
+  </section>
+
+  <section class="screen" id="scr-historial">
+    <div class="screen-head">
+      <h1>Historial</h1>
+      <p class="lead" id="histResumen"></p>
+    </div>
+    <div class="chips" style="margin-bottom:14px">
+      <button class="chip on" data-f="todo" onclick="filtrarHist(this)">Todo</button>
+      <button class="chip" data-f="desrat" onclick="filtrarHist(this)">Desratización</button>
+      <button class="chip" data-f="orden" onclick="filtrarHist(this)">Órdenes</button>
+    </div>
+    <div class="stack" id="histList"></div>
+    <button class="backlink" onclick="go('scr-menu')">‹ Volver</button>
+  </section>
+
+  <section class="screen" id="scr-detalle">
+    <div class="screen-head">
+      <div class="eyebrow" id="detEyebrow"></div>
+      <h1 id="detTitle"></h1>
+      <p class="lead" id="detSub"></p>
+    </div>
+    <div id="detBody" class="stack"></div>
+    <div class="stack" style="margin-top:16px">
+      <button class="primary" id="detMail">Enviar reporte por mail</button>
+      <button class="ghost" id="detCompartir">Enviar por WhatsApp</button>
+      <button class="ghost" id="detPdf">Ver planilla / guardar PDF</button>
+      <button class="ghost" id="detBorrar" style="color:var(--bad)">Eliminar este registro</button>
+    </div>
+    <button class="backlink" onclick="renderHistorial(); go('scr-historial')">‹ Volver al historial</button>
+  </section>
+
+  <section class="screen" id="scr-ajustes">
+    <div class="screen-head"><h1>Ajustes</h1></div>
+
+    <div class="section-title"><h2>Operarios</h2></div>
+    <div class="card">
+      <div id="listaOperarios"></div>
+      <div style="display:flex; gap:10px; margin-top:12px">
+        <input type="text" id="nuevoOperario" placeholder="Nombre del operario">
+        <button class="mini-btn" style="flex:none" onclick="agregarOperario()">Agregar</button>
+      </div>
+    </div>
+
+    <div class="section-title"><h2>Plantas</h2></div>
+    <div class="card">
+      <div id="listaPlantas"></div>
+      <div style="display:flex; gap:10px; margin-top:12px">
+        <input type="text" id="nuevaPlanta" placeholder="Nombre de la planta">
+        <button class="mini-btn" style="flex:none" onclick="agregarPlanta()">Agregar</button>
+      </div>
+    </div>
+
+    <div class="section-title"><h2>Sectores</h2></div>
+    <div class="card">
+      <div id="listaSectores"></div>
+      <div class="stack" style="margin-top:12px">
+        <select id="nuevoSectorPlanta" style="width:100%; padding:13px; font:inherit; border:1.5px solid var(--line); border-radius:12px; background:var(--surface); color:var(--ink)"></select>
+        <input type="text" id="nuevoSectorNombre" placeholder="Nombre del sector">
+        <div style="display:flex; gap:10px">
+          <input type="number" id="nuevoSectorCebos" placeholder="Cant. estaciones" min="1">
+          <input type="number" id="nuevoSectorUV" placeholder="Cant. trampas UV (0 si no tiene)" min="0">
+        </div>
+        <button class="mini-btn" onclick="agregarSector()">Agregar sector</button>
+      </div>
+      <p style="color:var(--ink-3); font-size:13.5px; margin-top:10px">Los registros ya guardados no cambian al editar sectores.</p>
+    </div>
+
+    <div class="section-title"><h2>Envío automático de reportes</h2></div>
+    <div class="card">
+      <p style="color:var(--ink-2); font-size:15px; margin-bottom:12px">Con esto configurado, el botón "Enviar reporte por mail" manda la planilla en PDF automáticamente. Ver la guía de instalación del servicio de Google.</p>
+      <div class="stack">
+        <div><label for="cfgGasUrl">Dirección del servicio (termina en /exec)</label><input type="text" id="cfgGasUrl" placeholder="https://script.google.com/macros/s/…/exec" onchange="guardarConfigEnvio()"></div>
+        <div><label for="cfgMail">Casillas que reciben los reportes (separadas por coma)</label><input type="text" id="cfgMail" placeholder="calidad@ejemplo.com, higiene@ejemplo.com" onchange="guardarConfigEnvio()"></div>
+        <div><label for="cfgWa">WhatsApp destino (opcional, con código de país sin +)</label><input type="text" id="cfgWa" placeholder="5493411234567" onchange="guardarConfigEnvio()"></div>
+        <p style="color:var(--ink-3); font-size:13.5px">Con número cargado, "Enviar por WhatsApp" abre directo ese chat con el reporte escrito. Sin número, el operario elige el contacto o grupo.</p>
+        <button class="ghost" onclick="probarConexion()">Probar conexión</button>
+      </div>
+    </div>
+
+    <div class="section-title"><h2>Copia de seguridad</h2></div>
+    <div class="card">
+      <p style="color:var(--ink-2); font-size:15px">Los datos viven en esta tablet. Exportá una copia cada semana y guardala (WhatsApp, mail o Drive).</p>
+      <p style="font-size:14.5px; margin-top:6px" id="ultimoRespaldoTxt"></p>
+      <div class="stack" style="margin-top:12px">
+        <button class="primary" onclick="exportarRespaldo()">Exportar copia de seguridad</button>
+        <button class="ghost" onclick="document.getElementById('importFile').click()">Restaurar desde una copia</button>
+        <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importarRespaldo(this)">
+      </div>
+    </div>
+
+    <button class="backlink" onclick="go(operario ? 'scr-menu' : 'scr-quien')">‹ Volver</button>
+  </section>
+
+</div>
+
+<div class="sheet-veil no-print" id="veil" onclick="if(event.target===this) closeSheet()">
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Estado de la estación">
+    <h2><span id="sheetKind">Estación</span> <span class="num" id="sheetNum">—</span></h2>
+    <p class="lead" style="font-size:15px">¿Cómo la encontraste?</p>
+    <div class="estados" id="estadoBtns"></div>
+    <button class="ghost" style="margin-top:14px" onclick="clearEstado()">Borrar marca</button>
+  </div>
+</div>
+
+<div class="modal-veil no-print" id="modalVeil" onclick="if(event.target===this) cerrarModal()">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h2 id="modalTit"></h2>
+    <p id="modalTxt"></p>
+    <div class="stack">
+      <button class="primary" id="modalOk"></button>
+      <button class="ghost" onclick="cerrarModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast no-print" id="toast"></div>
+
+<div id="printArea"></div>
+
+<script>
+'use strict';
+
+/* ============ datos ============ */
+const CLAVE = 'adc-control-plagas-v1';
+
+const ESTADOS = [
+  { k: 'B', n: 'Bien',        d: 'Sin novedad' },
+  { k: 'C', n: 'Consumido',   d: 'Se repone cebo' },
+  { k: 'N', n: 'Faltante',    d: 'No está la estación' },
+  { k: 'D', n: 'Deteriorado', d: 'Rota o dañada' },
+  { k: 'O', n: 'Oculto',      d: 'No se pudo acceder' },
+  { k: 'X', n: 'Cambio de pegamento', d: 'Placa renovada' },
+];
+const ESTADOS_UV = ['B', 'X', 'D', 'N'];
+const COLORES = { B: 'var(--ok)', C: 'var(--warn)', N: 'var(--bad)', D: 'var(--det)', O: 'var(--ocu)', X: 'var(--peg)' };
+
+function datosIniciales() {
+  return {
+    v: 1,
+    operarios: ['Cristian', 'Marcos', 'Rodrigo'],
+    plantas: [
+      { id: 'p1', nombre: 'Frigorífico Cabildo' },
+    ],
+    sectores: [
+      { id: 's1', plantaId: 'p1', nombre: 'Planta general',     cebos: 113, uv: 0 },
+      { id: 's2', plantaId: 'p1', nombre: 'Perímetro',          cebos: 60,  uv: 20 },
+      { id: 's3', plantaId: 'p1', nombre: 'Carga de vagones',   cebos: 31,  uv: 0 },
+      { id: 's4', plantaId: 'p1', nombre: 'Calado de camiones', cebos: 15,  uv: 0 },
+    ],
+    registros: [],
+    ordenes: [],
+    seqOrden: {},
+    ultimoRespaldo: null,
+    borrador: null,
+    config: { gasUrl: '', mailDestino: '', waNumero: '' },
+  };
+}
+
+let DB;
+function migrar(db) {
+  if (!db.operarios) db.operarios = [];
+  if (!db.registros) db.registros = [];
+  if (!db.ordenes) db.ordenes = [];
+  if (!db.sectores) db.sectores = [];
+  if (!db.seqOrden) db.seqOrden = {};
+  if (!db.config) db.config = { gasUrl: '', mailDestino: '', waNumero: '' };
+  if (db.config.waNumero === undefined) db.config.waNumero = '';
+  if (!db.plantas || !db.plantas.length) db.plantas = [{ id: 'p1', nombre: 'Frigorífico Cabildo' }];
+  db.sectores.forEach(s => { if (!s.plantaId) s.plantaId = db.plantas[0].id; });
+  return db;
+}
+function cargar() {
+  try {
+    const raw = localStorage.getItem(CLAVE);
+    DB = raw ? JSON.parse(raw) : datosIniciales();
+    if (!DB || DB.v !== 1) DB = datosIniciales();
+    DB = migrar(DB);
+  } catch (e) { DB = datosIniciales(); }
+}
+function persistir() {
+  try { localStorage.setItem(CLAVE, JSON.stringify(DB)); }
+  catch (e) { toast('No se pudo guardar en el dispositivo. Exportá una copia de seguridad.'); }
+}
+
+/* ============ estado de sesión ============ */
+let operario = null;
+let plantaActual = null; // planta elegida para la jornada
+let sector = null;       // sector activo del recorrido
+let marcas = {};         // estaciones de cebado
+let marcasUV = {};       // trampas UV
+let sheetTarget = null;
+let detalleActual = null; // {tipo:'registro'|'orden', obj}
+let filtroHist = 'todo';
+
+const $ = id => document.getElementById(id);
+
+/* ============ navegación ============ */
+function go(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  $(id).classList.add('on');
+  window.scrollTo({ top: 0 });
+}
+
+/* ============ utilidades ============ */
+function hoyISO() { return new Date().toISOString(); }
+function fFecha(iso, conHora) {
+  const d = new Date(iso);
+  const f = d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  if (!conHora) return f;
+  return f + ' ' + d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+}
+function nombreEstado(k) { const e = ESTADOS.find(x => x.k === k); return e ? e.n : k; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+let toastTimer;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('on'), 3500);
+}
+
+let modalCb = null;
+function confirmar(tit, txt, cb, botonTxt) {
+  $('modalTit').textContent = tit;
+  $('modalTxt').textContent = txt;
+  const ok = $('modalOk');
+  ok.textContent = botonTxt || 'Sí, continuar';
+  ok.className = 'primary' + (botonTxt === 'Eliminar' ? ' rojo' : '');
+  modalCb = cb;
+  $('modalVeil').classList.add('on');
+}
+function cerrarModal() { $('modalVeil').classList.remove('on'); modalCb = null; }
+document.addEventListener('DOMContentLoaded', () => {
+  $('modalOk').addEventListener('click', () => { const cb = modalCb; cerrarModal(); if (cb) cb(); });
+});
+
+/* ============ pantalla: quién reporta ============ */
+function renderNombres() {
+  const nl = $('nameList'); nl.innerHTML = '';
+  DB.operarios.forEach(n => {
+    const b = document.createElement('button');
+    b.className = 'big-btn name-btn';
+    b.innerHTML = `<span class="avatar">${esc(n[0].toUpperCase())}</span><span class="t">${esc(n)}</span><span class="arrow">›</span>`;
+    b.onclick = () => {
+      operario = n; $('whoName').textContent = n; $('whoBadge').style.display = 'flex';
+      irAPlantas();
+    };
+    nl.appendChild(b);
+  });
+  if (!DB.operarios.length) nl.innerHTML = '<p class="lead">No hay operarios cargados. Agregalos desde Ajustes.</p>';
+}
+
+function irAPlantas() {
+  renderPlantas();
+  go('scr-planta');
+}
+
+function renderPlantas() {
+  const pl = $('plantaList'); pl.innerHTML = '';
+  DB.plantas.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'big-btn';
+    const sectores = DB.sectores.filter(s => s.plantaId === p.id).length;
+    b.innerHTML = `<span class="icon">🏭</span><span><span class="t">${esc(p.nombre)}</span><br><span class="s">${sectores} sector${sectores === 1 ? '' : 'es'} cargado${sectores === 1 ? '' : 's'}</span></span><span class="arrow">›</span>`;
+    b.onclick = () => { plantaActual = p; renderMenu(); go('scr-menu'); };
+    pl.appendChild(b);
+  });
+  if (!DB.plantas.length) pl.innerHTML = '<p class="lead">No hay plantas cargadas. Agregalas desde Ajustes.</p>';
+}
+
+/* ============ pantalla: menú + avisos ============ */
+function renderMenu() {
+  $('menuPlanta').textContent = plantaActual ? plantaActual.nombre : '';
+  const av = $('avisos'); av.innerHTML = '';
+  if (DB.borrador) {
+    const d = DB.borrador;
+    const cant = Object.keys(d.cebos).length + Object.keys(d.uv).length;
+    const div = document.createElement('div');
+    div.className = 'alert';
+    div.innerHTML = `<span>📝</span><span><b>Recorrido sin terminar</b> — ${esc(d.sectorNombre)}, ${cant} marcadas (${esc(d.operario)}). </span>`;
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex; gap:8px; flex:none; flex-direction:column';
+    const bc = document.createElement('button'); bc.className = 'mini-btn'; bc.textContent = 'Continuar';
+    bc.onclick = () => continuarBorrador();
+    const bd = document.createElement('button'); bd.className = 'mini-btn rojo'; bd.textContent = 'Descartar';
+    bd.onclick = () => confirmar('¿Descartar el borrador?', 'Se pierden las marcas de ese recorrido sin terminar.', () => { DB.borrador = null; persistir(); renderMenu(); }, 'Eliminar');
+    btns.append(bc, bd); div.appendChild(btns);
+    av.appendChild(div);
+  }
+  const total = DB.registros.length + DB.ordenes.length;
+  if (total > 0) {
+    const dias = DB.ultimoRespaldo ? Math.floor((Date.now() - new Date(DB.ultimoRespaldo)) / 86400000) : null;
+    if (dias === null || dias >= 7) {
+      const div = document.createElement('div');
+      div.className = 'alert suave';
+      div.innerHTML = `<span>💾</span><span>${dias === null ? 'Todavía no hiciste ninguna copia de seguridad.' : 'Hace ' + dias + ' días que no exportás una copia de seguridad.'} </span>`;
+      const b = document.createElement('button'); b.className = 'mini-btn'; b.style.flex = 'none'; b.textContent = 'Exportar ahora';
+      b.onclick = () => exportarRespaldo();
+      div.appendChild(b);
+      av.appendChild(div);
+    }
+  }
+}
+
+/* ============ desratización: sectores ============ */
+function renderSectores() {
+  const sl = $('sectorList'); sl.innerHTML = '';
+  const lista = plantaActual ? DB.sectores.filter(s => s.plantaId === plantaActual.id) : DB.sectores;
+  if (!lista.length) { sl.innerHTML = '<p class="lead">Esta planta no tiene sectores cargados. Agregalos desde Ajustes.</p>'; return; }
+  lista.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'big-btn';
+    const extra = s.uv ? ` + ${s.uv} trampas UV` : '';
+    b.innerHTML = `<span class="icon">${s.cebos}</span><span><span class="t">${esc(s.nombre)}</span><br><span class="s">Estaciones 1 a ${s.cebos}${extra}</span></span><span class="arrow">›</span>`;
+    b.onclick = () => startRecorrido(s, null);
+    sl.appendChild(b);
+  });
+}
+
+function startRecorrido(s, borrador) {
+  sector = s;
+  marcas = borrador ? Object.assign({}, borrador.cebos) : {};
+  marcasUV = borrador ? Object.assign({}, borrador.uv) : {};
+  $('recTitle').textContent = s.nombre;
+  $('recEyebrow').textContent = (plantaActual ? plantaActual.nombre + ' · ' : '') + 'Desratización · ' + new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+  buildGrid();
+  guardarBorrador();
+  go('scr-recorrido');
+}
+
+function continuarBorrador() {
+  const d = DB.borrador;
+  if (!d) return;
+  const s = DB.sectores.find(x => x.id === d.sectorId) || { id: d.sectorId, nombre: d.sectorNombre, cebos: d.cebosTotal, uv: d.uvTotal };
+  operario = d.operario;
+  if (d.plantaId) plantaActual = DB.plantas.find(p => p.id === d.plantaId) || plantaActual;
+  $('whoName').textContent = operario; $('whoBadge').style.display = 'flex';
+  startRecorrido(s, d);
+}
+
+function guardarBorrador() {
+  DB.borrador = {
+    operario, sectorId: sector.id, sectorNombre: sector.nombre,
+    plantaId: plantaActual ? plantaActual.id : null,
+    plantaNombre: plantaActual ? plantaActual.nombre : '',
+    cebosTotal: sector.cebos, uvTotal: sector.uv,
+    cebos: marcas, uv: marcasUV, actualizado: hoyISO(),
+  };
+  persistir();
+}
+
+/* ============ desratización: grilla ============ */
+function buildGrid() {
+  const g = $('stGrid'); g.innerHTML = '';
+  for (let i = 1; i <= sector.cebos; i++) {
+    const c = document.createElement('button');
+    c.className = 'st'; c.id = 'st-' + i;
+    c.innerHTML = `<span class="num">${i}</span><span class="tag" id="tag-${i}">—</span>`;
+    c.onclick = () => openSheet('cebo', i);
+    g.appendChild(c);
+    if (marcas[i]) paint('cebo', i, marcas[i]);
+  }
+  const uvB = $('uvBlock');
+  if (sector.uv) {
+    uvB.style.display = 'block';
+    const ug = $('uvGrid'); ug.innerHTML = '';
+    for (let i = 1; i <= sector.uv; i++) {
+      const c = document.createElement('button');
+      c.className = 'st'; c.id = 'uv-' + i;
+      c.innerHTML = `<span class="num">UV ${i}</span><span class="tag" id="uvtag-${i}">—</span>`;
+      c.onclick = () => openSheet('uv', i);
+      ug.appendChild(c);
+      if (marcasUV[i]) paint('uv', i, marcasUV[i]);
+    }
+  } else uvB.style.display = 'none';
+  refresh();
+}
+
+function openSheet(tipo, num) {
+  sheetTarget = { tipo, num };
+  $('sheetKind').textContent = tipo === 'uv' ? 'Trampa UV' : 'Estación';
+  $('sheetNum').textContent = num;
+  const box = $('estadoBtns'); box.innerHTML = '';
+  const lista = tipo === 'uv' ? ESTADOS.filter(e => ESTADOS_UV.includes(e.k)) : ESTADOS;
+  lista.forEach(e => {
+    const b = document.createElement('button');
+    b.className = 'e-btn e' + e.k;
+    b.innerHTML = `${e.n}<small>${e.d}</small>`;
+    b.onclick = () => setEstado(e.k);
+    box.appendChild(b);
+  });
+  $('veil').classList.add('on');
+}
+function closeSheet() { $('veil').classList.remove('on'); sheetTarget = null; }
+
+function setEstado(k) {
+  if (!sheetTarget) return;
+  if (sheetTarget.tipo === 'uv') marcasUV[sheetTarget.num] = k;
+  else marcas[sheetTarget.num] = k;
+  paint(sheetTarget.tipo, sheetTarget.num, k);
+  closeSheet(); refresh(); guardarBorrador();
+}
+function clearEstado() {
+  if (!sheetTarget) return;
+  if (sheetTarget.tipo === 'uv') delete marcasUV[sheetTarget.num];
+  else delete marcas[sheetTarget.num];
+  paint(sheetTarget.tipo, sheetTarget.num, null);
+  closeSheet(); refresh(); guardarBorrador();
+}
+function paint(tipo, num, k) {
+  const el = $((tipo === 'uv' ? 'uv-' : 'st-') + num);
+  const tag = $((tipo === 'uv' ? 'uvtag-' : 'tag-') + num);
+  if (!el) return;
+  if (k) { el.dataset.e = k; tag.textContent = nombreEstado(k); }
+  else { delete el.dataset.e; tag.textContent = '—'; }
+}
+function refresh() {
+  const done = Object.keys(marcas).length;
+  $('recCount').textContent = `${done} / ${sector.cebos}`;
+  $('recBar').style.width = (done / sector.cebos * 100) + '%';
+  if (sector.uv) $('uvCount').textContent = `${Object.keys(marcasUV).length} / ${sector.uv} revisadas`;
+}
+function markRestantes() {
+  for (let i = 1; i <= sector.cebos; i++) if (!marcas[i]) { marcas[i] = 'B'; paint('cebo', i, 'B'); }
+  if (sector.uv) for (let i = 1; i <= sector.uv; i++) if (!marcasUV[i]) { marcasUV[i] = 'B'; paint('uv', i, 'B'); }
+  refresh(); guardarBorrador();
+  toast('Las estaciones sin marcar quedaron como “Bien”');
+}
+
+/* ============ desratización: resumen y guardado ============ */
+function contarEstados(m) {
+  const c = {};
+  Object.values(m).forEach(k => c[k] = (c[k] || 0) + 1);
+  return c;
+}
+
+function goResumen() {
+  const faltan = [];
+  for (let i = 1; i <= sector.cebos; i++) if (!marcas[i]) faltan.push(i);
+  const faltanUV = [];
+  if (sector.uv) for (let i = 1; i <= sector.uv; i++) if (!marcasUV[i]) faltanUV.push(i);
+
+  const al = $('resAlert');
+  if (faltan.length || faltanUV.length) {
+    const t = [];
+    if (faltan.length) t.push(`faltan revisar ${faltan.length} estaciones (${resumenNums(faltan)})`);
+    if (faltanUV.length) t.push(`faltan ${faltanUV.length} trampas UV`);
+    $('resAlertTxt').textContent = t.join(' y ') + '. Podés volver y completarlas, o guardar igual.';
+    al.style.display = 'flex';
+  } else al.style.display = 'none';
+
+  $('resEyebrow').textContent = `Desratización · ${sector.nombre} · ${fFecha(hoyISO())}`;
+  const counts = contarEstados(marcas);
+  let html = '';
+  ESTADOS.forEach(e => {
+    html += `<div class="sum-row"><span class="pill"><i style="background:${COLORES[e.k]}"></i>${e.n}</span><span class="num">${counts[e.k] || 0}</span></div>`;
+  });
+  if (faltan.length) html += `<div class="sum-row"><span class="pill"><i style="background:var(--ink-3)"></i>Sin revisar</span><span class="num">${faltan.length}</span></div>`;
+  if (sector.uv) html += `<div class="sum-row"><span class="pill"><i style="background:var(--ink-3)"></i>Trampas UV revisadas</span><span class="num">${Object.keys(marcasUV).length} / ${sector.uv}</span></div>`;
+  $('resCard').innerHTML = html;
+  go('scr-resumen');
+}
+function resumenNums(arr) {
+  if (arr.length <= 6) return 'N° ' + arr.join(', ');
+  return 'N° ' + arr.slice(0, 5).join(', ') + '…';
+}
+
+function guardarRegistro() {
+  const reg = {
+    id: 'r' + Date.now(),
+    fecha: hoyISO(),
+    operario,
+    plantaNombre: plantaActual ? plantaActual.nombre : '',
+    sectorId: sector.id,
+    sectorNombre: sector.nombre,
+    cebosTotal: sector.cebos,
+    uvTotal: sector.uv,
+    cebos: Object.assign({}, marcas),
+    uv: Object.assign({}, marcasUV),
+    obs: $('obsGral').value.trim(),
+  };
+  DB.registros.unshift(reg);
+  DB.borrador = null;
+  persistir();
+  $('obsGral').value = '';
+  $('listoTitle').textContent = 'Registro guardado';
+  $('listoSub').textContent = `${reg.sectorNombre} · ${fFecha(reg.fecha, true)} · reportó ${reg.operario}. Quedó en el historial.`;
+  $('listoMail').textContent = 'Enviar reporte por mail';
+  $('listoMail').onclick = ev => enviarReporte('registro', reg, ev.currentTarget);
+  $('listoCompartir').onclick = () => compartirRegistro(reg);
+  $('listoPdf').onclick = () => imprimirRegistro(reg);
+  go('scr-listo');
+}
+
+/* ============ órdenes esporádicas ============ */
+function proximoNumOrden() {
+  const anio = String(new Date().getFullYear());
+  const seq = (DB.seqOrden[anio] || 0) + 1;
+  return anio + '-' + String(seq).padStart(4, '0');
+}
+function abrirOrden() {
+  $('ordenNumPreview').textContent = 'N° ' + proximoNumOrden();
+  document.querySelectorAll('#chipsTipo .chip').forEach(c => c.classList.remove('on'));
+  const cs = $('chipsSector'); cs.innerHTML = '';
+  const lista = plantaActual ? DB.sectores.filter(s => s.plantaId === plantaActual.id) : DB.sectores;
+  lista.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.dataset.v = s.nombre; b.textContent = s.nombre;
+    b.onclick = () => b.classList.toggle('on');
+    cs.appendChild(b);
+  });
+  $('obsOrden').value = '';
+  $('ordenError').style.display = 'none';
+  go('scr-orden');
+}
+function guardarOrden() {
+  const tipo = document.querySelector('#chipsTipo .chip.on');
+  const secs = [...document.querySelectorAll('#chipsSector .chip.on')].map(c => c.dataset.v);
+  const err = $('ordenError');
+  if (!tipo || !secs.length) { err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  const anio = String(new Date().getFullYear());
+  DB.seqOrden[anio] = (DB.seqOrden[anio] || 0) + 1;
+  const orden = {
+    id: 'o' + Date.now(),
+    numero: anio + '-' + String(DB.seqOrden[anio]).padStart(4, '0'),
+    fecha: hoyISO(),
+    operario,
+    plantaNombre: plantaActual ? plantaActual.nombre : '',
+    tipo: tipo.dataset.v,
+    sectores: secs,
+    obs: $('obsOrden').value.trim(),
+    firma: null,
+    firmante: '',
+  };
+  DB.ordenes.unshift(orden);
+  persistir();
+  abrirFirma(orden);
+}
+
+function goListoOrden(orden) {
+  $('listoTitle').textContent = 'Orden guardada';
+  $('listoSub').textContent = `Orden N° ${orden.numero} · ${orden.tipo} · ${fFecha(orden.fecha, true)} · reportó ${orden.operario}.`
+    + (orden.firma ? ` Firmada por ${orden.firmante || 'el supervisor'}.` : ' FALTA LA FIRMA del supervisor para poder enviarla.');
+  $('listoMail').textContent = 'Enviar reporte por mail';
+  $('listoMail').onclick = ev => enviarReporte('orden', orden, ev.currentTarget);
+  $('listoCompartir').onclick = () => compartirOrden(orden);
+  $('listoPdf').onclick = () => pdfOrdenConGuardia(orden);
+  go('scr-listo');
+}
+
+/* ============ firma del supervisor ============ */
+function firmaSegura(f) {
+  return (typeof f === 'string' && f.indexOf('data:image/') === 0) ? f : null;
+}
+let ordenPendienteFirma = null;
+let firmaDibujada = false;
+let firmaCtx = null;
+
+function abrirFirma(orden) {
+  ordenPendienteFirma = orden;
+  $('firmaEyebrow').textContent = 'Orden N° ' + orden.numero + ' · ' + orden.tipo;
+  $('firmanteInput').value = orden.firmante || '';
+  $('firmaError').style.display = 'none';
+  go('scr-firma');
+  prepararCanvas();
+}
+
+function prepararCanvas() {
+  const canvas = $('firmaCanvas');
+  const escala = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * escala;
+  canvas.height = rect.height * escala;
+  firmaCtx = canvas.getContext('2d');
+  firmaCtx.scale(escala, escala);
+  firmaCtx.lineWidth = 2.5;
+  firmaCtx.lineCap = 'round';
+  firmaCtx.lineJoin = 'round';
+  firmaCtx.strokeStyle = '#1a2530';
+  firmaDibujada = false;
+  let trazando = false;
+  const pos = ev => {
+    const r = canvas.getBoundingClientRect();
+    return { x: ev.clientX - r.left, y: ev.clientY - r.top };
+  };
+  canvas.onpointerdown = ev => {
+    ev.preventDefault();
+    canvas.setPointerCapture(ev.pointerId);
+    trazando = true;
+    const p = pos(ev);
+    firmaCtx.beginPath();
+    firmaCtx.moveTo(p.x, p.y);
+    firmaCtx.lineTo(p.x + 0.1, p.y + 0.1);
+    firmaCtx.stroke();
+    firmaDibujada = true;
+  };
+  canvas.onpointermove = ev => {
+    if (!trazando) return;
+    ev.preventDefault();
+    const p = pos(ev);
+    firmaCtx.lineTo(p.x, p.y);
+    firmaCtx.stroke();
+  };
+  canvas.onpointerup = canvas.onpointercancel = () => { trazando = false; };
+}
+
+function limpiarFirma() {
+  const canvas = $('firmaCanvas');
+  firmaCtx.clearRect(0, 0, canvas.width, canvas.height);
+  firmaDibujada = false;
+  $('firmaError').style.display = 'none';
+}
+
+function guardarFirma() {
+  if (!firmaDibujada) { $('firmaError').style.display = 'block'; return; }
+  const orden = ordenPendienteFirma;
+  if (!orden) return;
+  orden.firma = $('firmaCanvas').toDataURL('image/png');
+  orden.firmante = $('firmanteInput').value.trim();
+  persistir();
+  ordenPendienteFirma = null;
+  toast('Firma guardada ✓');
+  goListoOrden(orden);
+}
+
+function firmarDespues() {
+  const orden = ordenPendienteFirma;
+  ordenPendienteFirma = null;
+  if (orden) goListoOrden(orden);
+}
+
+function pdfOrdenConGuardia(orden) {
+  if (!orden.firma) {
+    confirmar('Falta la firma del supervisor', 'La orden necesita la firma antes de generar la planilla o enviarla.', () => abrirFirma(orden), 'Cargar firma ahora');
+    return;
+  }
+  imprimirOrden(orden);
+}
+
+/* ============ historial ============ */
+function filtrarHist(chip) {
+  document.querySelectorAll('#scr-historial .chip').forEach(c => c.classList.remove('on'));
+  chip.classList.add('on');
+  filtroHist = chip.dataset.f;
+  renderHistorial();
+}
+function renderHistorial() {
+  const items = [];
+  if (filtroHist !== 'orden') DB.registros.forEach(r => items.push({ tipo: 'registro', fecha: r.fecha, obj: r }));
+  if (filtroHist !== 'desrat') DB.ordenes.forEach(o => items.push({ tipo: 'orden', fecha: o.fecha, obj: o }));
+  items.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+  $('histResumen').textContent = `${DB.registros.length} recorridos de desratización · ${DB.ordenes.length} órdenes esporádicas`;
+  const list = $('histList'); list.innerHTML = '';
+  if (!items.length) { list.innerHTML = '<p class="lead">Todavía no hay registros guardados.</p>'; return; }
+
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.className = 'hist-item';
+    if (it.tipo === 'registro') {
+      const r = it.obj;
+      const c = contarEstados(r.cebos);
+      const nov = Object.keys(c).filter(k => k !== 'B').map(k => `${c[k]} ${nombreEstado(k).toLowerCase()}`).join(' · ');
+      b.innerHTML = `
+        <span class="hist-top"><span class="badge desrat">DESRATIZACIÓN</span><span class="hist-fecha">${fFecha(r.fecha, true)}</span></span>
+        <span class="hist-tit">${esc(r.sectorNombre)}</span>
+        <span class="hist-sub">${r.plantaNombre ? esc(r.plantaNombre) + ' · ' : ''}${Object.keys(r.cebos).length}/${r.cebosTotal} revisadas${nov ? ' · ' + nov : ' · todo bien'} · ${esc(r.operario)}${r.enviado ? ' · ✉ enviado' : ''}</span>`;
+      b.onclick = () => abrirDetalleRegistro(r);
+    } else {
+      const o = it.obj;
+      b.innerHTML = `
+        <span class="hist-top"><span class="badge orden">ORDEN N° ${esc(o.numero)}</span><span class="hist-fecha">${fFecha(o.fecha, true)}</span></span>
+        <span class="hist-tit">${esc(o.tipo)}</span>
+        <span class="hist-sub">${o.plantaNombre ? esc(o.plantaNombre) + ' · ' : ''}${esc(o.sectores.join(', '))} · ${esc(o.operario)}${o.firma ? '' : ' · ✍ sin firma'}${o.enviado ? ' · ✉ enviado' : ''}</span>`;
+      b.onclick = () => abrirDetalleOrden(o);
+    }
+    list.appendChild(b);
+  });
+}
+
+/* ============ detalle ============ */
+function abrirDetalleRegistro(r) {
+  detalleActual = { tipo: 'registro', obj: r };
+  $('detEyebrow').textContent = (r.plantaNombre ? r.plantaNombre + ' · ' : '') + 'Desratización · ' + fFecha(r.fecha, true);
+  $('detTitle').textContent = r.sectorNombre;
+  $('detSub').textContent = 'Reportó ' + r.operario + (r.enviado ? ' · ✉ enviado por mail el ' + fFecha(r.enviado, true) : '');
+  $('detMail').textContent = r.enviado ? 'Reenviar por mail' : 'Enviar reporte por mail';
+  $('detMail').onclick = ev => enviarReporte('registro', r, ev.currentTarget);
+
+  const c = contarEstados(r.cebos);
+  const sinRevisar = r.cebosTotal - Object.keys(r.cebos).length;
+  let html = '<div class="card">';
+  ESTADOS.forEach(e => {
+    if (c[e.k]) html += `<div class="sum-row"><span class="pill"><i style="background:${COLORES[e.k]}"></i>${e.n}</span><span class="num">${c[e.k]}</span></div>`;
+  });
+  if (sinRevisar > 0) html += `<div class="sum-row"><span class="pill"><i style="background:var(--ink-3)"></i>Sin revisar</span><span class="num">${sinRevisar}</span></div>`;
+  if (r.uvTotal) html += `<div class="sum-row"><span class="pill"><i style="background:var(--ink-3)"></i>Trampas UV revisadas</span><span class="num">${Object.keys(r.uv).length} / ${r.uvTotal}</span></div>`;
+  html += '</div>';
+
+  html += '<div class="card"><div class="st-grid" style="margin-top:0">';
+  for (let i = 1; i <= r.cebosTotal; i++) {
+    const k = r.cebos[i];
+    html += `<div class="st mini" ${k ? `data-e="${k}"` : ''}><span class="num">${i}</span><span class="tag">${k ? nombreEstado(k) : '—'}</span></div>`;
+  }
+  html += '</div>';
+  if (r.uvTotal) {
+    html += '<div class="section-title" style="margin:16px 0 6px"><h2>Trampas UV</h2></div><div class="st-grid" style="margin-top:0">';
+    for (let i = 1; i <= r.uvTotal; i++) {
+      const k = r.uv[i];
+      html += `<div class="st mini" ${k ? `data-e="${k}"` : ''}><span class="num">UV ${i}</span><span class="tag">${k ? nombreEstado(k) : '—'}</span></div>`;
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  if (r.obs) html += `<div class="card"><b>Novedades:</b><p style="color:var(--ink-2); margin-top:4px">${esc(r.obs)}</p></div>`;
+  $('detBody').innerHTML = html;
+
+  $('detCompartir').onclick = () => compartirRegistro(r);
+  $('detPdf').onclick = () => imprimirRegistro(r);
+  $('detBorrar').onclick = () => confirmar('¿Eliminar este registro?', 'Se borra de la tablet y no se puede recuperar.', () => {
+    DB.registros = DB.registros.filter(x => x.id !== r.id);
+    persistir(); renderHistorial(); go('scr-historial'); toast('Registro eliminado');
+  }, 'Eliminar');
+  go('scr-detalle');
+}
+
+function abrirDetalleOrden(o) {
+  detalleActual = { tipo: 'orden', obj: o };
+  $('detEyebrow').textContent = (o.plantaNombre ? o.plantaNombre + ' · ' : '') + 'Servicio esporádico · ' + fFecha(o.fecha, true);
+  $('detTitle').textContent = 'Orden N° ' + o.numero;
+  $('detSub').textContent = o.tipo + ' · reportó ' + o.operario + (o.enviado ? ' · ✉ enviado por mail el ' + fFecha(o.enviado, true) : '');
+  $('detMail').textContent = o.enviado ? 'Reenviar por mail' : 'Enviar reporte por mail';
+  $('detMail').onclick = ev => enviarReporte('orden', o, ev.currentTarget);
+  let html = '';
+  if (!o.firma) {
+    html += `<div class="alert"><span>✍️</span><span><b>Falta la firma del supervisor.</b> Sin firma no se puede enviar ni generar la planilla.</span></div>`;
+  }
+  html += '<div class="card">';
+  html += `<div class="sum-row"><span>Sectores</span><span style="font-weight:650; text-align:right">${esc(o.sectores.join(', '))}</span></div>`;
+  if (o.producto) html += `<div class="sum-row"><span>Producto</span><span style="font-weight:650">${esc(o.producto)}</span></div>`;
+  if (o.dosis) html += `<div class="sum-row"><span>Dosis</span><span style="font-weight:650">${esc(o.dosis)}</span></div>`;
+  html += `<div class="sum-row"><span>Firma del supervisor</span><span style="font-weight:650">${o.firma ? '✓ ' + esc(o.firmante || 'firmada') : 'pendiente'}</span></div>`;
+  html += '</div>';
+  if (firmaSegura(o.firma)) html += `<div class="card"><b>Firma:</b><br><img src="${firmaSegura(o.firma)}" alt="Firma del supervisor" style="max-width:280px; max-height:120px; border:1px solid var(--line); border-radius:8px; margin-top:6px; background:#fff"></div>`;
+  if (o.obs) html += `<div class="card"><b>Observaciones:</b><p style="color:var(--ink-2); margin-top:4px">${esc(o.obs)}</p></div>`;
+  $('detBody').innerHTML = html;
+  if (!o.firma) {
+    const bf = document.createElement('button');
+    bf.className = 'primary';
+    bf.textContent = 'Cargar firma del supervisor';
+    bf.onclick = () => abrirFirma(o);
+    $('detBody').appendChild(bf);
+  }
+  $('detCompartir').onclick = () => compartirOrden(o);
+  $('detPdf').onclick = () => pdfOrdenConGuardia(o);
+  $('detBorrar').onclick = () => confirmar('¿Eliminar esta orden?', 'Se borra de la tablet y no se puede recuperar.', () => {
+    DB.ordenes = DB.ordenes.filter(x => x.id !== o.id);
+    persistir(); renderHistorial(); go('scr-historial'); toast('Orden eliminada');
+  }, 'Eliminar');
+  go('scr-detalle');
+}
+
+/* ============ compartir por WhatsApp ============ */
+function textoRegistro(r) {
+  const c = contarEstados(r.cebos);
+  const sinRevisar = r.cebosTotal - Object.keys(r.cebos).length;
+  const lineas = [
+    '*ADC Fumigación – Control de plagas*',
+    `*Desratización – ${r.sectorNombre}*`,
+    ...(r.plantaNombre ? [r.plantaNombre] : []),
+    `${fFecha(r.fecha, true)} · reportó ${r.operario}`,
+    '',
+    `Estaciones revisadas: ${Object.keys(r.cebos).length} de ${r.cebosTotal}`,
+  ];
+  ESTADOS.forEach(e => { if (c[e.k]) lineas.push(`• ${e.n}: ${c[e.k]}`); });
+  if (sinRevisar > 0) lineas.push(`• Sin revisar: ${sinRevisar}`);
+  const noB = Object.keys(r.cebos).filter(i => r.cebos[i] !== 'B');
+  if (noB.length) lineas.push('', 'Novedades por estación: ' + noB.map(i => `N°${i} ${nombreEstado(r.cebos[i]).toLowerCase()}`).join(', '));
+  if (r.uvTotal) {
+    const cu = contarEstados(r.uv);
+    const uvNoB = Object.keys(r.uv).filter(i => r.uv[i] !== 'B');
+    lineas.push('', `Trampas UV: ${Object.keys(r.uv).length}/${r.uvTotal} revisadas` + (uvNoB.length ? ' · ' + uvNoB.map(i => `UV${i} ${nombreEstado(r.uv[i]).toLowerCase()}`).join(', ') : ' · todas bien'));
+  }
+  if (r.obs) lineas.push('', 'Observaciones: ' + r.obs);
+  return lineas.join('\n');
+}
+function textoOrden(o) {
+  const lineas = [
+    '*ADC Fumigación – Control de plagas*',
+    `*Orden de trabajo N° ${o.numero}*`,
+    `${o.tipo}`,
+    ...(o.plantaNombre ? [o.plantaNombre] : []),
+    `${fFecha(o.fecha, true)} · reportó ${o.operario}` + (o.firmante ? ` · firmó ${o.firmante}` : ''),
+    '',
+    'Sectores: ' + o.sectores.join(', '),
+  ];
+  if (o.producto) lineas.push('Producto: ' + o.producto);
+  if (o.dosis) lineas.push('Dosis: ' + o.dosis);
+  if (o.obs) lineas.push('', 'Observaciones: ' + o.obs);
+  return lineas.join('\n');
+}
+function compartirTexto(txt) {
+  if (DB.config.waNumero) {
+    window.open('https://wa.me/' + DB.config.waNumero + '?text=' + encodeURIComponent(txt), '_blank');
+  } else if (navigator.share) {
+    navigator.share({ text: txt }).catch(() => {});
+  } else {
+    window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+  }
+}
+function compartirRegistro(r) { compartirTexto(textoRegistro(r)); }
+function compartirOrden(o) { compartirTexto(textoOrden(o)); }
+
+/* ============ envío automático por mail ============ */
+const CLAVE_ENVIO = 'adc-sw-2026-k7m3';
+
+function guardarConfigEnvio() {
+  DB.config.gasUrl = $('cfgGasUrl').value.trim();
+  DB.config.mailDestino = $('cfgMail').value.trim();
+  DB.config.waNumero = $('cfgWa').value.replace(/[^\d]/g, '');
+  persistir();
+  toast('Configuración de envío guardada');
+}
+
+async function probarConexion() {
+  const url = $('cfgGasUrl').value.trim();
+  if (!url) { toast('Pegá primero la dirección del servicio'); return; }
+  toast('Probando conexión…');
+  try {
+    const res = await fetch(url, { method: 'GET' });
+    const j = await res.json();
+    toast(j && j.ok ? 'Conexión OK ✓ El servicio responde.' : 'El servicio respondió algo inesperado.');
+  } catch (e) {
+    toast('No se pudo conectar. Revisá la dirección (debe terminar en /exec).');
+  }
+}
+
+async function enviarReporte(tipo, obj, boton) {
+  if (tipo === 'orden' && !obj.firma) {
+    confirmar('Falta la firma del supervisor', 'La orden necesita la firma antes de poder enviarla.', () => abrirFirma(obj), 'Cargar firma ahora');
+    return;
+  }
+  if (!DB.config.gasUrl) {
+    confirmar('Falta configurar el envío',
+      'Cargá la dirección del servicio de Google y la casilla de destino en Ajustes → Envío automático de reportes.',
+      () => { renderAjustes(); go('scr-ajustes'); }, 'Ir a Ajustes');
+    return;
+  }
+  const original = boton ? boton.textContent : '';
+  if (boton) { boton.disabled = true; boton.textContent = 'Enviando…'; }
+  const payload = { clave: CLAVE_ENVIO, tipo, para: DB.config.mailDestino };
+  payload[tipo] = obj;
+  try {
+    const res = await fetch(DB.config.gasUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+    });
+    const j = await res.json();
+    if (!j || !j.ok) throw new Error((j && j.error) || 'respuesta inválida');
+    obj.enviado = hoyISO();
+    persistir();
+    toast('Reporte enviado por mail ✓');
+    if (boton) boton.textContent = 'Enviado ✓';
+  } catch (e) {
+    toast('No se pudo enviar. Revisá la conexión o la configuración en Ajustes.');
+    if (boton) boton.textContent = original;
+  } finally {
+    if (boton) boton.disabled = false;
+  }
+}
+
+/* ============ planilla imprimible ============ */
+function cabeceraPlanilla(subtitulo, fecha) {
+  const d = new Date(fecha);
+  return `
+  <div class="pl-head">
+    <div class="pl-logo">adc<small>FUMIGACION</small></div>
+    <div class="pl-titulo">
+      <div>Documentos de la Calidad</div>
+      <div>Registro</div>
+      <div>${esc(subtitulo)}</div>
+    </div>
+    <div class="pl-meta">
+      <div>Fecha: ${d.toLocaleDateString('es-AR')}</div>
+      <div>Hora: ${d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>
+      <div>Hoja 1 de 1</div>
+    </div>
+  </div>`;
+}
+function tablaEstaciones(prefijo, total, m, columnas) {
+  const porCol = Math.ceil(total / columnas);
+  let html = '<table class="pl-tabla"><tr>';
+  for (let c = 0; c < columnas; c++) html += `<th>${prefijo}</th><th>EST.</th>`;
+  html += '</tr>';
+  for (let f = 0; f < porCol; f++) {
+    html += '<tr>';
+    for (let c = 0; c < columnas; c++) {
+      const n = c * porCol + f + 1;
+      if (n <= total) html += `<td>${n}</td><td>${m[n] || ''}</td>`;
+      else html += '<td></td><td></td>';
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+  return html;
+}
+function imprimirRegistro(r) {
+  const pa = $('printArea');
+  pa.innerHTML = `
+  <div class="pl-hoja">
+    ${cabeceraPlanilla('DESRATIZACIÓN EN PLANTA INDUSTRIAL', r.fecha)}
+    <div class="pl-refs">
+      <div><b>REFERENCIAS</b></div>
+      <div>C: Consumido · N: Faltante · D: Deteriorado · O: Oculto · B: Bien · X: Cambio de pegamento</div>
+    </div>
+    <div class="pl-info">
+      ${r.plantaNombre ? `<span><b>Planta:</b> ${esc(r.plantaNombre)}</span>` : ''}
+      <span><b>Sector:</b> ${esc(r.sectorNombre)}</span>
+      <span><b>Empresa:</b> ADC SRL</span>
+      <span><b>Operario:</b> ${esc(r.operario)}</span>
+      <span><b>Revisadas:</b> ${Object.keys(r.cebos).length} de ${r.cebosTotal}</span>
+    </div>
+    ${tablaEstaciones('CEBO', r.cebosTotal, r.cebos, 4)}
+    ${r.uvTotal ? '<div style="font-weight:700; font-size:11px; margin-bottom:4px">TRAMPAS UV</div>' + tablaEstaciones('UV', r.uvTotal, r.uv, 4) : ''}
+    <div class="pl-obs"><b>OBSERVACIONES GENERALES — Novedades de los distintos sectores:</b>${esc(r.obs) || ''}</div>
+    <div class="pl-firmas">
+      <div>Supervisor de Planta</div>
+      <div>Operario de ADC SRL</div>
+    </div>
+  </div>`;
+  window.print();
+}
+function imprimirOrden(o) {
+  const pa = $('printArea');
+  pa.innerHTML = `
+  <div class="pl-hoja">
+    ${cabeceraPlanilla('ORDEN DE TRABAJO — SERVICIO ESPORÁDICO', o.fecha)}
+    <div class="pl-info" style="flex-direction:column; gap:6px; align-items:flex-start">
+      <span><b>Orden N°:</b> ${esc(o.numero)}</span>
+      ${o.plantaNombre ? `<span><b>Planta:</b> ${esc(o.plantaNombre)}</span>` : ''}
+      <span><b>Tipo de tarea:</b> ${esc(o.tipo)}</span>
+      <span><b>Sectores:</b> ${esc(o.sectores.join(', '))}</span>
+      ${o.producto ? `<span><b>Producto utilizado:</b> ${esc(o.producto)}</span>` : ''}
+      ${o.dosis ? `<span><b>Dosis / dilución:</b> ${esc(o.dosis)}</span>` : ''}
+      <span><b>Empresa:</b> ADC SRL &nbsp;&nbsp; <b>Operario:</b> ${esc(o.operario)}</span>
+    </div>
+    <div class="pl-obs"><b>OBSERVACIONES:</b>${esc(o.obs) || ''}</div>
+    <table style="width:100%; margin-top:40px"><tr>
+      <td style="text-align:center; font-size:11px; vertical-align:bottom">
+        ${firmaSegura(o.firma) ? `<img src="${firmaSegura(o.firma)}" alt="Firma" style="max-height:60px">` : '<div style="height:60px"></div>'}
+        <div style="border-top:1px solid #000; width:220px; margin:0 auto; padding-top:4px">Supervisor de Planta${o.firmante ? '<br>' + esc(o.firmante) : ''}</div>
+      </td>
+      <td style="text-align:center; font-size:11px; vertical-align:bottom">
+        <div style="height:60px"></div>
+        <div style="border-top:1px solid #000; width:220px; margin:0 auto; padding-top:4px">Operario de ADC SRL<br>${esc(o.operario)}</div>
+      </td>
+    </tr></table>
+  </div>`;
+  window.print();
+}
+
+/* ============ ajustes ============ */
+function renderAjustes() {
+  const lo = $('listaOperarios'); lo.innerHTML = '';
+  DB.operarios.forEach((n, idx) => {
+    const div = document.createElement('div');
+    div.className = 'ajuste-item';
+    div.innerHTML = `<span class="nom">${esc(n)}</span>`;
+    const b = document.createElement('button'); b.className = 'mini-btn rojo'; b.textContent = 'Quitar';
+    b.onclick = () => confirmar('¿Quitar a ' + n + '?', 'Sus registros guardados no se borran.', () => {
+      DB.operarios.splice(idx, 1); persistir(); renderAjustes();
+    }, 'Eliminar');
+    div.appendChild(b);
+    lo.appendChild(div);
+  });
+  if (!DB.operarios.length) lo.innerHTML = '<p class="lead">Sin operarios cargados.</p>';
+
+  const lp = $('listaPlantas'); lp.innerHTML = '';
+  DB.plantas.forEach((p, idx) => {
+    const div = document.createElement('div');
+    div.className = 'ajuste-item';
+    const cant = DB.sectores.filter(s => s.plantaId === p.id).length;
+    div.innerHTML = `<span class="nom">${esc(p.nombre)}<br><span class="meta">${cant} sector${cant === 1 ? '' : 'es'}</span></span>`;
+    const b = document.createElement('button'); b.className = 'mini-btn rojo'; b.textContent = 'Quitar';
+    b.onclick = () => {
+      if (DB.sectores.some(s => s.plantaId === p.id)) { toast('Primero quitá los sectores de esa planta'); return; }
+      confirmar('¿Quitar la planta ' + p.nombre + '?', 'Los registros guardados no se borran.', () => {
+        DB.plantas.splice(idx, 1); persistir(); renderAjustes();
+      }, 'Eliminar');
+    };
+    div.appendChild(b);
+    lp.appendChild(div);
+  });
+
+  const selP = $('nuevoSectorPlanta');
+  selP.innerHTML = DB.plantas.map(p => `<option value="${p.id}">Planta: ${esc(p.nombre)}</option>`).join('');
+
+  const ls = $('listaSectores'); ls.innerHTML = '';
+  DB.sectores.forEach((s, idx) => {
+    const div = document.createElement('div');
+    div.className = 'ajuste-item';
+    const pl = DB.plantas.find(p => p.id === s.plantaId);
+    div.innerHTML = `<span class="nom">${esc(s.nombre)}<br><span class="meta">${pl ? esc(pl.nombre) + ' · ' : ''}${s.cebos} estaciones${s.uv ? ' + ' + s.uv + ' UV' : ''}</span></span>`;
+    const be = document.createElement('button'); be.className = 'mini-btn'; be.textContent = 'Editar';
+    be.onclick = () => editarSector(idx);
+    const bq = document.createElement('button'); bq.className = 'mini-btn rojo'; bq.textContent = 'Quitar';
+    bq.onclick = () => confirmar('¿Quitar el sector ' + s.nombre + '?', 'Los registros guardados de este sector no se borran.', () => {
+      DB.sectores.splice(idx, 1); persistir(); renderAjustes();
+    }, 'Eliminar');
+    div.append(be, bq);
+    ls.appendChild(div);
+  });
+
+  $('cfgGasUrl').value = DB.config.gasUrl || '';
+  $('cfgMail').value = DB.config.mailDestino || '';
+  $('cfgWa').value = DB.config.waNumero || '';
+
+  $('ultimoRespaldoTxt').textContent = DB.ultimoRespaldo
+    ? 'Última copia: ' + fFecha(DB.ultimoRespaldo, true)
+    : 'Todavía no se exportó ninguna copia.';
+}
+function agregarOperario() {
+  const inp = $('nuevoOperario');
+  const n = inp.value.trim();
+  if (!n) return;
+  if (DB.operarios.some(x => x.toLowerCase() === n.toLowerCase())) { toast('Ese nombre ya existe'); return; }
+  DB.operarios.push(n); persistir(); inp.value = ''; renderAjustes();
+}
+function agregarPlanta() {
+  const inp = $('nuevaPlanta');
+  const n = inp.value.trim();
+  if (!n) return;
+  if (DB.plantas.some(p => p.nombre.toLowerCase() === n.toLowerCase())) { toast('Esa planta ya existe'); return; }
+  DB.plantas.push({ id: 'p' + Date.now(), nombre: n });
+  persistir(); inp.value = ''; renderAjustes();
+}
+
+function agregarSector() {
+  const nombre = $('nuevoSectorNombre').value.trim();
+  const cebos = parseInt($('nuevoSectorCebos').value, 10);
+  const uv = parseInt($('nuevoSectorUV').value, 10) || 0;
+  const plantaId = $('nuevoSectorPlanta').value;
+  if (!nombre || !cebos || cebos < 1) { toast('Poné el nombre y la cantidad de estaciones'); return; }
+  if (!plantaId) { toast('Elegí la planta del sector'); return; }
+  DB.sectores.push({ id: 's' + Date.now(), plantaId, nombre, cebos, uv });
+  persistir();
+  $('nuevoSectorNombre').value = ''; $('nuevoSectorCebos').value = ''; $('nuevoSectorUV').value = '';
+  renderAjustes();
+}
+function editarSector(idx) {
+  const s = DB.sectores[idx];
+  const nombre = prompt('Nombre del sector:', s.nombre);
+  if (nombre === null) return;
+  const cebos = prompt('Cantidad de estaciones de cebado:', s.cebos);
+  if (cebos === null) return;
+  const uv = prompt('Cantidad de trampas UV (0 si no tiene):', s.uv);
+  if (uv === null) return;
+  const nc = parseInt(cebos, 10), nu = parseInt(uv, 10);
+  if (!nombre.trim() || !nc || nc < 1 || isNaN(nu) || nu < 0) { toast('Datos inválidos, no se guardó'); return; }
+  s.nombre = nombre.trim(); s.cebos = nc; s.uv = nu;
+  persistir(); renderAjustes();
+}
+
+/* ============ respaldo ============ */
+function exportarRespaldo() {
+  DB.ultimoRespaldo = hoyISO();
+  persistir();
+  const data = JSON.stringify(DB, null, 1);
+  const fecha = new Date().toISOString().slice(0, 10);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `respaldo-control-plagas-${fecha}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast('Copia exportada. Guardala en Drive, mail o WhatsApp.');
+  renderMenu();
+  if ($('scr-ajustes').classList.contains('on')) renderAjustes();
+}
+function importarRespaldo(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let nuevo;
+    try { nuevo = JSON.parse(reader.result); } catch (e) { toast('El archivo no es una copia válida'); return; }
+    if (!nuevo || nuevo.v !== 1 || !Array.isArray(nuevo.registros)) { toast('El archivo no es una copia válida'); return; }
+    confirmar('¿Restaurar esta copia?',
+      `Contiene ${nuevo.registros.length} recorridos y ${(nuevo.ordenes || []).length} órdenes. REEMPLAZA todo lo que hay ahora en la tablet.`,
+      () => {
+        DB = migrar(nuevo); persistir();
+        operario = null; plantaActual = null;
+        $('whoBadge').style.display = 'none';
+        renderNombres(); renderAjustes();
+        toast('Copia restaurada');
+        go('scr-quien');
+      },
+      'Sí, reemplazar');
+  };
+  reader.readAsText(file);
+}
+
+/* ============ arranque ============ */
+cargar();
+document.addEventListener('DOMContentLoaded', () => {
+  renderNombres();
+  renderSectores();
+  renderAjustes();
+  document.querySelectorAll('#chipsTipo .chip').forEach(c => c.onclick = () => {
+    document.querySelectorAll('#chipsTipo .chip').forEach(x => x.classList.remove('on'));
+    c.classList.add('on');
+  });
+  $('nuevaPlanta').addEventListener('keydown', e => { if (e.key === 'Enter') agregarPlanta(); });
+  $('nuevoOperario').addEventListener('keydown', e => { if (e.key === 'Enter') agregarOperario(); });
+  go('scr-quien');
+});
+</script>
+</body>
+</html>
