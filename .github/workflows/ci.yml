@@ -1,0 +1,46 @@
+# CI del proyecto: typecheck + build + tests en cada PR y en cada push a main.
+# El job "build" es status check requerido en la protección de main:
+# un PR no se puede mergear si esto no está en verde. No requiere
+# aprobación humana — cada colaborador mergea sus propios PRs.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rrhh-app
+    env:
+      # Dummies: next build instancia los clientes de Supabase al recolectar
+      # datos de páginas, pero no conecta a nada. Los valores reales solo
+      # existen en Vercel y en los .env.local de cada dev.
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: rrhh-app/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Tests
+        run: npm test
