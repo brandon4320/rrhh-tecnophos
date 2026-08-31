@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard } from 'lucide-react'
+import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard, Factory, ExternalLink } from 'lucide-react'
 import { requireSesion } from '@/lib/auth/session'
 import { modulosPara } from '@/config/modules'
 import { createClient } from '@/lib/supabase/server'
@@ -34,6 +34,10 @@ export default async function HubPage() {
   const puedeRrhh = modulos.some((m) => m.key === 'rrhh')
   const puedeOps = modulos.some((m) => m.key === 'limpieza')
   const puedeComercial = modulos.some((m) => m.key === 'comercial')
+
+  // Sistema externo del cliente UNIPAR (deploy propio en Vercel).
+  // La card solo aparece cuando la URL está configurada.
+  const uniparUrl = process.env.NEXT_PUBLIC_UNIPAR_APP_URL
 
   const supabase = await createClient()
   const empresasQuery = supabase.from('empresas').select('id, nombre, slug').order('nombre')
@@ -154,6 +158,28 @@ export default async function HubPage() {
                 </div>
               </div>
             ))}
+
+            {puedeOps && uniparUrl && (
+              <div className="flex flex-col rounded-2xl border border-border bg-card p-5">
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-foreground text-background">
+                    <Factory className="size-5" strokeWidth={1.75} />
+                  </span>
+                  <div>
+                    <p className="font-semibold tracking-tight">UNIPAR - ADC</p>
+                    <p className="text-xs text-muted-foreground">Sistema del servicio de limpieza</p>
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-0.5">
+                  <a href={uniparUrl} target="_blank" rel="noopener noreferrer" className={filaCls}>
+                    <ClipboardList className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                    <span className="min-w-0 flex-1 truncate">Gestión operativa</span>
+                    <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
