@@ -20,6 +20,9 @@ const MARCAS = [
   { key: 'serviwhite', nombre: 'Serviwhite', logo: '/logo-serviwhite-iso.png', match: (s: string) => s === 'serviwhite' },
 ] as const
 
+// Sistema del servicio de limpieza para UNIPAR (deploy propio, fuera de este repo).
+const UNIPAR_APP_URL = 'https://unipar-app.vercel.app/'
+
 function nombreSede(nombreEmpresa: string) {
   return nombreEmpresa.replace(/^Tecnophos\s+/i, '')
 }
@@ -137,11 +140,11 @@ export default async function HubPage() {
                     ))}
 
                   {marca.key === 'adc' && puedeOps && (
-                    <Link href="/operaciones" className={filaCls}>
+                    <a href={UNIPAR_APP_URL} target="_blank" rel="noopener noreferrer" className={filaCls}>
                       <ClipboardList className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
-                      <span className="min-w-0 flex-1 truncate">Operaciones · UNIPAR</span>
-                      <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
-                    </Link>
+                      <span className="min-w-0 flex-1 truncate">Sistema limpieza - UNIPAR</span>
+                      <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
+                    </a>
                   )}
 
                   {/* App de control de plagas: página estática autocontenida en public/
