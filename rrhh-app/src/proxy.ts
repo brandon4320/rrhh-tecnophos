@@ -8,7 +8,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { env } from '@/lib/env'
 
-const PUBLIC_PATHS = ['/login']
+// /control-plagas.html es la app de registro para operarios (estática, datos
+// en el dispositivo): los iPads la abren sin sesión del portal.
+const PUBLIC_PATHS = ['/login', '/control-plagas.html']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
