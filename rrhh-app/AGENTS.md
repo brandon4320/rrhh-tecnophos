@@ -28,7 +28,7 @@ Un solo login con **módulos** (registro en `src/config/modules.ts`):
 | Módulo | Ruta | Qué hace | Quién lo usa |
 |---|---|---|---|
 | **RRHH** | `/(protected)` → `/dashboard`, `/empleados`, `/empresa/[slug]`, `/legajo/[id]`, `/vencimientos`, `/admin/*` | Carpeta documental: empleados, certificados con vencimiento, vehículos, equipos/activos (matafuegos, Draeger), habilitaciones de empresa, archivos adjuntos | Administración (desktop) |
-| **Operaciones** | `/operaciones` | Servicio de limpieza de ADC en planta UNIPAR: asistencia, tareas, cronograma, reportes diarios, stock, feedback del cliente | Supervisores/operarios ADC + cliente UNIPAR (mobile) |
+| ~~Operaciones~~ | — | **Eliminado (2026-09)**: reemplazado por el sistema externo unipar-app.vercel.app (repo aparte). Las tablas `limpieza_*` y los usuarios con roles de limpieza siguen en la DB como legacy. | — |
 | **Gestión Comercial** | `/comercial` | CRM: clientes, proyectos (pipeline), tareas, agenda, viajes, equipo, reportes. Workspace estilo Notion con kanban | Equipo comercial (MUY mobile) |
 | Mantenimiento | — | `enabled: false`, futuro | — |
 

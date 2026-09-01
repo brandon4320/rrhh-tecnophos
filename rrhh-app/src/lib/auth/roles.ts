@@ -6,10 +6,10 @@
 export const ROLES = [
   'admin', // super admin de la plataforma (empresa_acceso = null)
   'usuario', // usuario RRHH (scopeado por empresa_acceso)
-  'admin_adc', // admin del servicio de limpieza ADC
-  'supervisor', // supervisor de limpieza
-  'operario', // operario de limpieza
-  'admin_unipar', // cliente externo (solo lectura de reportes + feedback)
+  // Los roles del servicio de limpieza (admin_adc, supervisor, operario,
+  // admin_unipar) se eliminaron en 2026-09: ese sistema ahora es un deploy
+  // externo (unipar-app.vercel.app). Pueden quedar usuarios legacy en la DB
+  // con esos roles: no matchean ningún módulo y no ven nada.
   // --- módulo comercial ---
   'direccion', // dirección general: ve todo, puede editar
   'gerente_comercial', // gestiona equipo comercial completo
@@ -21,12 +21,6 @@ export type Rol = (typeof ROLES)[number]
 
 /** Roles que acceden al dominio RRHH. */
 export const RRHH_ROLES = ['admin', 'usuario'] as const satisfies readonly Rol[]
-
-/** Roles internos del servicio de limpieza (operan el módulo). */
-export const LIMPIEZA_INTERNOS = ['admin', 'admin_adc', 'supervisor', 'operario'] as const satisfies readonly Rol[]
-
-/** Roles que pueden ESCRIBIR en el módulo limpieza. */
-export const LIMPIEZA_ESCRITURA = ['admin', 'admin_adc', 'supervisor'] as const satisfies readonly Rol[]
 
 /** Todos los roles del módulo comercial. */
 export const COMERCIAL_ROLES = [

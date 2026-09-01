@@ -5,7 +5,7 @@
 // ============================================================
 import type { Rol } from '@/lib/auth/roles'
 
-export type ModuloKey = 'rrhh' | 'limpieza' | 'mantenimiento' | 'comercial'
+export type ModuloKey = 'rrhh' | 'mantenimiento' | 'comercial'
 
 /** Empresas dueñas de un módulo (para mostrar marca en el menú). */
 export type EmpresaMarca = 'tecnophos' | 'adc' | 'serviwhite'
@@ -33,16 +33,6 @@ export const MODULOS: ModuloDef[] = [
     icon: 'IdCard',
     roles: ['admin', 'usuario'],
     empresas: ['tecnophos', 'adc', 'serviwhite'],
-    enabled: true,
-  },
-  {
-    // key/tablas internas siguen siendo "limpieza"; la etiqueta es genérica.
-    key: 'limpieza',
-    label: 'Operaciones',
-    href: '/operaciones',
-    icon: 'ClipboardList',
-    roles: ['admin', 'admin_adc', 'supervisor', 'operario', 'admin_unipar'],
-    empresas: ['adc'],
     enabled: true,
   },
   {

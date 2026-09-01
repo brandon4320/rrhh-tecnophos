@@ -35,7 +35,6 @@ export default async function HubPage() {
   if (modulos.length === 1) redirect(modulos[0].href)
 
   const puedeRrhh = modulos.some((m) => m.key === 'rrhh')
-  const puedeOps = modulos.some((m) => m.key === 'limpieza')
   const puedeComercial = modulos.some((m) => m.key === 'comercial')
 
   const supabase = await createClient()
@@ -139,7 +138,7 @@ export default async function HubPage() {
                       </Link>
                     ))}
 
-                  {marca.key === 'adc' && puedeOps && (
+                  {marca.key === 'adc' && (
                     <a href={UNIPAR_APP_URL} target="_blank" rel="noopener noreferrer" className={filaCls}>
                       <ClipboardList className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
                       <span className="min-w-0 flex-1 truncate">Sistema limpieza - UNIPAR</span>
@@ -149,7 +148,7 @@ export default async function HubPage() {
 
                   {/* App de control de plagas: página estática autocontenida en public/
                       (los datos viven en el dispositivo del operario, no usa Supabase). */}
-                  {marca.key === 'adc' && puedeOps && (
+                  {marca.key === 'adc' && (
                     <a href="/control-plagas.html" target="_blank" rel="noopener noreferrer" className={filaCls}>
                       <Bug className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
                       <span className="min-w-0 flex-1 truncate">Control de Plagas</span>
