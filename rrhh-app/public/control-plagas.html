@@ -587,6 +587,18 @@ function migrar(db) {
   if (!db.plantas || !db.plantas.length) db.plantas = [{ id: 'p1', nombre: 'Frigorífico Cabildo', mail: '', empresa: 'ADC SRL' }];
   db.plantas.forEach(p => { if (p.mail === undefined) p.mail = ''; if (!p.empresa) p.empresa = 'ADC SRL'; });
   db.sectores.forEach(s => { if (!s.plantaId) s.plantaId = db.plantas[0].id; });
+  // Plantas con certificado conocido: se crean si faltan y se les fija la
+  // empresa que corresponde al certificado (ADC o Tecnophos).
+  CERT_MODELOS.forEach((m, i) => {
+    const existente = db.plantas.find(p => m.match.some(k => normalizarTxt(p.nombre).indexOf(k) !== -1));
+    if (existente) {
+      existente.empresa = m.empresa;
+    } else if (m.seed) {
+      const id = 'pm' + i;
+      db.plantas.push({ id, nombre: m.seed.nombre, mail: '', empresa: m.empresa });
+      db.sectores.push({ id: 'sm' + i, plantaId: id, nombre: m.seed.sector, cebos: m.seed.cebos, uv: m.seed.uv });
+    }
+  });
   return db;
 }
 function cargar() {
@@ -817,12 +829,14 @@ function buildGrid() {
   }
   const uvB = $('uvBlock');
   if (sector.uv) {
+    const modelo = modeloPara(plantaActual ? plantaActual.nombre : '');
+    uvB.querySelector('h2').textContent = modelo.uvGrupo === 'PLACAS ADHESIVAS' ? 'Placas adhesivas' : 'Trampas UV';
     uvB.style.display = 'block';
     const ug = $('uvGrid'); ug.innerHTML = '';
     for (let i = 1; i <= sector.uv; i++) {
       const c = document.createElement('button');
       c.className = 'st'; c.id = 'uv-' + i;
-      c.innerHTML = `<span class="num">UV ${i}</span><span class="tag" id="uvtag-${i}">—</span>`;
+      c.innerHTML = `<span class="num">${modelo.uvEtiqueta} ${i}</span><span class="tag" id="uvtag-${i}">—</span>`;
       c.onclick = () => openSheet('uv', i);
       ug.appendChild(c);
       if (marcasUV[i]) paint('uv', i, marcasUV[i]);
@@ -1023,13 +1037,12 @@ function abrirFirma(orden) {
 
 function prepararCanvas() {
   const canvas = $('firmaCanvas');
-  const escala = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * escala;
-  canvas.height = rect.height * escala;
+  // Tamaño interno FIJO: no depende del layout del momento (en tablets el
+  // navegador puede medir 0/2px al abrir la pantalla y la firma salía en blanco).
+  canvas.width = 1200;
+  canvas.height = 400;
   firmaCtx = canvas.getContext('2d');
-  firmaCtx.scale(escala, escala);
-  firmaCtx.lineWidth = 2.5;
+  firmaCtx.lineWidth = 4;
   firmaCtx.lineCap = 'round';
   firmaCtx.lineJoin = 'round';
   firmaCtx.strokeStyle = '#1a2530';
@@ -1037,7 +1050,9 @@ function prepararCanvas() {
   let trazando = false;
   const pos = ev => {
     const r = canvas.getBoundingClientRect();
-    return { x: ev.clientX - r.left, y: ev.clientY - r.top };
+    const fx = r.width > 0 ? canvas.width / r.width : 1;
+    const fy = r.height > 0 ? canvas.height / r.height : 1;
+    return { x: (ev.clientX - r.left) * fx, y: (ev.clientY - r.top) * fy };
   };
   canvas.onpointerdown = ev => {
     ev.preventDefault();
@@ -1067,11 +1082,20 @@ function limpiarFirma() {
   $('firmaError').style.display = 'none';
 }
 
+function firmaTieneTinta(canvas) {
+  try {
+    const d = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    for (let i = 3; i < d.length; i += 40) if (d[i] > 0) return true;
+    return false;
+  } catch (e) { return true; }
+}
+
 function guardarFirma() {
-  if (!firmaDibujada) { $('firmaError').style.display = 'block'; return; }
+  const canvas = $('firmaCanvas');
+  if (!firmaDibujada || !firmaTieneTinta(canvas)) { $('firmaError').style.display = 'block'; return; }
   const orden = ordenPendienteFirma;
   if (!orden) return;
-  orden.firma = $('firmaCanvas').toDataURL('image/png');
+  orden.firma = canvas.toDataURL('image/png');
   orden.firmante = $('firmanteInput').value.trim();
   persistir();
   ordenPendienteFirma = null;
@@ -1337,7 +1361,47 @@ async function enviarReporte(tipo, obj, boton) {
 const LOGO_TECNOPHOS = 'data:image/png;base64,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';
 const LOGO_ADC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIYAAABkCAYAAABD9UgYAAAACXBIWXMAAAsSAAALEgHS3X78AAAM8klEQVR4nO1dv28byRUe2bJjEEisdAaSo5asgrtCdOdUkpvAnWkgCdKJTv4A0/kHtPoDEsv95Uy1QQDRnZHGZHXuTBcJUpErXoorxQtAGHc+K3h73yjD5ezMm/1FEpkPWEiUuMPHmW/ej5l5b7cuLy+FR/loBo0dIUTL9EHjaDJYl6HYXgMZ/l9ApHht+a5b69IX19ZABo81hCeGhxaeGB5aeGJ4aOGJ4aGFJ4aHFp4YHlp4Ynho4YnhoYUnhocWnhgeWnhieGjhieGhhSeGhxaeGB5aeGJ4aOGJ4aFF6Se4mkHjAL8GuAgjIcQFXeNoMlrXoWkGDTp1tYNLHsuTsq/VUbwkUvpdyhuNo0lkur/wM5/NoNEWQrTRkXvM24bo8N4qiYLOJNkPHGR/hw4fjKNJ39K28WjfOJpkOtqH86RSbrp2mbcOIXs/2e+FEKMZNIiRIYS7nbO5cyKIEOJkHE0ucgtnAWTv4OJ2aBpm1MnUF8kZWQYxoNG6QojDnHITjsfRJJQvchFDIUQRgulwXBZBMMtI9idFtw2cqgQpkhggxIkQYr84cReJkdn5bAYNamRSIikIR2QPYZ4KA9qLSiSFQL/0CpZ7pxk0iBBvCybFEpydT2iJvoMNzgsyTWfNoEEzsJtHe0BL0GA9rEj2wgAt0auq3500BoQbVUgKFTQDBxhcZ+C+wYaSog3ZK+t3NjFAikEBzmUeUMeMIAsbeH+0IkLnQjNokFN8VnW/s0xJDlLIcEjGzyMyBUqMfYCw1mUWU+TQozY4ZgWaor8msjsBmuKF420yMhrJNRcKReECyKuFCDI1CrMSQ1HB3I6dwWPupS2iKAtDA7EYh4fMkHEP93I0x8AhDJWyp0ZCBcjOguJTcDGE3Nq1FIyFOh5dU7hrDVebQWPg4AHnDi+bQaOLTuYQ8fk4mnQNbfUdZnQZsg/H0eRAOIarymTkmD5a9+nkWYWV2kRtw+hj4ItySEHC3aU4OO+awzianEATvGO8/Ymi2hcA2TmkWJXsJoRMUlCk1sq7NE/aJNlGKjGUxSsb3kG4wpayofYOoB5tWFK3GyT7EiA7Z33l8TiadMpaHTZpDI46p45lOYGuQJttxuzbhee+jrJnmckcv+LpOJoUuniWhNbHAGsnlntn6NhSN71gb0cWx+58HE0C4SZ7y7bDWCQ4PoYQosGQ/ZQ0BUe0eVhPmtlRLZyyJkJaVML54LCKnVCEiB1Lp+4ifB3Ay7ahWyUpHGAzfzPb95uHdeOG5jysx9FLLZym7gQLgymxEWMIR6sSYMBtNruT+GmSvVQ1nAO2PSHjlsA8rKv7V2mmlIKJs3lYH8zDeuoq8hIxoIpt8XhlpHD4zDY0i8234Dilq4JJ9pmJ0POw3sOmIxdEkFRy6DSGjbXnpgMpZYHxmbcZg36+zqeuLDCRIuvRhz2ski5BRwzbamLlpFBgMyc2TbdK2fNCSwz4FC6aIon9eVhfMr86YgSav6nY1BknNpgYM4Ojz3G2bVjStFk0xiYTY20PHltgkruIQ0y787C+MO46YhidtyrOYZaFDZZdG1rDjBS1cbew5uHzSjYDaWsuNrPvgoXoxBPDQwtPjM2AdgfZoEmyYMHM6ohhDAnTtrk3ARssu3YRqhZOIyyTF4EFB1dHDJuD5nTecs2wStkzHWIG9gyHoIsIwc9r4dR6HsMW0rF29tYUheanOCLvZ6fdX8QS/9LimY4YtnWKPeynbCL2VyG7ci7UBJtJ0E5ImJPjHOK9q4VT+wIX9hJsQq7rRhTH3q5C9q5tg4xhEvbTfCQM7GkGuWZphE2LSmxCHrrmdlSEEWM/pVLZoS1sy9Z9pq+QSupaOCWN8txBNDrBFkDjLCGNGJxt9XU908DRCFXK3mMcBZDH/s8t79vHIWctauGU/ndfCPHS0AZ9xuNaOG2ZTnNpiYENG9vMI1+j9A529QmYh3qqkj1knFQfKhtkHFI/M2k8ii5q4ZTMw09BkqfwQR7R0cFaOCUtYf3uqXklzDOKwuUMoitw8Kaj5GbYclziPA503Ns1kJ2TRXZfPSPSDBoRY/+j9PO2qSufENakkiQOy5h9mG2u6Xkx0GEce7tq2U81B4c4RL2NBO/SFuxsS+IdpqdPHeycbKwDmQ5ohjyHTwTUMifxZ1Wyaw/2gigcUhM5XhMJs1YAUJE02UZiYJuaq2rpmNhbmoFZ1grQqfIwa+6iIIrsHGKvQva2IT+265DNdoQKAJlMImkdkHnhflapJXjCzxw/c4gQbJBmCzEIsiBampM2dPUxEp/BtfUqXsqM8Zyyp+Gx7aS6Y/6qxAxRkCwWpyWeUoROzXjPVoMLtjhPWaVkpMCdWbmIIbKTY6HdxOs8Gs2YiK2igJoks8QWh+lgzwIx2KWWyHuHx5zV9pdaM8oEmp3NgJK8MpOjKNmfuuTjoK7FQY4SS7ezyu50HgOMelzgVm9lgOq+vyLZZzAfzvk4MGWZk6SzwvmgDjr4oIBU/8oBjz+ouJNl8nTmsJh8BZjIyiZlphNcxOJxNGlhVa1MQc+LznpTOvkRYwk6D2YwHYWVWQC5AqxklkqQXEf7oBqloEV28jlUb1BW1hu1iwz5xyXIfowKNYWncoLYYdkEKbSWuFJHPEvp6HOEiKn1xLNGJRzAyes41uKWkNvm/VWkbyLqkrXEs/b7iVoBoPAi8xIItVpKpbjkwpEsFjbCeoH1YKvyNIA0FPI0A6xRJOXXyR6Z1jpWgUS/6/pLPj1hZFrrKI0YHpsNnz7goYUnhocWnhgeWiwtic/DepYNM4/Nx6wWTq8cVd1eSe69fQ89tlu/ETcO/ii2dn4W///7f/1dfHjzF/F99KX2/TcOnsaXxOX7/4iP0Zfi21ehuLz4d+rn3Or8VVwL7onvBs/ii4mFMNebkopw7c5n4mb7T1ekIFz/xa/iAeRi69aP43t+9LvPSxe69KcoevyArVs/ufr9w+hv4vLiK7G180msMTiYh/WYEDGZ7nxaeq96YlSEj1//IzYFNOu3W7+OP/Tj1/8Uggjz/hurEGRSrgW/jH+ndsqGNyUV4sObz8W3r45jjSFi8/Jp7HNwQMQgUhG+e1V+Mp0nRkXYvveHeHBvPjhaMCsqyDmlS4cPb764+uulomGorZvtP2vb3G79NnZE6VLbvfkgjH0eEzwxKgJFEdIEkJ8gYBKkj0EDe+NBGBNIB4pEPkZv4v/QwEoikHkh03RdQyhydMm5pWtr5+c/vP/OZ2L73u9TCXh1b3KvBMVE8x7d90jBdfgJ4srvUGY/Dd77b67+Rq+v7XwS/04hrfpavZcGm15L0OukBvl48dVViJt8v0QtnF4991VHjNaK60h4rAYXtXB6dX7E7656aOF9DA8tPDE8tPDE8NDCE8NDC08MDy08MTy08MTw0GJpd9VWYkk+Zlp5f7xSmvy7w//lQkojLYVAybS/r3t0lU0GsVg9r60kCMt8kJCZviDlSC1jkLFUg4v8HSXv5RzZ8Eb5IVMr7ZGiGAN2tvtpwUXMbQh1RVqQ45Gn/EKy1sRQKZgagChUVeeuKT8kIUfXUPmvpxTRlfeofencp8gV6YMQQ+WzZfttPF7UlN9yG22wKgeZiNGr+MFyNDg65oeY2VlrRAiFFEszHaThPENWkpZIdaQ853UBavvQvocF9GUPRy4fJTPdmkHjRBZKIQJZNB9VKzzh1OdYFx9DVrVdOGiAmXKYJ7EZ6Xt7aY+9Ri6osaMUNX4KWWZVVRhW5A916Y8gdJvxFMkhMu+fIJXUiHUhRoROP0zUwJKDkCc5OLbnOROMZcf3kNJ3UmFd8jYelpcqP7TRO8NzTRbaou9hk91EDKoId5m4ypwlofoTangfybZ5nmVmrYeBynemjgrhNEpz0FP+XjZ2mA/569uSsWFmOoq/kQoTMU5hT9WrNJ8DQqtaIyxAWwgk8NocrqO054tBle+qzmZC1irSLTiaqcUpiQBz9Fz6G2nvK8L5jJ2dNGfMMU9FPnG4D7t6XMCTD0mmhzTAGavaSKfzRTNo6Gp4dUvWHH2UiU7rXxkxPWQW7I3LRUIjP0Eou4QifAzZ8JIDh9nU4ZZlUmbiXkHaQmCmx225FnlVzNlLjfY8xvcq4oG4Jkj5+zr50cfSLLj0V1sp/7iE3OkDNJjNoPESs7KvCCfNAeeZ6yqk1sjrW0j5LjDAMqTroSN3lCIvaZAFZDs6WVDF8EUObcSVn+Q4g/wnymRsgZi7CMXZph7jJttdQlFRiXxWxkOsmr5G6cQdCMyuMkMC0wqgugqXF0rlO/r5BPKdgYAXuk5VFrT6hgq+Paw+luqEov/uQv4jpY9l/uGjLMRU/I0l6DTGCGUP2VVi0HFdRC0t5e8cBt9nrgaaZOrZHGNJDgy4dOZMFXjoO3H6gQiX5hxy+7IM+VWkmjv4G0SQ/42BEOK/sCQFNrnzgpwAAAAASUVORK5CYII=';
 
+/* Modelos de certificado por planta (replican la planilla oficial de cada una).
+   Se identifican por el nombre de la planta; una planta sin modelo usa el genérico. */
+const PRODUCTO_TECNOPHOS = 'Producto utilizado: Difethialone (Rodillon de Bayer) Bloques Parafinados';
+const CERT_MODELOS = [
+  { match: ['cabildo'], paraEmpresa: 'FRIGORIFICO CABILDO', empresa: 'ADC SRL',
+    seed: { nombre: 'Frigorífico Cabildo', sector: 'Cebadera perímetro y trampas UV', cebos: 60, uv: 20 } },
+  { match: ['manera'], paraEmpresa: 'MOLINO LA NUEVA MANERA', empresa: 'ADC SRL',
+    uvEtiqueta: 'CAJ', uvGrupo: 'PLACAS ADHESIVAS',
+    pie: { elaboro: 'BRAIAN RISSO', reviso: 'MANUEL FRANCIULLI', aprobo: 'LIC. ALEJANDRO BRITEZ', fecha: '13/7/2026' },
+    seed: { nombre: 'Molino La Nueva Manera', sector: 'Cebadera perímetro y placas adhesivas', cebos: 48, uv: 30 } },
+  { match: ['millagro'], paraEmpresa: 'MILLAGRO S.A.', empresa: 'TECNOPHOS',
+    producto: PRODUCTO_TECNOPHOS, firmaIzq: 'Personal MILLAGRO SA',
+    seed: { nombre: 'Millagro S.A.', sector: 'Planta industrial', cebos: 34, uv: 0 } },
+  { match: ['calado'], paraEmpresa: 'BUNGE SA', empresa: 'TECNOPHOS',
+    titulo: 'DESRATIZACIÓN EN CALADO', producto: PRODUCTO_TECNOPHOS,
+    seed: { nombre: 'Bunge - Calado', sector: 'Calado', cebos: 18, uv: 0 } },
+  { match: ['galvan'], paraEmpresa: 'BUNGE SA', empresa: 'TECNOPHOS',
+    titulo: 'DESRATIZACIÓN EN PUERTO GALVAN', producto: PRODUCTO_TECNOPHOS,
+    seed: { nombre: 'Bunge - Puerto Galván', sector: 'Puerto Galván', cebos: 134, uv: 0 } },
+];
+function normalizarTxt(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+function modeloPara(plantaNombre) {
+  const n = normalizarTxt(plantaNombre);
+  const m = CERT_MODELOS.find(x => x.match.some(k => n.indexOf(k) !== -1)) || {};
+  return {
+    titulo: m.titulo || 'DESRATIZACIÓN EN PLANTA INDUSTRIAL',
+    paraEmpresa: m.paraEmpresa || String(plantaNombre || '').toUpperCase(),
+    empresa: m.empresa || null,
+    producto: m.producto || null,
+    uvEtiqueta: m.uvEtiqueta || 'UV',
+    uvGrupo: m.uvGrupo || null,
+    firmaIzq: m.firmaIzq || 'Supervisor del Planta',
+    pie: m.pie || null,
+  };
+}
+
 function empresaDe(obj) {
+  const modelo = modeloPara(obj.plantaNombre);
+  if (modelo.empresa) return modelo.empresa;
   const p = DB.plantas.find(x => x.id === obj.plantaId);
   return (p && p.empresa) || 'ADC SRL';
 }
@@ -1364,7 +1428,7 @@ function cabPlanilla(titulo, fechaISO, empresa) {
   </tr></table>`;
 }
 
-function bloqueReferencias(r, empresa) {
+function bloqueReferencias(r, empresa, modelo) {
   return `
   <table style="width:100%; border-collapse:collapse; font-family:Arial; margin-bottom:8px"><tr>
     <td style="width:150px; vertical-align:top; font-size:10px; padding-right:12px; line-height:1.5">
@@ -1379,10 +1443,11 @@ function bloqueReferencias(r, empresa) {
     <td style="vertical-align:top; font-size:11px">
       <div style="font-weight:700; margin-bottom:5px">Ref: &nbsp;${esc((r.sectorNombre || '').toUpperCase())}</div>
       <div style="text-align:center; font-weight:700; font-size:10.5px; margin-bottom:5px">COMPLETAR DE ACUERDO A LOS PLANOS</div>
+      ${modelo.producto ? `<div style="font-size:10.5px; margin-bottom:5px">${esc(modelo.producto)}</div>` : ''}
       <table style="width:100%; border-collapse:collapse">
         <tr>
           <td style="border:1px solid #000; width:46px; padding:2px 6px; font-size:10.5px">Para :</td>
-          <td style="border:1px solid #000; padding:2px 6px; font-size:10.5px"><span style="font-size:9px">EMPRESA</span> &nbsp;<b>${esc((r.plantaNombre || '').toUpperCase())}</b></td>
+          <td style="border:1px solid #000; padding:2px 6px; font-size:10.5px"><span style="font-size:9px">EMPRESA</span> &nbsp;<b>${esc(modelo.paraEmpresa)}</b></td>
           <td style="border:1px solid #000; width:120px; padding:2px 6px; font-size:9px">CARGO:</td>
         </tr>
         <tr>
@@ -1396,16 +1461,25 @@ function bloqueReferencias(r, empresa) {
 }
 
 function planillaDesratizacion(r, empresa) {
+  const modelo = modeloPara(r.plantaNombre);
   const filas = 26;
   const colsCebo = Math.max(1, Math.ceil(r.cebosTotal / filas));
   const colsUV = r.uvTotal ? Math.ceil(r.uvTotal / filas) : 0;
+  const etUV = modelo.uvEtiqueta;
   const celda = 'border:1px solid #000; padding:1px 5px; font-size:10px; text-align:center; height:15px';
   const head = 'border:1px solid #000; padding:1px 4px; font-size:9.5px; text-align:center; background:#d9d9d9';
   let tabla = '<table style="width:100%; border-collapse:collapse; font-family:Arial">';
-  tabla += '<tr>';
-  for (let c = 0; c < colsCebo; c++) tabla += `<th style="${head}">CEBO</th><th style="${head}">EST.</th>`;
-  for (let c = 0; c < colsUV; c++) tabla += `<th style="${head}">UV</th><th style="${head}">EST.</th>`;
-  tabla += `<th style="${head}; width:36%; font-weight:700">OBSERVACIONES GENERALES</th></tr>`;
+  if (modelo.uvGrupo && colsUV) {
+    tabla += `<tr><th style="${head}" colspan="${colsCebo * 2}">CEBOS</th><th style="${head}" colspan="${colsUV * 2}">${esc(modelo.uvGrupo)}</th><th style="${head}; width:36%; font-weight:700" rowspan="2">OBSERVACIONES GENERALES</th></tr><tr>`;
+    for (let c = 0; c < colsCebo; c++) tabla += `<th style="${head}">CEBO</th><th style="${head}">EST.</th>`;
+    for (let c = 0; c < colsUV; c++) tabla += `<th style="${head}">${esc(etUV)}</th><th style="${head}">EST.</th>`;
+    tabla += '</tr>';
+  } else {
+    tabla += '<tr>';
+    for (let c = 0; c < colsCebo; c++) tabla += `<th style="${head}">CEBO</th><th style="${head}">EST.</th>`;
+    for (let c = 0; c < colsUV; c++) tabla += `<th style="${head}">${esc(etUV)}</th><th style="${head}">EST.</th>`;
+    tabla += `<th style="${head}; width:36%; font-weight:700">OBSERVACIONES GENERALES</th></tr>`;
+  }
   for (let f = 0; f < filas; f++) {
     tabla += '<tr>';
     for (let c = 0; c < colsCebo; c++) {
@@ -1420,15 +1494,21 @@ function planillaDesratizacion(r, empresa) {
     tabla += '</tr>';
   }
   tabla += '</table>';
+  const pie = modelo.pie ? `
+    <table style="width:100%; border-collapse:collapse; font-family:Arial; margin-top:30px; font-size:10px; text-align:center">
+      <tr><td style="border:1px solid #000; padding:2px">${esc(modelo.pie.elaboro)}</td><td style="border:1px solid #000; padding:2px">${esc(modelo.pie.reviso)}</td><td style="border:1px solid #000; padding:2px">${esc(modelo.pie.aprobo)}</td><td style="border:1px solid #000; padding:2px">${esc(modelo.pie.fecha)}</td></tr>
+      <tr><td style="border:1px solid #000; padding:2px; background:#d9d9d9">Elaboró</td><td style="border:1px solid #000; padding:2px; background:#d9d9d9">REVISÓ</td><td style="border:1px solid #000; padding:2px; background:#d9d9d9">APROBÓ</td><td style="border:1px solid #000; padding:2px; background:#d9d9d9">FECHA</td></tr>
+    </table>` : '';
   return `
   <div style="padding:24px; font-family:Arial; color:#000">
-    ${cabPlanilla('DESRATIZACIÓN EN PLANTA INDUSTRIAL', r.fecha, empresa)}
-    ${bloqueReferencias(r, empresa)}
+    ${cabPlanilla(modelo.titulo, r.fecha, empresa)}
+    ${bloqueReferencias(r, empresa, modelo)}
     ${tabla}
     <table style="width:100%; margin-top:60px; font-family:Arial"><tr>
-      <td style="text-align:center; font-size:11px"><div style="border-top:1px solid #000; width:200px; margin:0 auto; padding-top:4px">Supervisor del Planta</div></td>
+      <td style="text-align:center; font-size:11px"><div style="border-top:1px solid #000; width:200px; margin:0 auto; padding-top:4px">${esc(modelo.firmaIzq)}</div></td>
       <td style="text-align:center; font-size:11px"><div style="border-top:1px solid #000; width:200px; margin:0 auto; padding-top:4px">Operario de ${esc(empresa)}</div></td>
     </tr></table>
+    ${pie}
   </div>`;
 }
 
