@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard, Bug, ExternalLink } from 'lucide-react'
+import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard, Bug, FileQuestionMark, ExternalLink } from 'lucide-react'
 import { requireSesion } from '@/lib/auth/session'
 import { modulosPara } from '@/config/modules'
 import { createClient } from '@/lib/supabase/server'
@@ -22,6 +22,9 @@ const MARCAS = [
 
 // Sistema del servicio de limpieza para UNIPAR (deploy propio, fuera de este repo).
 const UNIPAR_APP_URL = 'https://unipar-app.vercel.app/'
+
+// Flujo de n8n autohospedado para revisar certificados dudosos de ARCOR.
+const ARCOR_CERTS_URL = 'https://tecnophos-n8n.duckdns.org/cargar'
 
 function nombreSede(nombreEmpresa: string) {
   return nombreEmpresa.replace(/^Tecnophos\s+/i, '')
@@ -152,6 +155,14 @@ export default async function HubPage() {
                     <a href="/control-plagas.html" target="_blank" rel="noopener noreferrer" className={filaCls}>
                       <Bug className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
                       <span className="min-w-0 flex-1 truncate">Control de Plagas</span>
+                      <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
+                    </a>
+                  )}
+
+                  {marca.key === 'tecnophos' && (
+                    <a href={ARCOR_CERTS_URL} target="_blank" rel="noopener noreferrer" className={filaCls}>
+                      <FileQuestionMark className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <span className="min-w-0 flex-1 truncate">Certificados dudosos - ARCOR</span>
                       <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                     </a>
                   )}
