@@ -242,7 +242,7 @@
       <p class="lead">Tocá tu nombre para empezar.</p>
     </div>
     <div class="stack" id="nameList"></div>
-    <button class="backlink" onclick="go('scr-ajustes')">⚙ Ajustes del sistema</button>
+    <button class="backlink" onclick="abrirAjustes()">⚙ Ajustes (administrador)</button>
   </section>
 
   <section class="screen" id="scr-planta">
@@ -279,7 +279,7 @@
     <div class="linkline">
       <button class="backlink" onclick="irAPlantas()">‹ Cambiar de planta</button>
       <button class="backlink" onclick="go('scr-quien')">‹ Cambiar de operario</button>
-      <button class="backlink" onclick="go('scr-ajustes')">⚙ Ajustes</button>
+      <button class="backlink" onclick="abrirAjustes()">⚙ Ajustes (administrador)</button>
     </div>
   </section>
 
@@ -445,10 +445,12 @@
     <div class="section-title"><h2>Plantas</h2></div>
     <div class="card">
       <div id="listaPlantas"></div>
-      <div style="display:flex; gap:10px; margin-top:12px">
+      <div class="stack" style="margin-top:12px">
         <input type="text" id="nuevaPlanta" placeholder="Nombre de la planta">
-        <button class="mini-btn" style="flex:none" onclick="agregarPlanta()">Agregar</button>
+        <input type="text" id="nuevaPlantaMail" placeholder="Casilla de mail de esta planta (opcional)">
+        <button class="mini-btn" onclick="agregarPlanta()">Agregar planta</button>
       </div>
+      <p style="color:var(--ink-3); font-size:13.5px; margin-top:10px">Los reportes de cada planta van a su casilla. Si una planta no tiene casilla, se usa la casilla por defecto de más abajo.</p>
     </div>
 
     <div class="section-title"><h2>Sectores</h2></div>
@@ -471,10 +473,11 @@
       <p style="color:var(--ink-2); font-size:15px; margin-bottom:12px">Con esto configurado, el botón "Enviar reporte por mail" manda la planilla en PDF automáticamente. Ver la guía de instalación del servicio de Google.</p>
       <div class="stack">
         <div><label for="cfgGasUrl">Dirección del servicio (termina en /exec)</label><input type="text" id="cfgGasUrl" placeholder="https://script.google.com/macros/s/…/exec" onchange="guardarConfigEnvio()"></div>
-        <div><label for="cfgMail">Casillas que reciben los reportes (separadas por coma)</label><input type="text" id="cfgMail" placeholder="calidad@ejemplo.com, higiene@ejemplo.com" onchange="guardarConfigEnvio()"></div>
+        <div><label for="cfgMail">Casilla por defecto (para plantas sin casilla propia; pueden ser varias separadas por coma)</label><input type="text" id="cfgMail" placeholder="calidad@ejemplo.com" onchange="guardarConfigEnvio()"></div>
         <div><label for="cfgWa">WhatsApp destino (opcional, con código de país sin +)</label><input type="text" id="cfgWa" placeholder="5493411234567" onchange="guardarConfigEnvio()"></div>
-        <p style="color:var(--ink-3); font-size:13.5px">Con número cargado, "Enviar por WhatsApp" abre directo ese chat con el reporte escrito. Sin número, el operario elige el contacto o grupo.</p>
+        <p style="color:var(--ink-3); font-size:13.5px">Para mandar a un GRUPO de WhatsApp, dejá este campo vacío: al tocar "Enviar por WhatsApp" el operario elige el grupo de su lista (WhatsApp no permite abrir un grupo directo). Con un número cargado, abre directo ese chat.</p>
         <button class="ghost" onclick="probarConexion()">Probar conexión</button>
+        <button class="ghost" onclick="cambiarPin()">Cambiar PIN de administrador</button>
       </div>
     </div>
 
@@ -514,6 +517,20 @@
   </div>
 </div>
 
+<div class="modal-veil no-print" id="pinVeil" onclick="if(event.target===this) cerrarPin()">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h2>Acceso de administrador</h2>
+    <p>Esta sección es solo para administradores. Ingresá el PIN.</p>
+    <input type="password" inputmode="numeric" id="pinInput" maxlength="8" autocomplete="off"
+      style="margin-top:14px; font-size:24px; text-align:center; letter-spacing:8px">
+    <p class="field-err" id="pinError" style="margin-top:8px">PIN incorrecto.</p>
+    <div class="stack">
+      <button class="primary" onclick="confirmarPin()">Entrar</button>
+      <button class="ghost" onclick="cerrarPin()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast no-print" id="toast"></div>
 
 <div id="printArea"></div>
@@ -540,7 +557,7 @@ function datosIniciales() {
     v: 1,
     operarios: ['Cristian', 'Marcos', 'Rodrigo'],
     plantas: [
-      { id: 'p1', nombre: 'Frigorífico Cabildo' },
+      { id: 'p1', nombre: 'Frigorífico Cabildo', mail: '' },
     ],
     sectores: [
       { id: 's1', plantaId: 'p1', nombre: 'Planta general',     cebos: 113, uv: 0 },
@@ -553,7 +570,7 @@ function datosIniciales() {
     seqOrden: {},
     ultimoRespaldo: null,
     borrador: null,
-    config: { gasUrl: '', mailDestino: '', waNumero: '' },
+    config: { gasUrl: '', mailDestino: '', waNumero: '', adminPin: '1234' },
   };
 }
 
@@ -564,9 +581,11 @@ function migrar(db) {
   if (!db.ordenes) db.ordenes = [];
   if (!db.sectores) db.sectores = [];
   if (!db.seqOrden) db.seqOrden = {};
-  if (!db.config) db.config = { gasUrl: '', mailDestino: '', waNumero: '' };
+  if (!db.config) db.config = { gasUrl: '', mailDestino: '', waNumero: '', adminPin: '1234' };
   if (db.config.waNumero === undefined) db.config.waNumero = '';
-  if (!db.plantas || !db.plantas.length) db.plantas = [{ id: 'p1', nombre: 'Frigorífico Cabildo' }];
+  if (!db.config.adminPin) db.config.adminPin = '1234';
+  if (!db.plantas || !db.plantas.length) db.plantas = [{ id: 'p1', nombre: 'Frigorífico Cabildo', mail: '', empresa: 'ADC SRL' }];
+  db.plantas.forEach(p => { if (p.mail === undefined) p.mail = ''; if (!p.empresa) p.empresa = 'ADC SRL'; });
   db.sectores.forEach(s => { if (!s.plantaId) s.plantaId = db.plantas[0].id; });
   return db;
 }
@@ -597,9 +616,44 @@ const $ = id => document.getElementById(id);
 
 /* ============ navegación ============ */
 function go(id) {
+  if (id === 'scr-quien') adminOk = false;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
   $(id).classList.add('on');
   window.scrollTo({ top: 0 });
+}
+
+/* ============ acceso de administrador (PIN) ============ */
+let adminOk = false;
+let pinCb = null;
+function pedirPin(cb) {
+  if (adminOk) { cb(); return; }
+  pinCb = cb;
+  $('pinInput').value = '';
+  $('pinError').style.display = 'none';
+  $('pinVeil').classList.add('on');
+  setTimeout(() => $('pinInput').focus(), 120);
+}
+function confirmarPin() {
+  if ($('pinInput').value === (DB.config.adminPin || '1234')) {
+    adminOk = true;
+    $('pinVeil').classList.remove('on');
+    const cb = pinCb; pinCb = null;
+    if (cb) cb();
+  } else {
+    $('pinError').style.display = 'block';
+    $('pinInput').value = '';
+    $('pinInput').focus();
+  }
+}
+function cerrarPin() { $('pinVeil').classList.remove('on'); pinCb = null; }
+function abrirAjustes() { pedirPin(() => { renderAjustes(); go('scr-ajustes'); }); }
+function cambiarPin() {
+  const nuevo = prompt('Nuevo PIN de administrador (4 a 8 dígitos):');
+  if (nuevo === null) return;
+  if (!/^\d{4,8}$/.test(nuevo)) { toast('El PIN debe tener entre 4 y 8 dígitos'); return; }
+  DB.config.adminPin = nuevo;
+  persistir();
+  toast('PIN actualizado');
 }
 
 /* ============ utilidades ============ */
@@ -1119,10 +1173,10 @@ function abrirDetalleRegistro(r) {
 
   $('detCompartir').onclick = () => compartirRegistro(r);
   $('detPdf').onclick = () => imprimirRegistro(r);
-  $('detBorrar').onclick = () => confirmar('¿Eliminar este registro?', 'Se borra de la tablet y no se puede recuperar.', () => {
+  $('detBorrar').onclick = () => pedirPin(() => confirmar('¿Eliminar este registro?', 'Se borra de la tablet y no se puede recuperar.', () => {
     DB.registros = DB.registros.filter(x => x.id !== r.id);
     persistir(); renderHistorial(); go('scr-historial'); toast('Registro eliminado');
-  }, 'Eliminar');
+  }, 'Eliminar'));
   go('scr-detalle');
 }
 
@@ -1155,10 +1209,10 @@ function abrirDetalleOrden(o) {
   }
   $('detCompartir').onclick = () => compartirOrden(o);
   $('detPdf').onclick = () => pdfOrdenConGuardia(o);
-  $('detBorrar').onclick = () => confirmar('¿Eliminar esta orden?', 'Se borra de la tablet y no se puede recuperar.', () => {
+  $('detBorrar').onclick = () => pedirPin(() => confirmar('¿Eliminar esta orden?', 'Se borra de la tablet y no se puede recuperar.', () => {
     DB.ordenes = DB.ordenes.filter(x => x.id !== o.id);
     persistir(); renderHistorial(); go('scr-historial'); toast('Orden eliminada');
-  }, 'Eliminar');
+  }, 'Eliminar'));
   go('scr-detalle');
 }
 
@@ -1184,6 +1238,7 @@ function textoRegistro(r) {
     lineas.push('', `Trampas UV: ${Object.keys(r.uv).length}/${r.uvTotal} revisadas` + (uvNoB.length ? ' · ' + uvNoB.map(i => `UV${i} ${nombreEstado(r.uv[i]).toLowerCase()}`).join(', ') : ' · todas bien'));
   }
   if (r.obs) lineas.push('', 'Observaciones: ' + r.obs);
+  if (r.pdfUrl) lineas.push('', '📄 Planilla oficial (PDF): ' + r.pdfUrl);
   return lineas.join('\n');
 }
 function textoOrden(o) {
@@ -1199,6 +1254,7 @@ function textoOrden(o) {
   if (o.producto) lineas.push('Producto: ' + o.producto);
   if (o.dosis) lineas.push('Dosis: ' + o.dosis);
   if (o.obs) lineas.push('', 'Observaciones: ' + o.obs);
+  if (o.pdfUrl) lineas.push('', '📄 Orden oficial (PDF): ' + o.pdfUrl);
   return lineas.join('\n');
 }
 function compartirTexto(txt) {
@@ -1242,15 +1298,19 @@ async function enviarReporte(tipo, obj, boton) {
     confirmar('Falta la firma del supervisor', 'La orden necesita la firma antes de poder enviarla.', () => abrirFirma(obj), 'Cargar firma ahora');
     return;
   }
-  if (!DB.config.gasUrl) {
+  const planta = DB.plantas.find(p => p.id === obj.plantaId);
+  const para = (planta && planta.mail) || DB.config.mailDestino;
+  if (!DB.config.gasUrl || !para) {
     confirmar('Falta configurar el envío',
-      'Cargá la dirección del servicio de Google y la casilla de destino en Ajustes → Envío automático de reportes.',
-      () => { renderAjustes(); go('scr-ajustes'); }, 'Ir a Ajustes');
+      !DB.config.gasUrl
+        ? 'Cargá la dirección del servicio de Google en Ajustes → Envío automático de reportes.'
+        : `La planta ${obj.plantaNombre || ''} no tiene casilla de mail propia y tampoco hay casilla por defecto. Cargala en Ajustes.`,
+      () => abrirAjustes(), 'Ir a Ajustes');
     return;
   }
   const original = boton ? boton.textContent : '';
   if (boton) { boton.disabled = true; boton.textContent = 'Enviando…'; }
-  const payload = { clave: CLAVE_ENVIO, tipo, para: DB.config.mailDestino };
+  const payload = { clave: CLAVE_ENVIO, tipo, para, empresa: empresaDe(obj) };
   payload[tipo] = obj;
   try {
     const res = await fetch(DB.config.gasUrl, {
@@ -1261,6 +1321,7 @@ async function enviarReporte(tipo, obj, boton) {
     const j = await res.json();
     if (!j || !j.ok) throw new Error((j && j.error) || 'respuesta inválida');
     obj.enviado = hoyISO();
+    if (j.pdfUrl && typeof j.pdfUrl === 'string' && j.pdfUrl.indexOf('https://drive.google.com/') === 0) obj.pdfUrl = j.pdfUrl;
     persistir();
     toast('Reporte enviado por mail ✓');
     if (boton) boton.textContent = 'Enviado ✓';
@@ -1272,72 +1333,115 @@ async function enviarReporte(tipo, obj, boton) {
   }
 }
 
-/* ============ planilla imprimible ============ */
-function cabeceraPlanilla(subtitulo, fecha) {
-  const d = new Date(fecha);
+/* ============ planilla imprimible (réplica del certificado oficial) ============ */
+const LOGO_TECNOPHOS = 'data:image/png;base64,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';
+const LOGO_ADC = 'data:image/png;base64,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';
+
+function empresaDe(obj) {
+  const p = DB.plantas.find(x => x.id === obj.plantaId);
+  return (p && p.empresa) || 'ADC SRL';
+}
+function logoEmpresa(empresa) {
+  return empresa === 'TECNOPHOS' ? LOGO_TECNOPHOS : LOGO_ADC;
+}
+
+function cabPlanilla(titulo, fechaISO, empresa) {
+  const fTxt = new Date(fechaISO).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   return `
-  <div class="pl-head">
-    <div class="pl-logo">adc<small>FUMIGACION</small></div>
-    <div class="pl-titulo">
-      <div>Documentos de la Calidad</div>
-      <div>Registro</div>
-      <div>${esc(subtitulo)}</div>
-    </div>
-    <div class="pl-meta">
-      <div>Fecha: ${d.toLocaleDateString('es-AR')}</div>
-      <div>Hora: ${d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>
-      <div>Hoja 1 de 1</div>
-    </div>
-  </div>`;
+  <table style="width:100%; border-collapse:collapse; font-family:Arial; margin-bottom:8px"><tr>
+    <td style="border:1.5px solid #000; padding:6px 12px; width:120px; text-align:center; vertical-align:middle">
+      <img src="${logoEmpresa(empresa)}" alt="${esc(empresa)}" style="max-height:52px; max-width:108px">
+    </td>
+    <td style="border:1.5px solid #000; padding:0; vertical-align:top">
+      <div style="border-bottom:1px solid #000; padding:3px 8px; font-size:11px">Documentos de la Calidad</div>
+      <div style="border-bottom:1px solid #000; padding:3px 8px; font-size:11px">Registro - N°</div>
+      <div style="padding:4px 8px; font-size:11.5px; font-weight:700">${esc(titulo)}</div>
+    </td>
+    <td style="border:1.5px solid #000; padding:0; width:130px; vertical-align:top">
+      <div style="border-bottom:1px solid #000; padding:4px 8px; font-size:11px; text-align:center">${fTxt}</div>
+      <div style="padding:10px 8px; font-size:11px; text-align:center">Hoja 1 de 1</div>
+    </td>
+  </tr></table>`;
 }
-function tablaEstaciones(prefijo, total, m, columnas) {
-  const porCol = Math.ceil(total / columnas);
-  let html = '<table class="pl-tabla"><tr>';
-  for (let c = 0; c < columnas; c++) html += `<th>${prefijo}</th><th>EST.</th>`;
-  html += '</tr>';
-  for (let f = 0; f < porCol; f++) {
-    html += '<tr>';
-    for (let c = 0; c < columnas; c++) {
-      const n = c * porCol + f + 1;
-      if (n <= total) html += `<td>${n}</td><td>${m[n] || ''}</td>`;
-      else html += '<td></td><td></td>';
+
+function bloqueReferencias(r, empresa) {
+  return `
+  <table style="width:100%; border-collapse:collapse; font-family:Arial; margin-bottom:8px"><tr>
+    <td style="width:150px; vertical-align:top; font-size:10px; padding-right:12px; line-height:1.5">
+      <div style="background:#d9d9d9; font-weight:700; padding:1px 5px; display:inline-block">REFERENCIAS</div>
+      <div>C: Consumido</div>
+      <div>N: Faltante</div>
+      <div>D: Deteriorado</div>
+      <div>O: Oculto</div>
+      <div>B: Bien</div>
+      <div>X: Cambio de pegamento</div>
+    </td>
+    <td style="vertical-align:top; font-size:11px">
+      <div style="font-weight:700; margin-bottom:5px">Ref: &nbsp;${esc((r.sectorNombre || '').toUpperCase())}</div>
+      <div style="text-align:center; font-weight:700; font-size:10.5px; margin-bottom:5px">COMPLETAR DE ACUERDO A LOS PLANOS</div>
+      <table style="width:100%; border-collapse:collapse">
+        <tr>
+          <td style="border:1px solid #000; width:46px; padding:2px 6px; font-size:10.5px">Para :</td>
+          <td style="border:1px solid #000; padding:2px 6px; font-size:10.5px"><span style="font-size:9px">EMPRESA</span> &nbsp;<b>${esc((r.plantaNombre || '').toUpperCase())}</b></td>
+          <td style="border:1px solid #000; width:120px; padding:2px 6px; font-size:9px">CARGO:</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #000; padding:2px 6px; font-size:10.5px">De:</td>
+          <td style="border:1px solid #000; padding:2px 6px; font-size:10.5px"><span style="font-size:9px">EMPRESA</span> &nbsp;<b>${esc(empresa)}</b></td>
+          <td style="border:1px solid #000; padding:2px 6px; font-size:9px">CARGO:</td>
+        </tr>
+      </table>
+    </td>
+  </tr></table>`;
+}
+
+function planillaDesratizacion(r, empresa) {
+  const filas = 26;
+  const colsCebo = Math.max(1, Math.ceil(r.cebosTotal / filas));
+  const colsUV = r.uvTotal ? Math.ceil(r.uvTotal / filas) : 0;
+  const celda = 'border:1px solid #000; padding:1px 5px; font-size:10px; text-align:center; height:15px';
+  const head = 'border:1px solid #000; padding:1px 4px; font-size:9.5px; text-align:center; background:#d9d9d9';
+  let tabla = '<table style="width:100%; border-collapse:collapse; font-family:Arial">';
+  tabla += '<tr>';
+  for (let c = 0; c < colsCebo; c++) tabla += `<th style="${head}">CEBO</th><th style="${head}">EST.</th>`;
+  for (let c = 0; c < colsUV; c++) tabla += `<th style="${head}">UV</th><th style="${head}">EST.</th>`;
+  tabla += `<th style="${head}; width:36%; font-weight:700">OBSERVACIONES GENERALES</th></tr>`;
+  for (let f = 0; f < filas; f++) {
+    tabla += '<tr>';
+    for (let c = 0; c < colsCebo; c++) {
+      const n = c * filas + f + 1;
+      tabla += n <= r.cebosTotal ? `<td style="${celda}">${n}</td><td style="${celda}">${esc(r.cebos[n] || '')}</td>` : '<td></td><td></td>';
     }
-    html += '</tr>';
+    for (let c = 0; c < colsUV; c++) {
+      const n = c * filas + f + 1;
+      tabla += n <= r.uvTotal ? `<td style="${celda}">${n}</td><td style="${celda}">${esc(r.uv[n] || '')}</td>` : '<td></td><td></td>';
+    }
+    if (f === 0) tabla += `<td rowspan="${filas}" style="border:1px solid #000; vertical-align:top; padding:6px 8px; font-size:11px"><div style="font-weight:700; text-align:center; margin-bottom:8px">Novedades de los distintos sectores:</div>${esc(r.obs || '')}</td>`;
+    tabla += '</tr>';
   }
-  html += '</table>';
-  return html;
-}
-function imprimirRegistro(r) {
-  const pa = $('printArea');
-  pa.innerHTML = `
-  <div class="pl-hoja">
-    ${cabeceraPlanilla('DESRATIZACIÓN EN PLANTA INDUSTRIAL', r.fecha)}
-    <div class="pl-refs">
-      <div><b>REFERENCIAS</b></div>
-      <div>C: Consumido · N: Faltante · D: Deteriorado · O: Oculto · B: Bien · X: Cambio de pegamento</div>
-    </div>
-    <div class="pl-info">
-      ${r.plantaNombre ? `<span><b>Planta:</b> ${esc(r.plantaNombre)}</span>` : ''}
-      <span><b>Sector:</b> ${esc(r.sectorNombre)}</span>
-      <span><b>Empresa:</b> ADC SRL</span>
-      <span><b>Operario:</b> ${esc(r.operario)}</span>
-      <span><b>Revisadas:</b> ${Object.keys(r.cebos).length} de ${r.cebosTotal}</span>
-    </div>
-    ${tablaEstaciones('CEBO', r.cebosTotal, r.cebos, 4)}
-    ${r.uvTotal ? '<div style="font-weight:700; font-size:11px; margin-bottom:4px">TRAMPAS UV</div>' + tablaEstaciones('UV', r.uvTotal, r.uv, 4) : ''}
-    <div class="pl-obs"><b>OBSERVACIONES GENERALES — Novedades de los distintos sectores:</b>${esc(r.obs) || ''}</div>
-    <div class="pl-firmas">
-      <div>Supervisor de Planta</div>
-      <div>Operario de ADC SRL</div>
-    </div>
+  tabla += '</table>';
+  return `
+  <div style="padding:24px; font-family:Arial; color:#000">
+    ${cabPlanilla('DESRATIZACIÓN EN PLANTA INDUSTRIAL', r.fecha, empresa)}
+    ${bloqueReferencias(r, empresa)}
+    ${tabla}
+    <table style="width:100%; margin-top:60px; font-family:Arial"><tr>
+      <td style="text-align:center; font-size:11px"><div style="border-top:1px solid #000; width:200px; margin:0 auto; padding-top:4px">Supervisor del Planta</div></td>
+      <td style="text-align:center; font-size:11px"><div style="border-top:1px solid #000; width:200px; margin:0 auto; padding-top:4px">Operario de ${esc(empresa)}</div></td>
+    </tr></table>
   </div>`;
+}
+
+function imprimirRegistro(r) {
+  $('printArea').innerHTML = planillaDesratizacion(r, empresaDe(r));
   window.print();
 }
 function imprimirOrden(o) {
   const pa = $('printArea');
+  const empresa = empresaDe(o);
   pa.innerHTML = `
-  <div class="pl-hoja">
-    ${cabeceraPlanilla('ORDEN DE TRABAJO — SERVICIO ESPORÁDICO', o.fecha)}
+  <div style="padding:24px; font-family:Arial; color:#000">
+    ${cabPlanilla('ORDEN DE TRABAJO — SERVICIO ESPORÁDICO', o.fecha, empresa)}
     <div class="pl-info" style="flex-direction:column; gap:6px; align-items:flex-start">
       <span><b>Orden N°:</b> ${esc(o.numero)}</span>
       ${o.plantaNombre ? `<span><b>Planta:</b> ${esc(o.plantaNombre)}</span>` : ''}
@@ -1345,7 +1449,7 @@ function imprimirOrden(o) {
       <span><b>Sectores:</b> ${esc(o.sectores.join(', '))}</span>
       ${o.producto ? `<span><b>Producto utilizado:</b> ${esc(o.producto)}</span>` : ''}
       ${o.dosis ? `<span><b>Dosis / dilución:</b> ${esc(o.dosis)}</span>` : ''}
-      <span><b>Empresa:</b> ADC SRL &nbsp;&nbsp; <b>Operario:</b> ${esc(o.operario)}</span>
+      <span><b>Empresa:</b> ${esc(empresa)} &nbsp;&nbsp; <b>Operario:</b> ${esc(o.operario)}</span>
     </div>
     <div class="pl-obs"><b>OBSERVACIONES:</b>${esc(o.obs) || ''}</div>
     <table style="width:100%; margin-top:40px"><tr>
@@ -1355,7 +1459,7 @@ function imprimirOrden(o) {
       </td>
       <td style="text-align:center; font-size:11px; vertical-align:bottom">
         <div style="height:60px"></div>
-        <div style="border-top:1px solid #000; width:220px; margin:0 auto; padding-top:4px">Operario de ADC SRL<br>${esc(o.operario)}</div>
+        <div style="border-top:1px solid #000; width:220px; margin:0 auto; padding-top:4px">Operario de ${esc(empresa)}<br>${esc(o.operario)}</div>
       </td>
     </tr></table>
   </div>`;
@@ -1383,7 +1487,9 @@ function renderAjustes() {
     const div = document.createElement('div');
     div.className = 'ajuste-item';
     const cant = DB.sectores.filter(s => s.plantaId === p.id).length;
-    div.innerHTML = `<span class="nom">${esc(p.nombre)}<br><span class="meta">${cant} sector${cant === 1 ? '' : 'es'}</span></span>`;
+    div.innerHTML = `<span class="nom">${esc(p.nombre)}<br><span class="meta">${esc(p.empresa || 'ADC SRL')} · ${cant} sector${cant === 1 ? '' : 'es'} · ${p.mail ? '✉ ' + esc(p.mail) : 'sin casilla propia (usa la por defecto)'}</span></span>`;
+    const be = document.createElement('button'); be.className = 'mini-btn'; be.textContent = 'Editar';
+    be.onclick = () => editarPlanta(idx);
     const b = document.createElement('button'); b.className = 'mini-btn rojo'; b.textContent = 'Quitar';
     b.onclick = () => {
       if (DB.sectores.some(s => s.plantaId === p.id)) { toast('Primero quitá los sectores de esa planta'); return; }
@@ -1391,7 +1497,7 @@ function renderAjustes() {
         DB.plantas.splice(idx, 1); persistir(); renderAjustes();
       }, 'Eliminar');
     };
-    div.appendChild(b);
+    div.append(be, b);
     lp.appendChild(div);
   });
 
@@ -1432,10 +1538,27 @@ function agregarOperario() {
 function agregarPlanta() {
   const inp = $('nuevaPlanta');
   const n = inp.value.trim();
+  const mail = $('nuevaPlantaMail').value.trim();
   if (!n) return;
+  if (mail && mail.indexOf('@') < 1) { toast('La casilla de mail no parece válida'); return; }
   if (DB.plantas.some(p => p.nombre.toLowerCase() === n.toLowerCase())) { toast('Esa planta ya existe'); return; }
-  DB.plantas.push({ id: 'p' + Date.now(), nombre: n });
-  persistir(); inp.value = ''; renderAjustes();
+  DB.plantas.push({ id: 'p' + Date.now(), nombre: n, mail, empresa: 'ADC SRL' });
+  persistir(); inp.value = ''; $('nuevaPlantaMail').value = ''; renderAjustes();
+}
+function editarPlanta(idx) {
+  const p = DB.plantas[idx];
+  const nombre = prompt('Nombre de la planta:', p.nombre);
+  if (nombre === null) return;
+  const mail = prompt('Casilla de mail de esta planta (vacío = usa la por defecto).\nPueden ser varias separadas por coma:', p.mail || '');
+  if (mail === null) return;
+  const empresa = prompt('Empresa que presta el servicio en esta planta (escribí ADC o TECNOPHOS).\nDefine el logo y las firmas del certificado:', p.empresa === 'TECNOPHOS' ? 'TECNOPHOS' : 'ADC');
+  if (empresa === null) return;
+  if (!nombre.trim()) { toast('El nombre no puede quedar vacío'); return; }
+  if (mail.trim() && mail.indexOf('@') < 1) { toast('La casilla de mail no parece válida'); return; }
+  p.nombre = nombre.trim();
+  p.mail = mail.trim();
+  p.empresa = empresa.trim().toUpperCase().indexOf('TEC') === 0 ? 'TECNOPHOS' : 'ADC SRL';
+  persistir(); renderAjustes();
 }
 
 function agregarSector() {
@@ -1518,7 +1641,9 @@ document.addEventListener('DOMContentLoaded', () => {
     c.classList.add('on');
   });
   $('nuevaPlanta').addEventListener('keydown', e => { if (e.key === 'Enter') agregarPlanta(); });
+  $('nuevaPlantaMail').addEventListener('keydown', e => { if (e.key === 'Enter') agregarPlanta(); });
   $('nuevoOperario').addEventListener('keydown', e => { if (e.key === 'Enter') agregarOperario(); });
+  $('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmarPin(); });
   go('scr-quien');
 });
 </script>
