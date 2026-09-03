@@ -270,6 +270,16 @@
         <span><span class="t">Servicio esporádico</span><br><span class="s">Aspersión, fumigación o tarea puntual a pedido</span></span>
         <span class="arrow">›</span>
       </button>
+      <button class="big-btn" id="btnMenuUV" style="display:none" onclick="abrirMonitoreoUV()">
+        <span class="icon">💡</span>
+        <span><span class="t">Monitoreo de trampas UV</span><br><span class="s">Equipos, placas adherentes y recuento de insectos</span></span>
+        <span class="arrow">›</span>
+      </button>
+      <button class="big-btn gris" id="btnMenuPalomas" style="display:none" onclick="abrirPalomas()">
+        <span class="icon">🕊</span>
+        <span><span class="t">Palomas</span><br><span class="s">Registro de capturas</span></span>
+        <span class="arrow">›</span>
+      </button>
       <button class="big-btn gris" onclick="renderHistorial(); go('scr-historial')">
         <span class="icon">≡</span>
         <span><span class="t">Historial</span><br><span class="s">Registros y órdenes guardadas</span></span>
@@ -365,23 +375,78 @@
     <button class="backlink" onclick="go('scr-menu')">‹ Volver</button>
   </section>
 
+  <section class="screen" id="scr-uv">
+    <div class="screen-head">
+      <div class="eyebrow" id="uvEyebrow">Monitoreo de trampas UV</div>
+      <h1>Equipos UV</h1>
+      <p class="lead">Tocá cada equipo y completá su revisión. Frecuencia: semanal.</p>
+    </div>
+    <div class="stack" id="uvEquiposList"></div>
+    <div style="margin-top:16px">
+      <label for="uvObs">Observaciones y propuestas de mejora</label>
+      <textarea id="uvObs" placeholder="Novedades del monitoreo…"></textarea>
+    </div>
+    <p class="field-err" id="uvError">Faltan equipos por revisar.</p>
+    <div class="stack" style="margin-top:16px">
+      <button class="primary" onclick="guardarMonitoreo()">Guardar monitoreo</button>
+    </div>
+    <button class="backlink" onclick="go('scr-menu')">‹ Volver (no se guarda)</button>
+  </section>
+
+  <section class="screen" id="scr-palomas">
+    <div class="screen-head">
+      <div class="eyebrow" id="palomasEyebrow">Palomas</div>
+      <h1>Registro de palomas</h1>
+    </div>
+    <div class="stack">
+      <div>
+        <label>¿Se capturaron palomas?</label>
+        <div class="chips" id="chipsPalomas">
+          <button class="chip" data-v="si">Sí</button>
+          <button class="chip" data-v="no">No</button>
+        </div>
+      </div>
+      <div id="palomasCantBox" style="display:none">
+        <label for="palomasCant">¿Cuántas?</label>
+        <input type="number" id="palomasCant" min="1" placeholder="Cantidad">
+      </div>
+      <div>
+        <label for="palomasObs">Observaciones</label>
+        <textarea id="palomasObs" placeholder="Sector, estado de las jaulas, novedades…"></textarea>
+      </div>
+      <p class="field-err" id="palomasError">Indicá si se capturaron palomas (y cuántas).</p>
+      <button class="primary" onclick="guardarPalomas()">Guardar registro de palomas</button>
+    </div>
+    <button class="backlink" onclick="go('scr-menu')">‹ Volver</button>
+  </section>
+
   <section class="screen" id="scr-firma">
     <div class="screen-head">
-      <div class="eyebrow" id="firmaEyebrow">Orden de trabajo</div>
-      <h1>Firma del supervisor</h1>
-      <p class="lead">Pedile al supervisor que firme con el dedo en el recuadro. Sin la firma no se puede enviar el reporte.</p>
+      <div class="eyebrow" id="firmaEyebrow">Firmas</div>
+      <h1>Firmas del reporte</h1>
+      <p class="lead">Primero firma el operario que hizo el trabajo y después el supervisor. Sin las dos firmas no se puede enviar el reporte.</p>
     </div>
+
+    <div class="section-title"><h2 id="firmaTitOp">1 · Firma del operario</h2><span id="firmaOpNombre"></span></div>
     <div class="card" style="padding:10px">
-      <canvas id="firmaCanvas" style="width:100%; height:240px; border:1.5px dashed var(--line); border-radius:12px; touch-action:none; background:var(--surface)"></canvas>
-      <button class="mini-btn" style="margin-top:10px" onclick="limpiarFirma()">Borrar y firmar de nuevo</button>
+      <canvas id="firmaCanvasOp" style="width:100%; height:200px; border:1.5px dashed var(--line); border-radius:12px; touch-action:none; background:var(--surface)"></canvas>
+      <button class="mini-btn" style="margin-top:10px" onclick="limpiarFirma('op')">Borrar y firmar de nuevo</button>
+    </div>
+    <p class="field-err" id="firmaErrorOp">Falta la firma del operario.</p>
+
+    <div class="section-title"><h2 id="firmaTitSup">2 · Firma del supervisor</h2></div>
+    <div class="card" style="padding:10px">
+      <canvas id="firmaCanvasSup" style="width:100%; height:200px; border:1.5px dashed var(--line); border-radius:12px; touch-action:none; background:var(--surface)"></canvas>
+      <button class="mini-btn" style="margin-top:10px" onclick="limpiarFirma('sup')">Borrar y firmar de nuevo</button>
     </div>
     <div style="margin-top:14px">
-      <label for="firmanteInput">Aclaración (nombre del supervisor)</label>
+      <label for="firmanteInput" id="firmaLabelSup">Aclaración (nombre del supervisor)</label>
       <input type="text" id="firmanteInput" placeholder="Nombre y apellido">
     </div>
-    <p class="field-err" id="firmaError">Falta la firma en el recuadro.</p>
+    <p class="field-err" id="firmaErrorSup">Falta la firma del supervisor.</p>
+
     <div class="stack" style="margin-top:16px">
-      <button class="primary" onclick="guardarFirma()">Guardar firma</button>
+      <button class="primary" onclick="guardarFirmas()">Guardar firmas</button>
       <button class="ghost" onclick="firmarDespues()">Firmar después</button>
     </div>
   </section>
@@ -409,6 +474,8 @@
       <button class="chip on" data-f="todo" onclick="filtrarHist(this)">Todo</button>
       <button class="chip" data-f="desrat" onclick="filtrarHist(this)">Desratización</button>
       <button class="chip" data-f="orden" onclick="filtrarHist(this)">Órdenes</button>
+      <button class="chip" data-f="uvm" onclick="filtrarHist(this)">Trampas UV</button>
+      <button class="chip" data-f="pal" onclick="filtrarHist(this)">Palomas</button>
     </div>
     <div class="stack" id="histList"></div>
     <button class="backlink" onclick="go('scr-menu')">‹ Volver</button>
@@ -517,6 +584,31 @@
   </div>
 </div>
 
+<div class="sheet-veil no-print" id="uvVeil" onclick="if(event.target===this) cerrarUvSheet()">
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Revisión del equipo UV">
+    <h2>Equipo <span class="num" id="uvSheetNum">—</span></h2>
+    <p class="lead" style="font-size:15px" id="uvSheetUbicacion"></p>
+    <div class="stack" style="margin-top:14px">
+      <div><label>¿Funcionando?</label><div class="chips" data-campo="func"><button class="chip" data-v="SI">Sí</button><button class="chip" data-v="NO">No</button></div></div>
+      <div><label>Tubos encendidos</label><div class="chips" data-campo="tubos"><button class="chip" data-v="0">0</button><button class="chip" data-v="1">1</button><button class="chip" data-v="2">2</button></div></div>
+      <div><label>Placa adherente: ¿existente en el equipo?</label><div class="chips" data-campo="placa"><button class="chip" data-v="SI">Sí</button><button class="chip" data-v="NO">No</button></div></div>
+      <div><label>Estado de la placa</label><div class="chips" data-campo="estado"><button class="chip" data-v="Buena">Buena</button><button class="chip" data-v="Saturada">Saturada</button><button class="chip" data-v="Reemplazo">Reemplazo</button></div></div>
+      <div>
+        <label>Recuento de insectos</label>
+        <div class="row-2" style="grid-template-columns:1fr 1fr">
+          <input type="number" id="uvMoscas" min="0" placeholder="Moscas">
+          <input type="number" id="uvPolillas" min="0" placeholder="Polillas">
+          <input type="number" id="uvGorgojos" min="0" placeholder="Gorgojos">
+          <input type="number" id="uvOtros" min="0" placeholder="Otros">
+        </div>
+      </div>
+      <div><label>Cambio de tubos</label><div class="chips"><button class="chip" id="uvTuboSup">Tubo superior</button><button class="chip" id="uvTuboInf">Tubo inferior</button></div></div>
+      <div><label for="uvEquipoObs">Observación del equipo</label><input type="text" id="uvEquipoObs" placeholder="Opcional"></div>
+      <button class="primary" onclick="guardarEquipoUV()">Guardar equipo</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-veil no-print" id="pinVeil" onclick="if(event.target===this) cerrarPin()">
   <div class="modal" role="dialog" aria-modal="true">
     <h2>Acceso de administrador</h2>
@@ -579,6 +671,8 @@ function migrar(db) {
   if (!db.operarios) db.operarios = [];
   if (!db.registros) db.registros = [];
   if (!db.ordenes) db.ordenes = [];
+  if (!db.monitoreos) db.monitoreos = [];
+  if (!db.palomas) db.palomas = [];
   if (!db.sectores) db.sectores = [];
   if (!db.seqOrden) db.seqOrden = {};
   if (!db.config) db.config = { gasUrl: '', mailDestino: '', waNumero: '', adminPin: '1234' };
@@ -738,6 +832,9 @@ function renderPlantas() {
 /* ============ pantalla: menú + avisos ============ */
 function renderMenu() {
   $('menuPlanta').textContent = plantaActual ? plantaActual.nombre : '';
+  const modelo = modeloPara(plantaActual ? plantaActual.nombre : '');
+  $('btnMenuUV').style.display = modelo.monitoreoUV ? 'flex' : 'none';
+  $('btnMenuPalomas').style.display = modelo.palomas ? 'flex' : 'none';
   const av = $('avisos'); av.innerHTML = '';
   if (DB.borrador) {
     const d = DB.borrador;
@@ -952,13 +1049,7 @@ function guardarRegistro() {
   DB.borrador = null;
   persistir();
   $('obsGral').value = '';
-  $('listoTitle').textContent = 'Registro guardado';
-  $('listoSub').textContent = `${reg.sectorNombre} · ${fFecha(reg.fecha, true)} · reportó ${reg.operario}. Quedó en el historial.`;
-  $('listoMail').textContent = 'Enviar reporte por mail';
-  $('listoMail').onclick = ev => enviarReporte('registro', reg, ev.currentTarget);
-  $('listoCompartir').onclick = () => compartirRegistro(reg);
-  $('listoPdf').onclick = () => imprimirRegistro(reg);
-  go('scr-listo');
+  abrirFirmas(reg, 'registro');
 }
 
 /* ============ órdenes esporádicas ============ */
@@ -1004,49 +1095,219 @@ function guardarOrden() {
   };
   DB.ordenes.unshift(orden);
   persistir();
-  abrirFirma(orden);
+  abrirFirmas(orden, 'orden');
 }
 
-function goListoOrden(orden) {
-  $('listoTitle').textContent = 'Orden guardada';
-  $('listoSub').textContent = `Orden N° ${orden.numero} · ${orden.tipo} · ${fFecha(orden.fecha, true)} · reportó ${orden.operario}.`
-    + (orden.firma ? ` Firmada por ${orden.firmante || 'el supervisor'}.` : ' FALTA LA FIRMA del supervisor para poder enviarla.');
+/* ============ monitoreo de trampas UV ============ */
+let uvDatos = null;
+let uvEquipoActual = null;
+
+function abrirMonitoreoUV() {
+  const modelo = modeloPara(plantaActual ? plantaActual.nombre : '');
+  if (!modelo.monitoreoUV) return;
+  uvDatos = { equipos: {} };
+  $('uvEyebrow').textContent = plantaActual.nombre + ' · ' + fFecha(hoyISO());
+  $('uvObs').value = '';
+  $('uvError').style.display = 'none';
+  renderEquiposUV();
+  go('scr-uv');
+}
+
+function renderEquiposUV() {
+  const modelo = modeloPara(plantaActual.nombre);
+  const list = $('uvEquiposList'); list.innerHTML = '';
+  modelo.monitoreoUV.equipos.forEach((ub, i) => {
+    const n = i + 1;
+    const d = uvDatos.equipos[n];
+    const b = document.createElement('button');
+    b.className = 'big-btn';
+    if (d) b.style.borderColor = 'var(--ok)';
+    b.innerHTML = `<span class="icon" style="${d ? 'background:var(--ok-soft); color:var(--ok)' : ''}">${n}</span><span><span class="t">${esc(ub)}</span><br><span class="s">${d ? esc(resumenEquipoUV(d)) : 'Sin revisar'}</span></span><span class="arrow">›</span>`;
+    b.onclick = () => abrirEquipoUV(n, ub);
+    list.appendChild(b);
+  });
+}
+
+function resumenEquipoUV(d) {
+  const insectos = (d.moscas || 0) + (d.polillas || 0) + (d.gorgojos || 0) + (d.otros || 0);
+  return (d.func === 'SI' ? 'Funcionando' : 'NO FUNCIONA') + ' · placa ' + d.estado.toLowerCase() + ' · ' + insectos + ' insectos' + ((d.tuboSup || d.tuboInf) ? ' · cambio de tubos' : '');
+}
+
+function abrirEquipoUV(n, ubicacion) {
+  uvEquipoActual = n;
+  $('uvSheetNum').textContent = n;
+  $('uvSheetUbicacion').textContent = ubicacion;
+  const d = uvDatos.equipos[n] || { func: 'SI', tubos: '2', placa: 'SI', estado: 'Buena', moscas: '', polillas: '', gorgojos: '', otros: '', tuboSup: false, tuboInf: false, obs: '' };
+  document.querySelectorAll('#uvVeil .chips[data-campo]').forEach(g => {
+    g.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.dataset.v === String(d[g.dataset.campo])));
+  });
+  $('uvTuboSup').classList.toggle('on', !!d.tuboSup);
+  $('uvTuboInf').classList.toggle('on', !!d.tuboInf);
+  $('uvMoscas').value = d.moscas; $('uvPolillas').value = d.polillas;
+  $('uvGorgojos').value = d.gorgojos; $('uvOtros').value = d.otros;
+  $('uvEquipoObs').value = d.obs || '';
+  $('uvVeil').classList.add('on');
+}
+
+function cerrarUvSheet() { $('uvVeil').classList.remove('on'); uvEquipoActual = null; }
+
+function valorChipsUV(campo) {
+  const on = document.querySelector(`#uvVeil .chips[data-campo="${campo}"] .chip.on`);
+  return on ? on.dataset.v : null;
+}
+
+function guardarEquipoUV() {
+  if (!uvEquipoActual) return;
+  uvDatos.equipos[uvEquipoActual] = {
+    func: valorChipsUV('func') || 'SI',
+    tubos: valorChipsUV('tubos') || '2',
+    placa: valorChipsUV('placa') || 'SI',
+    estado: valorChipsUV('estado') || 'Buena',
+    moscas: parseInt($('uvMoscas').value, 10) || 0,
+    polillas: parseInt($('uvPolillas').value, 10) || 0,
+    gorgojos: parseInt($('uvGorgojos').value, 10) || 0,
+    otros: parseInt($('uvOtros').value, 10) || 0,
+    tuboSup: $('uvTuboSup').classList.contains('on'),
+    tuboInf: $('uvTuboInf').classList.contains('on'),
+    obs: $('uvEquipoObs').value.trim(),
+  };
+  cerrarUvSheet();
+  renderEquiposUV();
+}
+
+function guardarMonitoreo() {
+  const modelo = modeloPara(plantaActual.nombre);
+  const total = modelo.monitoreoUV.equipos.length;
+  const hechos = Object.keys(uvDatos.equipos).length;
+  if (hechos < total) {
+    $('uvError').textContent = `Faltan revisar ${total - hechos} equipos.`;
+    $('uvError').style.display = 'block';
+    return;
+  }
+  $('uvError').style.display = 'none';
+  const mon = {
+    id: 'm' + Date.now(),
+    fecha: hoyISO(),
+    operario,
+    plantaId: plantaActual.id,
+    plantaNombre: plantaActual.nombre,
+    frecuencia: modelo.monitoreoUV.frecuencia,
+    ubicaciones: modelo.monitoreoUV.equipos.slice(),
+    equipos: uvDatos.equipos,
+    obs: $('uvObs').value.trim(),
+  };
+  DB.monitoreos.unshift(mon);
+  persistir();
+  abrirFirmas(mon, 'monitoreo');
+}
+
+/* ============ palomas ============ */
+function abrirPalomas() {
+  $('palomasEyebrow').textContent = plantaActual.nombre + ' · ' + fFecha(hoyISO());
+  document.querySelectorAll('#chipsPalomas .chip').forEach(c => c.classList.remove('on'));
+  $('palomasCantBox').style.display = 'none';
+  $('palomasCant').value = '';
+  $('palomasObs').value = '';
+  $('palomasError').style.display = 'none';
+  go('scr-palomas');
+}
+
+function guardarPalomas() {
+  const sel = document.querySelector('#chipsPalomas .chip.on');
+  const cant = parseInt($('palomasCant').value, 10) || 0;
+  if (!sel || (sel.dataset.v === 'si' && cant < 1)) {
+    $('palomasError').style.display = 'block';
+    return;
+  }
+  $('palomasError').style.display = 'none';
+  const p = {
+    id: 'pa' + Date.now(),
+    fecha: hoyISO(),
+    operario,
+    plantaId: plantaActual.id,
+    plantaNombre: plantaActual.nombre,
+    capturadas: sel.dataset.v === 'si' ? cant : 0,
+    obs: $('palomasObs').value.trim(),
+  };
+  DB.palomas.unshift(p);
+  persistir();
+  goListo(p, 'palomas');
+}
+
+function goListo(obj, tipo) {
+  const firmado = !faltanFirmas(obj);
+  const avisoFirmas = firmado ? '' : ' FALTAN LAS FIRMAS para poder enviarlo.';
+  if (tipo === 'orden') {
+    $('listoTitle').textContent = 'Orden guardada';
+    $('listoSub').textContent = `Orden N° ${obj.numero} · ${obj.tipo} · ${fFecha(obj.fecha, true)} · reportó ${obj.operario}.`
+      + (firmado ? ` Firmada por ${obj.firmante || 'el supervisor'} y ${obj.operario}.` : avisoFirmas);
+  } else if (tipo === 'monitoreo') {
+    $('listoTitle').textContent = 'Monitoreo guardado';
+    $('listoSub').textContent = `Trampas UV · ${obj.plantaNombre} · ${fFecha(obj.fecha, true)} · reportó ${obj.operario}.` + avisoFirmas;
+  } else if (tipo === 'palomas') {
+    $('listoTitle').textContent = 'Registro guardado';
+    $('listoSub').textContent = `Palomas · ${obj.plantaNombre} · ${obj.capturadas > 0 ? obj.capturadas + ' capturadas' : 'sin capturas'} · reportó ${obj.operario}.`;
+  } else {
+    $('listoTitle').textContent = 'Registro guardado';
+    $('listoSub').textContent = `${obj.sectorNombre} · ${fFecha(obj.fecha, true)} · reportó ${obj.operario}. Quedó en el historial.` + avisoFirmas;
+  }
+  const imprimir = { registro: imprimirRegistro, orden: imprimirOrden, monitoreo: imprimirMonitoreo }[tipo];
+  const compartir = { registro: compartirRegistro, orden: compartirOrden, monitoreo: compartirMonitoreo, palomas: compartirPalomas }[tipo];
+  const sinFirmas = tipo === 'palomas';
   $('listoMail').textContent = 'Enviar reporte por mail';
-  $('listoMail').onclick = ev => enviarReporte('orden', orden, ev.currentTarget);
-  $('listoCompartir').onclick = () => compartirOrden(orden);
-  $('listoPdf').onclick = () => pdfOrdenConGuardia(orden);
+  $('listoMail').onclick = ev => enviarReporte(tipo, obj, ev.currentTarget);
+  $('listoCompartir').onclick = () => sinFirmas ? compartir(obj) : conGuardiaDeFirmas(obj, tipo, () => compartir(obj));
+  $('listoPdf').style.display = imprimir ? 'flex' : 'none';
+  if (imprimir) $('listoPdf').onclick = () => conGuardiaDeFirmas(obj, tipo, () => imprimir(obj));
   go('scr-listo');
 }
 
-/* ============ firma del supervisor ============ */
+/* ============ firmas (operario + supervisor) ============ */
 function firmaSegura(f) {
   return (typeof f === 'string' && f.indexOf('data:image/') === 0) ? f : null;
 }
-let ordenPendienteFirma = null;
-let firmaDibujada = false;
-let firmaCtx = null;
+function firmaSupDe(obj) { return firmaSegura(obj.firmaSup || obj.firma); }
+function firmaOpDe(obj) { return firmaSegura(obj.firmaOp); }
+function faltanFirmas(obj) { return !firmaSupDe(obj) || !firmaOpDe(obj); }
 
-function abrirFirma(orden) {
-  ordenPendienteFirma = orden;
-  $('firmaEyebrow').textContent = 'Orden N° ' + orden.numero + ' · ' + orden.tipo;
-  $('firmanteInput').value = orden.firmante || '';
-  $('firmaError').style.display = 'none';
+let pendienteFirma = null; // { obj, tipo: 'registro' | 'orden' }
+const pads = {};           // op / sup: { canvas, ctx, dibujada }
+
+function abrirFirmas(obj, tipo) {
+  pendienteFirma = { obj, tipo };
+  $('firmaEyebrow').textContent = tipo === 'orden'
+    ? 'Orden N° ' + obj.numero + ' · ' + obj.tipo
+    : (tipo === 'monitoreo' ? 'Monitoreo de trampas UV · ' + (obj.plantaNombre || '') : 'Desratización · ' + obj.sectorNombre);
+  if (tipo === 'monitoreo') {
+    $('firmaTitOp').textContent = '1 · Firma del técnico aplicador';
+    $('firmaTitSup').textContent = '2 · Firma del cliente';
+    $('firmaLabelSup').textContent = 'Aclaración (nombre del cliente)';
+  } else {
+    $('firmaTitOp').textContent = '1 · Firma del operario';
+    $('firmaTitSup').textContent = '2 · Firma del supervisor';
+    $('firmaLabelSup').textContent = 'Aclaración (nombre del supervisor)';
+  }
+  $('firmaOpNombre').textContent = obj.operario || '';
+  $('firmanteInput').value = obj.firmante || '';
+  $('firmaErrorOp').style.display = 'none';
+  $('firmaErrorSup').style.display = 'none';
   go('scr-firma');
-  prepararCanvas();
+  prepararPad('op', 'firmaCanvasOp');
+  prepararPad('sup', 'firmaCanvasSup');
 }
 
-function prepararCanvas() {
-  const canvas = $('firmaCanvas');
+function prepararPad(clave, canvasId) {
+  const canvas = $(canvasId);
   // Tamaño interno FIJO: no depende del layout del momento (en tablets el
   // navegador puede medir 0/2px al abrir la pantalla y la firma salía en blanco).
   canvas.width = 1200;
-  canvas.height = 400;
-  firmaCtx = canvas.getContext('2d');
-  firmaCtx.lineWidth = 4;
-  firmaCtx.lineCap = 'round';
-  firmaCtx.lineJoin = 'round';
-  firmaCtx.strokeStyle = '#1a2530';
-  firmaDibujada = false;
+  canvas.height = 340;
+  const ctx = canvas.getContext('2d');
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = '#1a2530';
+  pads[clave] = { canvas, ctx, dibujada: false };
   let trazando = false;
   const pos = ev => {
     const r = canvas.getBoundingClientRect();
@@ -1059,27 +1320,28 @@ function prepararCanvas() {
     canvas.setPointerCapture(ev.pointerId);
     trazando = true;
     const p = pos(ev);
-    firmaCtx.beginPath();
-    firmaCtx.moveTo(p.x, p.y);
-    firmaCtx.lineTo(p.x + 0.1, p.y + 0.1);
-    firmaCtx.stroke();
-    firmaDibujada = true;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x + 0.1, p.y + 0.1);
+    ctx.stroke();
+    pads[clave].dibujada = true;
   };
   canvas.onpointermove = ev => {
     if (!trazando) return;
     ev.preventDefault();
     const p = pos(ev);
-    firmaCtx.lineTo(p.x, p.y);
-    firmaCtx.stroke();
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
   };
   canvas.onpointerup = canvas.onpointercancel = () => { trazando = false; };
 }
 
-function limpiarFirma() {
-  const canvas = $('firmaCanvas');
-  firmaCtx.clearRect(0, 0, canvas.width, canvas.height);
-  firmaDibujada = false;
-  $('firmaError').style.display = 'none';
+function limpiarFirma(clave) {
+  const pad = pads[clave];
+  if (!pad) return;
+  pad.ctx.clearRect(0, 0, pad.canvas.width, pad.canvas.height);
+  pad.dibujada = false;
+  $(clave === 'op' ? 'firmaErrorOp' : 'firmaErrorSup').style.display = 'none';
 }
 
 function firmaTieneTinta(canvas) {
@@ -1090,31 +1352,40 @@ function firmaTieneTinta(canvas) {
   } catch (e) { return true; }
 }
 
-function guardarFirma() {
-  const canvas = $('firmaCanvas');
-  if (!firmaDibujada || !firmaTieneTinta(canvas)) { $('firmaError').style.display = 'block'; return; }
-  const orden = ordenPendienteFirma;
-  if (!orden) return;
-  orden.firma = canvas.toDataURL('image/png');
-  orden.firmante = $('firmanteInput').value.trim();
+function padValido(clave) {
+  const pad = pads[clave];
+  return pad && pad.dibujada && firmaTieneTinta(pad.canvas);
+}
+
+function guardarFirmas() {
+  const okOp = padValido('op');
+  const okSup = padValido('sup');
+  $('firmaErrorOp').style.display = okOp ? 'none' : 'block';
+  $('firmaErrorSup').style.display = okSup ? 'none' : 'block';
+  if (!okOp || !okSup) return;
+  const p = pendienteFirma;
+  if (!p) return;
+  p.obj.firmaOp = pads.op.canvas.toDataURL('image/png');
+  p.obj.firmaSup = pads.sup.canvas.toDataURL('image/png');
+  p.obj.firmante = $('firmanteInput').value.trim();
   persistir();
-  ordenPendienteFirma = null;
-  toast('Firma guardada ✓');
-  goListoOrden(orden);
+  pendienteFirma = null;
+  toast('Firmas guardadas ✓');
+  goListo(p.obj, p.tipo);
 }
 
 function firmarDespues() {
-  const orden = ordenPendienteFirma;
-  ordenPendienteFirma = null;
-  if (orden) goListoOrden(orden);
+  const p = pendienteFirma;
+  pendienteFirma = null;
+  if (p) goListo(p.obj, p.tipo);
 }
 
-function pdfOrdenConGuardia(orden) {
-  if (!orden.firma) {
-    confirmar('Falta la firma del supervisor', 'La orden necesita la firma antes de generar la planilla o enviarla.', () => abrirFirma(orden), 'Cargar firma ahora');
+function conGuardiaDeFirmas(obj, tipo, accion) {
+  if (faltanFirmas(obj)) {
+    confirmar('Faltan las firmas', 'El reporte necesita la firma del operario y la del supervisor antes de poder generarse o enviarse.', () => abrirFirmas(obj, tipo), 'Firmar ahora');
     return;
   }
-  imprimirOrden(orden);
+  accion();
 }
 
 /* ============ historial ============ */
@@ -1126,11 +1397,17 @@ function filtrarHist(chip) {
 }
 function renderHistorial() {
   const items = [];
-  if (filtroHist !== 'orden') DB.registros.forEach(r => items.push({ tipo: 'registro', fecha: r.fecha, obj: r }));
-  if (filtroHist !== 'desrat') DB.ordenes.forEach(o => items.push({ tipo: 'orden', fecha: o.fecha, obj: o }));
+  const f = filtroHist;
+  if (f === 'todo' || f === 'desrat') DB.registros.forEach(r => items.push({ tipo: 'registro', fecha: r.fecha, obj: r }));
+  if (f === 'todo' || f === 'orden') DB.ordenes.forEach(o => items.push({ tipo: 'orden', fecha: o.fecha, obj: o }));
+  if (f === 'todo' || f === 'uvm') (DB.monitoreos || []).forEach(m => items.push({ tipo: 'monitoreo', fecha: m.fecha, obj: m }));
+  if (f === 'todo' || f === 'pal') (DB.palomas || []).forEach(p => items.push({ tipo: 'palomas', fecha: p.fecha, obj: p }));
   items.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-  $('histResumen').textContent = `${DB.registros.length} recorridos de desratización · ${DB.ordenes.length} órdenes esporádicas`;
+  const partes = [`${DB.registros.length} desratizaciones`, `${DB.ordenes.length} órdenes`];
+  if ((DB.monitoreos || []).length) partes.push(`${DB.monitoreos.length} monitoreos UV`);
+  if ((DB.palomas || []).length) partes.push(`${DB.palomas.length} de palomas`);
+  $('histResumen').textContent = partes.join(' · ');
   const list = $('histList'); list.innerHTML = '';
   if (!items.length) { list.innerHTML = '<p class="lead">Todavía no hay registros guardados.</p>'; return; }
 
@@ -1146,16 +1423,75 @@ function renderHistorial() {
         <span class="hist-tit">${esc(r.sectorNombre)}</span>
         <span class="hist-sub">${r.plantaNombre ? esc(r.plantaNombre) + ' · ' : ''}${Object.keys(r.cebos).length}/${r.cebosTotal} revisadas${nov ? ' · ' + nov : ' · todo bien'} · ${esc(r.operario)}${r.enviado ? ' · ✉ enviado' : ''}</span>`;
       b.onclick = () => abrirDetalleRegistro(r);
-    } else {
+    } else if (it.tipo === 'orden') {
       const o = it.obj;
       b.innerHTML = `
         <span class="hist-top"><span class="badge orden">ORDEN N° ${esc(o.numero)}</span><span class="hist-fecha">${fFecha(o.fecha, true)}</span></span>
         <span class="hist-tit">${esc(o.tipo)}</span>
-        <span class="hist-sub">${o.plantaNombre ? esc(o.plantaNombre) + ' · ' : ''}${esc(o.sectores.join(', '))} · ${esc(o.operario)}${o.firma ? '' : ' · ✍ sin firma'}${o.enviado ? ' · ✉ enviado' : ''}</span>`;
+        <span class="hist-sub">${o.plantaNombre ? esc(o.plantaNombre) + ' · ' : ''}${esc(o.sectores.join(', '))} · ${esc(o.operario)}${faltanFirmas(o) ? ' · ✍ sin firmas' : ''}${o.enviado ? ' · ✉ enviado' : ''}</span>`;
       b.onclick = () => abrirDetalleOrden(o);
+    } else if (it.tipo === 'monitoreo') {
+      const m = it.obj;
+      const insectos = Object.values(m.equipos).reduce((a, d) => a + (d.moscas || 0) + (d.polillas || 0) + (d.gorgojos || 0) + (d.otros || 0), 0);
+      b.innerHTML = `
+        <span class="hist-top"><span class="badge desrat" style="background:var(--ocu-soft); color:var(--ocu)">TRAMPAS UV</span><span class="hist-fecha">${fFecha(m.fecha, true)}</span></span>
+        <span class="hist-tit">${esc(m.plantaNombre)}</span>
+        <span class="hist-sub">${Object.keys(m.equipos).length}/${m.ubicaciones.length} equipos · ${insectos} insectos · ${esc(m.operario)}${faltanFirmas(m) ? ' · ✍ sin firmas' : ''}${m.enviado ? ' · ✉ enviado' : ''}</span>`;
+      b.onclick = () => abrirDetalleMonitoreo(m);
+    } else {
+      const p = it.obj;
+      b.innerHTML = `
+        <span class="hist-top"><span class="badge orden" style="background:var(--peg-soft); color:var(--peg)">PALOMAS</span><span class="hist-fecha">${fFecha(p.fecha, true)}</span></span>
+        <span class="hist-tit">${esc(p.plantaNombre)}</span>
+        <span class="hist-sub">${p.capturadas > 0 ? p.capturadas + ' capturadas' : 'sin capturas'} · ${esc(p.operario)}${p.enviado ? ' · ✉ enviado' : ''}</span>`;
+      b.onclick = () => abrirDetallePalomas(p);
     }
     list.appendChild(b);
   });
+}
+
+function abrirDetalleMonitoreo(m) {
+  detalleActual = { tipo: 'monitoreo', obj: m };
+  $('detEyebrow').textContent = m.plantaNombre + ' · Trampas UV · ' + fFecha(m.fecha, true);
+  $('detTitle').textContent = 'Monitoreo de trampas UV';
+  $('detSub').textContent = 'Reportó ' + m.operario + (m.enviado ? ' · ✉ enviado por mail el ' + fFecha(m.enviado, true) : '');
+  $('detMail').textContent = m.enviado ? 'Reenviar por mail' : 'Enviar reporte por mail';
+  $('detMail').onclick = ev => enviarReporte('monitoreo', m, ev.currentTarget);
+  let html = '<div class="card">';
+  m.ubicaciones.forEach((ub, i) => {
+    const d = m.equipos[i + 1];
+    if (d) html += `<div class="sum-row"><span class="pill">Equipo ${i + 1} · ${esc(ub)}</span><span style="font-size:14px; color:var(--ink-2); text-align:right">${esc(resumenEquipoUV(d))}</span></div>`;
+  });
+  html += '</div>';
+  if (m.obs) html += `<div class="card"><b>Observaciones:</b><p style="color:var(--ink-2); margin-top:4px">${esc(m.obs)}</p></div>`;
+  html += bloqueFirmasDetalle(m);
+  $('detBody').innerHTML = html;
+  agregarBotonFirmar(m, 'monitoreo');
+  $('detCompartir').onclick = () => conGuardiaDeFirmas(m, 'monitoreo', () => compartirMonitoreo(m));
+  $('detPdf').style.display = 'flex';
+  $('detPdf').onclick = () => conGuardiaDeFirmas(m, 'monitoreo', () => imprimirMonitoreo(m));
+  $('detBorrar').onclick = () => pedirPin(() => confirmar('¿Eliminar este monitoreo?', 'Se borra de la tablet y no se puede recuperar.', () => {
+    DB.monitoreos = DB.monitoreos.filter(x => x.id !== m.id);
+    persistir(); renderHistorial(); go('scr-historial'); toast('Monitoreo eliminado');
+  }, 'Eliminar'));
+  go('scr-detalle');
+}
+
+function abrirDetallePalomas(p) {
+  detalleActual = { tipo: 'palomas', obj: p };
+  $('detEyebrow').textContent = p.plantaNombre + ' · Palomas · ' + fFecha(p.fecha, true);
+  $('detTitle').textContent = p.capturadas > 0 ? p.capturadas + ' palomas capturadas' : 'Sin capturas';
+  $('detSub').textContent = 'Reportó ' + p.operario + (p.enviado ? ' · ✉ enviado por mail el ' + fFecha(p.enviado, true) : '');
+  $('detMail').textContent = p.enviado ? 'Reenviar por mail' : 'Enviar reporte por mail';
+  $('detMail').onclick = ev => enviarReporte('palomas', p, ev.currentTarget);
+  $('detBody').innerHTML = p.obs ? `<div class="card"><b>Observaciones:</b><p style="color:var(--ink-2); margin-top:4px">${esc(p.obs)}</p></div>` : '<p class="lead">Sin observaciones.</p>';
+  $('detCompartir').onclick = () => compartirPalomas(p);
+  $('detPdf').style.display = 'none';
+  $('detBorrar').onclick = () => pedirPin(() => confirmar('¿Eliminar este registro?', 'Se borra de la tablet y no se puede recuperar.', () => {
+    DB.palomas = DB.palomas.filter(x => x.id !== p.id);
+    persistir(); renderHistorial(); go('scr-historial'); toast('Registro eliminado');
+  }, 'Eliminar'));
+  go('scr-detalle');
 }
 
 /* ============ detalle ============ */
@@ -1193,15 +1529,42 @@ function abrirDetalleRegistro(r) {
   }
   html += '</div>';
   if (r.obs) html += `<div class="card"><b>Novedades:</b><p style="color:var(--ink-2); margin-top:4px">${esc(r.obs)}</p></div>`;
+  html += bloqueFirmasDetalle(r);
   $('detBody').innerHTML = html;
+  agregarBotonFirmar(r, 'registro');
 
-  $('detCompartir').onclick = () => compartirRegistro(r);
-  $('detPdf').onclick = () => imprimirRegistro(r);
+  $('detCompartir').onclick = () => conGuardiaDeFirmas(r, 'registro', () => compartirRegistro(r));
+  $('detPdf').style.display = 'flex';
+  $('detPdf').onclick = () => conGuardiaDeFirmas(r, 'registro', () => imprimirRegistro(r));
   $('detBorrar').onclick = () => pedirPin(() => confirmar('¿Eliminar este registro?', 'Se borra de la tablet y no se puede recuperar.', () => {
     DB.registros = DB.registros.filter(x => x.id !== r.id);
     persistir(); renderHistorial(); go('scr-historial'); toast('Registro eliminado');
   }, 'Eliminar'));
   go('scr-detalle');
+}
+
+function bloqueFirmasDetalle(obj) {
+  let html = '';
+  if (faltanFirmas(obj)) {
+    html += `<div class="alert"><span>✍️</span><span><b>Faltan las firmas</b> (operario y supervisor). Sin ellas no se puede enviar ni generar la planilla.</span></div>`;
+  }
+  const cuadro = (titulo, img) => img
+    ? `<div style="flex:1; min-width:220px"><b>${titulo}:</b><br><img src="${img}" alt="${titulo}" style="max-width:260px; max-height:100px; border:1px solid var(--line); border-radius:8px; margin-top:6px; background:#fff"></div>`
+    : '';
+  const fOp = firmaOpDe(obj), fSup = firmaSupDe(obj);
+  if (fOp || fSup) {
+    html += `<div class="card" style="display:flex; gap:14px; flex-wrap:wrap">${cuadro('Firma del operario (' + esc(obj.operario || '') + ')', fOp)}${cuadro('Firma del supervisor' + (obj.firmante ? ' (' + esc(obj.firmante) + ')' : ''), fSup)}</div>`;
+  }
+  return html;
+}
+
+function agregarBotonFirmar(obj, tipo) {
+  if (!faltanFirmas(obj)) return;
+  const bf = document.createElement('button');
+  bf.className = 'primary';
+  bf.textContent = 'Firmar ahora (operario y supervisor)';
+  bf.onclick = () => abrirFirmas(obj, tipo);
+  $('detBody').appendChild(bf);
 }
 
 function abrirDetalleOrden(o) {
@@ -1211,28 +1574,19 @@ function abrirDetalleOrden(o) {
   $('detSub').textContent = o.tipo + ' · reportó ' + o.operario + (o.enviado ? ' · ✉ enviado por mail el ' + fFecha(o.enviado, true) : '');
   $('detMail').textContent = o.enviado ? 'Reenviar por mail' : 'Enviar reporte por mail';
   $('detMail').onclick = ev => enviarReporte('orden', o, ev.currentTarget);
-  let html = '';
-  if (!o.firma) {
-    html += `<div class="alert"><span>✍️</span><span><b>Falta la firma del supervisor.</b> Sin firma no se puede enviar ni generar la planilla.</span></div>`;
-  }
-  html += '<div class="card">';
+  let html = '<div class="card">';
   html += `<div class="sum-row"><span>Sectores</span><span style="font-weight:650; text-align:right">${esc(o.sectores.join(', '))}</span></div>`;
   if (o.producto) html += `<div class="sum-row"><span>Producto</span><span style="font-weight:650">${esc(o.producto)}</span></div>`;
   if (o.dosis) html += `<div class="sum-row"><span>Dosis</span><span style="font-weight:650">${esc(o.dosis)}</span></div>`;
-  html += `<div class="sum-row"><span>Firma del supervisor</span><span style="font-weight:650">${o.firma ? '✓ ' + esc(o.firmante || 'firmada') : 'pendiente'}</span></div>`;
+  html += `<div class="sum-row"><span>Firmas</span><span style="font-weight:650">${faltanFirmas(o) ? 'pendientes' : '✓ operario y supervisor'}</span></div>`;
   html += '</div>';
-  if (firmaSegura(o.firma)) html += `<div class="card"><b>Firma:</b><br><img src="${firmaSegura(o.firma)}" alt="Firma del supervisor" style="max-width:280px; max-height:120px; border:1px solid var(--line); border-radius:8px; margin-top:6px; background:#fff"></div>`;
   if (o.obs) html += `<div class="card"><b>Observaciones:</b><p style="color:var(--ink-2); margin-top:4px">${esc(o.obs)}</p></div>`;
+  html += bloqueFirmasDetalle(o);
   $('detBody').innerHTML = html;
-  if (!o.firma) {
-    const bf = document.createElement('button');
-    bf.className = 'primary';
-    bf.textContent = 'Cargar firma del supervisor';
-    bf.onclick = () => abrirFirma(o);
-    $('detBody').appendChild(bf);
-  }
-  $('detCompartir').onclick = () => compartirOrden(o);
-  $('detPdf').onclick = () => pdfOrdenConGuardia(o);
+  agregarBotonFirmar(o, 'orden');
+  $('detCompartir').onclick = () => conGuardiaDeFirmas(o, 'orden', () => compartirOrden(o));
+  $('detPdf').style.display = 'flex';
+  $('detPdf').onclick = () => conGuardiaDeFirmas(o, 'orden', () => imprimirOrden(o));
   $('detBorrar').onclick = () => pedirPin(() => confirmar('¿Eliminar esta orden?', 'Se borra de la tablet y no se puede recuperar.', () => {
     DB.ordenes = DB.ordenes.filter(x => x.id !== o.id);
     persistir(); renderHistorial(); go('scr-historial'); toast('Orden eliminada');
@@ -1293,6 +1647,36 @@ function compartirTexto(txt) {
 function compartirRegistro(r) { compartirTexto(textoRegistro(r)); }
 function compartirOrden(o) { compartirTexto(textoOrden(o)); }
 
+function textoMonitoreo(m) {
+  const lineas = [
+    '*ADC SRL – Control de plagas*',
+    `*Monitoreo de trampas UV – ${m.plantaNombre}*`,
+    `${fFecha(m.fecha, true)} · reportó ${m.operario}`,
+    '',
+  ];
+  m.ubicaciones.forEach((ub, i) => {
+    const d = m.equipos[i + 1];
+    if (d) lineas.push(`• Equipo ${i + 1} (${ub}): ${resumenEquipoUV(d)}${d.obs ? ' — ' + d.obs : ''}`);
+  });
+  if (m.obs) lineas.push('', 'Observaciones: ' + m.obs);
+  if (m.pdfUrl) lineas.push('', '📄 Planilla oficial (PDF): ' + m.pdfUrl);
+  return lineas.join('\n');
+}
+function compartirMonitoreo(m) { compartirTexto(textoMonitoreo(m)); }
+
+function textoPalomas(p) {
+  const lineas = [
+    '*ADC SRL – Control de plagas*',
+    `*Palomas – ${p.plantaNombre}*`,
+    `${fFecha(p.fecha, true)} · reportó ${p.operario}`,
+    '',
+    p.capturadas > 0 ? `Palomas capturadas: *${p.capturadas}*` : 'Sin capturas en esta visita.',
+  ];
+  if (p.obs) lineas.push('', 'Observaciones: ' + p.obs);
+  return lineas.join('\n');
+}
+function compartirPalomas(p) { compartirTexto(textoPalomas(p)); }
+
 /* ============ envío automático por mail ============ */
 const CLAVE_ENVIO = 'adc-sw-2026-k7m3';
 
@@ -1318,8 +1702,8 @@ async function probarConexion() {
 }
 
 async function enviarReporte(tipo, obj, boton) {
-  if (tipo === 'orden' && !obj.firma) {
-    confirmar('Falta la firma del supervisor', 'La orden necesita la firma antes de poder enviarla.', () => abrirFirma(obj), 'Cargar firma ahora');
+  if (tipo !== 'palomas' && faltanFirmas(obj)) {
+    confirmar('Faltan las firmas', 'El reporte necesita la firma del operario y la del supervisor antes de poder enviarse.', () => abrirFirmas(obj, tipo), 'Firmar ahora');
     return;
   }
   const planta = DB.plantas.find(p => p.id === obj.plantaId);
@@ -1369,8 +1753,13 @@ const CERT_MODELOS = [
     seed: { nombre: 'Frigorífico Cabildo', sector: 'Cebadera perímetro y trampas UV', cebos: 60, uv: 20 } },
   { match: ['manera'], paraEmpresa: 'MOLINO LA NUEVA MANERA', empresa: 'ADC SRL',
     uvEtiqueta: 'CAJ', uvGrupo: 'PLACAS ADHESIVAS',
-    pie: { elaboro: 'BRAIAN RISSO', reviso: 'MANUEL FRANCIULLI', aprobo: 'LIC. ALEJANDRO BRITEZ', fecha: '13/7/2026' },
-    seed: { nombre: 'Molino La Nueva Manera', sector: 'Cebadera perímetro y placas adhesivas', cebos: 48, uv: 30 } },
+    pie: { elaboro: 'BRAIAN RISSO', reviso: 'MANUEL FRANCIULLI', aprobo: 'LIC. ALEJANDRO BRITEZ', fecha: '13-07-2026' },
+    seed: { nombre: 'Molino La Nueva Manera', sector: 'Cebadera perímetro y placas adhesivas', cebos: 48, uv: 30 },
+    monitoreoUV: {
+      frecuencia: 'SEMANAL',
+      equipos: ['Molino Planta Baja', 'Molino - Primer piso', 'Molino - Segundo Piso', 'Molino - Tercer Piso', 'Depósito robot', 'Depósito Surgente'],
+    },
+    palomas: true },
   { match: ['millagro'], paraEmpresa: 'MILLAGRO S.A.', empresa: 'TECNOPHOS',
     producto: PRODUCTO_TECNOPHOS, firmaIzq: 'Personal MILLAGRO SA',
     seed: { nombre: 'Millagro S.A.', sector: 'Planta industrial', cebos: 34, uv: 0 } },
@@ -1396,6 +1785,8 @@ function modeloPara(plantaNombre) {
     uvGrupo: m.uvGrupo || null,
     firmaIzq: m.firmaIzq || 'Supervisor del Planta',
     pie: m.pie || null,
+    monitoreoUV: m.monitoreoUV || null,
+    palomas: !!m.palomas,
   };
 }
 
@@ -1504,16 +1895,104 @@ function planillaDesratizacion(r, empresa) {
     ${cabPlanilla(modelo.titulo, r.fecha, empresa)}
     ${bloqueReferencias(r, empresa, modelo)}
     ${tabla}
-    <table style="width:100%; margin-top:60px; font-family:Arial"><tr>
-      <td style="text-align:center; font-size:11px"><div style="border-top:1px solid #000; width:200px; margin:0 auto; padding-top:4px">${esc(modelo.firmaIzq)}</div></td>
-      <td style="text-align:center; font-size:11px"><div style="border-top:1px solid #000; width:200px; margin:0 auto; padding-top:4px">Operario de ${esc(empresa)}</div></td>
-    </tr></table>
+    ${filaFirmas(r, empresa, modelo.firmaIzq)}
     ${pie}
   </div>`;
 }
 
+function filaFirmas(obj, empresa, firmaIzq) {
+  const img = f => f ? `<img src="${f}" alt="Firma" style="max-height:55px">` : '<div style="height:55px"></div>';
+  return `
+  <table style="width:100%; margin-top:30px; font-family:Arial"><tr>
+    <td style="text-align:center; font-size:11px; vertical-align:bottom">
+      ${img(firmaSupDe(obj))}
+      <div style="border-top:1px solid #000; width:220px; margin:0 auto; padding-top:4px">${esc(firmaIzq)}${obj.firmante ? '<br>' + esc(obj.firmante) : ''}</div>
+    </td>
+    <td style="text-align:center; font-size:11px; vertical-align:bottom">
+      ${img(firmaOpDe(obj))}
+      <div style="border-top:1px solid #000; width:220px; margin:0 auto; padding-top:4px">Operario de ${esc(empresa)}${obj.operario ? '<br>' + esc(obj.operario) : ''}</div>
+    </td>
+  </tr></table>`;
+}
+
 function imprimirRegistro(r) {
   $('printArea').innerHTML = planillaDesratizacion(r, empresaDe(r));
+  window.print();
+}
+
+function planillaMonitoreoUV(m) {
+  const modelo = modeloPara(m.plantaNombre);
+  const pie = modelo.pie || { elaboro: '', reviso: '', aprobo: '', fecha: '' };
+  const th = 'border:1px solid #000; padding:2px 4px; font-size:9px; text-align:center; background:#e8e8e8';
+  const td = 'border:1px solid #000; padding:2px 4px; font-size:10px; text-align:center; height:16px';
+  const banda = 'background:#9a9a9a; color:#fff; text-align:center; font-weight:700; padding:4px; font-size:13px; font-family:Arial';
+  let filas = '';
+  m.ubicaciones.forEach((ub, i) => {
+    const n = i + 1;
+    const d = m.equipos[n] || {};
+    filas += `<tr><td style="${td}">${n}</td><td style="${td}">${esc(d.func || '')}</td><td style="${td}">${esc(d.tubos || '')}</td>` +
+      `<td style="${td}">${esc(d.placa || '')}</td>` +
+      `<td style="${td}">${d.estado === 'Buena' ? 'X' : ''}</td><td style="${td}">${d.estado === 'Saturada' ? 'X' : ''}</td><td style="${td}">${d.estado === 'Reemplazo' ? 'X' : ''}</td>` +
+      `<td style="${td}">${d.moscas || 0}</td><td style="${td}">${d.polillas || 0}</td><td style="${td}">${d.gorgojos || 0}</td><td style="${td}">${d.otros || 0}</td>` +
+      `<td style="${td}; text-align:left">${esc(d.obs || '')}</td></tr>`;
+  });
+  let filasTubos = '';
+  m.ubicaciones.forEach((ub, i) => {
+    const d = m.equipos[i + 1] || {};
+    filasTubos += `<tr><td style="${td}">${i + 1}</td><td style="${td}; text-align:left">${esc(ub)}</td><td style="${td}">${d.tuboSup ? 'X' : ''}</td><td style="${td}">${d.tuboInf ? 'X' : ''}</td></tr>`;
+  });
+  return `
+  <div style="padding:24px; font-family:Arial; color:#000">
+    <div style="${banda}; font-size:16px">ADC SRL — CONTROL DE PLAGAS</div>
+    <div style="${banda}; background:#b5b5b5; font-size:12px">Programa de Manejo Integrado de Plagas (MIP)</div>
+    <div style="${banda}; background:#d9d9d9; color:#000">MONITOREO DE TRAMPAS UV</div>
+    <table style="width:100%; border-collapse:collapse; font-family:Arial; margin:10px 0; font-size:10.5px; text-align:center">
+      <tr><td style="border:1px solid #000; padding:2px">${esc(pie.fecha)}</td><td style="border:1px solid #000; padding:2px">${esc(pie.elaboro)}</td><td style="border:1px solid #000; padding:2px">${esc(pie.reviso)}</td><td style="border:1px solid #000; padding:2px">${esc(pie.aprobo)}</td></tr>
+      <tr><td style="border:1px solid #000; padding:2px; font-weight:700">Fecha de Elaboración</td><td style="border:1px solid #000; padding:2px; font-weight:700">Elaboró</td><td style="border:1px solid #000; padding:2px; font-weight:700">Revisó</td><td style="border:1px solid #000; padding:2px; font-weight:700">Aprobó</td></tr>
+    </table>
+    <table style="width:100%; border-collapse:collapse; font-family:Arial; margin-bottom:12px; font-size:11px">
+      <tr><td style="width:110px; font-weight:700; padding:2px 4px">Cliente:</td><td style="border:1px solid #000; padding:2px 6px">${esc(m.plantaNombre)}</td></tr>
+      <tr><td style="font-weight:700; padding:2px 4px">Planta / Sector:</td><td style="border:1px solid #000; padding:2px 6px"></td></tr>
+      <tr><td style="font-weight:700; padding:2px 4px">Fecha:</td><td style="border:1px solid #000; padding:2px 6px">${fFecha(m.fecha)}</td></tr>
+      <tr><td style="font-weight:700; padding:2px 4px">Frecuencia:</td><td style="border:1px solid #000; padding:2px 6px">${esc(m.frecuencia || 'SEMANAL')}</td></tr>
+    </table>
+    <table style="width:100%; border-collapse:collapse; font-family:Arial">
+      <tr>
+        <th style="${th}" rowspan="3">Equipo N°</th><th style="${th}" rowspan="3">Funcionando</th><th style="${th}" rowspan="3">Tubos encendidos</th>
+        <th style="${th}" colspan="4">Placas Adherentes</th>
+        <th style="${th}" colspan="4" rowspan="2">Recuento de insectos</th>
+        <th style="${th}" rowspan="3">Observación</th>
+      </tr>
+      <tr><th style="${th}" rowspan="2">Existente en equipo</th><th style="${th}" colspan="3">Estado</th></tr>
+      <tr><th style="${th}">Buena</th><th style="${th}">Saturada</th><th style="${th}">Reemplazo</th><th style="${th}">Moscas</th><th style="${th}">Polillas</th><th style="${th}">Gorgojos</th><th style="${th}">Otros Total</th></tr>
+      ${filas}
+    </table>
+    <table style="width:100%; border-collapse:collapse; font-family:Arial; margin-top:14px">
+      <tr><th style="${th}" rowspan="2">Equipo</th><th style="${th}" rowspan="2">Ubicación</th><th style="${th}" colspan="2">Cambio de Tubos UV - Detalle</th></tr>
+      <tr><th style="${th}">Tubo Superior</th><th style="${th}">Tubo Inferior</th></tr>
+      ${filasTubos}
+    </table>
+    <div style="${banda}; background:#b5b5b5; margin-top:14px; font-size:12px">OBSERVACIONES Y PROPUESTAS DE MEJORA</div>
+    <div style="border:1px solid #000; min-height:50px; padding:6px 10px; font-size:11px">${esc(m.obs || '')}</div>
+    <table style="width:100%; border-collapse:collapse; font-family:Arial; margin-top:16px">
+      <tr>
+        <th style="${th}; font-size:11px">Firma Técnico Aplicador — ADC SRL</th>
+        <th style="${th}; font-size:11px">Firma Cliente</th>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000; height:65px; text-align:center; vertical-align:middle">${firmaOpDe(m) ? `<img src="${firmaOpDe(m)}" alt="Firma" style="max-height:55px">` : ''}</td>
+        <td style="border:1px solid #000; height:65px; text-align:center; vertical-align:middle">${firmaSupDe(m) ? `<img src="${firmaSupDe(m)}" alt="Firma" style="max-height:55px">` : ''}</td>
+      </tr>
+      <tr>
+        <td style="padding:3px 4px; font-size:10.5px">Aclaración: ${esc(m.operario || '')}</td>
+        <td style="padding:3px 4px; font-size:10.5px">Aclaración: ${esc(m.firmante || '')}</td>
+      </tr>
+    </table>
+  </div>`;
+}
+
+function imprimirMonitoreo(m) {
+  $('printArea').innerHTML = planillaMonitoreoUV(m);
   window.print();
 }
 function imprimirOrden(o) {
@@ -1532,16 +2011,7 @@ function imprimirOrden(o) {
       <span><b>Empresa:</b> ${esc(empresa)} &nbsp;&nbsp; <b>Operario:</b> ${esc(o.operario)}</span>
     </div>
     <div class="pl-obs"><b>OBSERVACIONES:</b>${esc(o.obs) || ''}</div>
-    <table style="width:100%; margin-top:40px"><tr>
-      <td style="text-align:center; font-size:11px; vertical-align:bottom">
-        ${firmaSegura(o.firma) ? `<img src="${firmaSegura(o.firma)}" alt="Firma" style="max-height:60px">` : '<div style="height:60px"></div>'}
-        <div style="border-top:1px solid #000; width:220px; margin:0 auto; padding-top:4px">Supervisor de Planta${o.firmante ? '<br>' + esc(o.firmante) : ''}</div>
-      </td>
-      <td style="text-align:center; font-size:11px; vertical-align:bottom">
-        <div style="height:60px"></div>
-        <div style="border-top:1px solid #000; width:220px; margin:0 auto; padding-top:4px">Operario de ${esc(empresa)}<br>${esc(o.operario)}</div>
-      </td>
-    </tr></table>
+    ${filaFirmas(o, empresa, modeloPara(o.plantaNombre).firmaIzq)}
   </div>`;
   window.print();
 }
@@ -1724,6 +2194,22 @@ document.addEventListener('DOMContentLoaded', () => {
   $('nuevaPlantaMail').addEventListener('keydown', e => { if (e.key === 'Enter') agregarPlanta(); });
   $('nuevoOperario').addEventListener('keydown', e => { if (e.key === 'Enter') agregarOperario(); });
   $('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmarPin(); });
+  // chips del formulario de equipos UV: selección única por grupo
+  document.querySelectorAll('#uvVeil .chips[data-campo]').forEach(g => {
+    g.querySelectorAll('.chip').forEach(c => c.onclick = () => {
+      g.querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+      c.classList.add('on');
+    });
+  });
+  $('uvTuboSup').onclick = () => $('uvTuboSup').classList.toggle('on');
+  $('uvTuboInf').onclick = () => $('uvTuboInf').classList.toggle('on');
+  // chips de palomas: sí/no + cantidad
+  document.querySelectorAll('#chipsPalomas .chip').forEach(c => c.onclick = () => {
+    document.querySelectorAll('#chipsPalomas .chip').forEach(x => x.classList.remove('on'));
+    c.classList.add('on');
+    $('palomasCantBox').style.display = c.dataset.v === 'si' ? 'block' : 'none';
+    $('palomasError').style.display = 'none';
+  });
   go('scr-quien');
 });
 </script>
