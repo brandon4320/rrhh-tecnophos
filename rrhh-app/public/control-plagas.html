@@ -15,6 +15,7 @@
     --det: #C05621;  --det-soft: #F8E7DC;
     --ocu: #2C5F8A;  --ocu-soft: #E1EBF3;
     --peg: #6B4FA3;  --peg-soft: #EAE4F4;
+    --tub: #0E7C86;  --tub-soft: #DDF1F3;
     --shadow: 0 1px 3px rgba(34,48,43,.08), 0 4px 16px rgba(34,48,43,.06);
   }
   * { box-sizing: border-box; margin: 0; }
@@ -112,7 +113,13 @@
   .st[data-e="D"] { background: var(--det-soft); border-color: var(--det); }  .st[data-e="D"] .tag { color: var(--det); }
   .st[data-e="O"] { background: var(--ocu-soft); border-color: var(--ocu); }  .st[data-e="O"] .tag { color: var(--ocu); }
   .st[data-e="X"] { background: var(--peg-soft); border-color: var(--peg); }  .st[data-e="X"] .tag { color: var(--peg); }
+  .st[data-e="T"] { background: var(--tub-soft); border-color: var(--tub); }  .st[data-e="T"] .tag { color: var(--tub); }
   .st.mini { min-height: 46px; pointer-events: none; }
+  .st-grid.grouped { display: block; }
+  .grp-title { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 2px 0; font-weight: 700; font-size: 15px; }
+  .grp-title:first-child { margin-top: 10px; }
+  .grp-title span { font-size: 13px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .st-grid.grouped .st-grid { margin-top: 8px; }
   .st.mini .num { font-size: 15px; }
 
   .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; font-size: 13px; color: var(--ink-2); }
@@ -138,6 +145,7 @@
   .e-btn.eD { background: var(--det-soft); border-color: var(--det); color: var(--det); }
   .e-btn.eO { background: var(--ocu-soft); border-color: var(--ocu); color: var(--ocu); }
   .e-btn.eX { background: var(--peg-soft); border-color: var(--peg); color: var(--peg); }
+  .e-btn.eT { background: var(--tub-soft); border-color: var(--tub); color: var(--tub); }
 
   label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
   textarea, input[type="text"], input[type="number"], input[type="date"] {
@@ -318,6 +326,7 @@
         <span><i style="background:var(--det)"></i>Deteriorado</span>
         <span><i style="background:var(--ocu)"></i>Oculto</span>
         <span><i style="background:var(--peg)"></i>Cambio de pegamento</span>
+        <span id="legendT" style="display:none"><i style="background:var(--tub)"></i>Cambio de tubo lumínico (UV)</span>
       </div>
     </div>
     <div id="uvBlock" style="display:none">
@@ -640,9 +649,35 @@ const ESTADOS = [
   { k: 'D', n: 'Deteriorado', d: 'Rota o dañada' },
   { k: 'O', n: 'Oculto',      d: 'No se pudo acceder' },
   { k: 'X', n: 'Cambio de pegamento', d: 'Placa renovada' },
+  { k: 'T', n: 'Cambio de tubo lumínico', d: 'Tubo UV renovado' },
 ];
-const ESTADOS_UV = ['B', 'X', 'D', 'N'];
-const COLORES = { B: 'var(--ok)', C: 'var(--warn)', N: 'var(--bad)', D: 'var(--det)', O: 'var(--ocu)', X: 'var(--peg)' };
+const ESTADOS_CEBO = ['B', 'C', 'N', 'D', 'O', 'X'];
+const ESTADOS_UV = ['B', 'X', 'D', 'N'];          // + 'T' en plantas cuyo certificado lo contempla
+const COLORES = { B: 'var(--ok)', C: 'var(--warn)', N: 'var(--bad)', D: 'var(--det)', O: 'var(--ocu)', X: 'var(--peg)', T: 'var(--tub)' };
+
+/* Un sector puede tener sus estaciones de cebado divididas en grupos con
+   numeración propia (ej. Cabildo: Perímetro externo 1-37 y Perímetro de
+   edificio 1-23). Internamente las estaciones se numeran corridas (1-60);
+   estas funciones traducen a la numeración que ve el operario y la planilla. */
+function gruposDe(s) {
+  const total = s.cebosTotal != null ? s.cebosTotal : s.cebos;
+  if (s.grupos && s.grupos.length) {
+    let desde = 1;
+    return s.grupos.map(g => { const r = { nombre: g.nombre, cebos: g.cebos, desde }; desde += g.cebos; return r; });
+  }
+  return [{ nombre: null, cebos: total, desde: 1 }];
+}
+function etiquetaCebo(s, n) {
+  const gs = gruposDe(s);
+  if (gs.length === 1) return { grupo: null, num: n, largo: 'N°' + n };
+  const g = gs.filter(x => n >= x.desde).pop() || gs[0];
+  const loc = n - g.desde + 1;
+  return { grupo: g.nombre, num: loc, largo: g.nombre + ' N°' + loc };
+}
+function estadosUVDe(plantaNombre) {
+  const m = modeloPara(plantaNombre);
+  return m.tuboLuminico ? ESTADOS_UV.concat(['T']) : ESTADOS_UV;
+}
 
 function datosIniciales() {
   return {
@@ -653,7 +688,8 @@ function datosIniciales() {
     ],
     sectores: [
       { id: 's1', plantaId: 'p1', nombre: 'Planta general',     cebos: 113, uv: 0 },
-      { id: 's2', plantaId: 'p1', nombre: 'Perímetro',          cebos: 60,  uv: 20 },
+      { id: 's2', plantaId: 'p1', nombre: 'Cebadera perímetro y trampas UV', cebos: 60, uv: 24,
+        grupos: [{ nombre: 'Perímetro externo', cebos: 37 }, { nombre: 'Perímetro de edificio', cebos: 23 }] },
       { id: 's3', plantaId: 'p1', nombre: 'Carga de vagones',   cebos: 31,  uv: 0 },
       { id: 's4', plantaId: 'p1', nombre: 'Calado de camiones', cebos: 15,  uv: 0 },
     ],
@@ -687,12 +723,26 @@ function migrar(db) {
     const existente = db.plantas.find(p => m.match.some(k => normalizarTxt(p.nombre).indexOf(k) !== -1));
     if (existente) {
       existente.empresa = m.empresa;
+      if (!existente.mail && m.mail) existente.mail = m.mail;
+      // Sector sembrado en una versión anterior con el nombre viejo: se
+      // actualiza al nombre/estructura del certificado oficial (solo si el
+      // administrador no lo tocó).
+      if (m.seed && m.seed.renombrar) {
+        db.sectores.filter(s => s.plantaId === existente.id && m.seed.renombrar.includes(s.nombre) && !s.grupos).forEach(s => {
+          s.nombre = m.seed.sector; s.cebos = m.seed.cebos; s.uv = m.seed.uv;
+          if (m.seed.grupos) s.grupos = m.seed.grupos.map(g => ({ nombre: g.nombre, cebos: g.cebos }));
+        });
+      }
     } else if (m.seed) {
       const id = 'pm' + i;
-      db.plantas.push({ id, nombre: m.seed.nombre, mail: '', empresa: m.empresa });
-      db.sectores.push({ id: 'sm' + i, plantaId: id, nombre: m.seed.sector, cebos: m.seed.cebos, uv: m.seed.uv });
+      db.plantas.push({ id, nombre: m.seed.nombre, mail: m.mail || '', empresa: m.empresa });
+      const sec = { id: 'sm' + i, plantaId: id, nombre: m.seed.sector, cebos: m.seed.cebos, uv: m.seed.uv };
+      if (m.seed.grupos) sec.grupos = m.seed.grupos.map(g => ({ nombre: g.nombre, cebos: g.cebos }));
+      db.sectores.push(sec);
     }
   });
+  // Consistencia: en sectores agrupados el total es la suma de los grupos.
+  db.sectores.forEach(s => { if (s.grupos && s.grupos.length) s.cebos = s.grupos.reduce((a, g) => a + (parseInt(g.cebos, 10) || 0), 0); });
   return db;
 }
 function cargar() {
@@ -875,7 +925,9 @@ function renderSectores() {
     const b = document.createElement('button');
     b.className = 'big-btn';
     const extra = s.uv ? ` + ${s.uv} trampas UV` : '';
-    b.innerHTML = `<span class="icon">${s.cebos}</span><span><span class="t">${esc(s.nombre)}</span><br><span class="s">Estaciones 1 a ${s.cebos}${extra}</span></span><span class="arrow">›</span>`;
+    const gs = gruposDe(s);
+    const desc = gs.length > 1 ? gs.map(g => `${esc(g.nombre)} 1 a ${g.cebos}`).join(' · ') : `Estaciones 1 a ${s.cebos}`;
+    b.innerHTML = `<span class="icon">${s.cebos}</span><span><span class="t">${esc(s.nombre)}</span><br><span class="s">${desc}${extra}</span></span><span class="arrow">›</span>`;
     b.onclick = () => startRecorrido(s, null);
     sl.appendChild(b);
   });
@@ -895,7 +947,7 @@ function startRecorrido(s, borrador) {
 function continuarBorrador() {
   const d = DB.borrador;
   if (!d) return;
-  const s = DB.sectores.find(x => x.id === d.sectorId) || { id: d.sectorId, nombre: d.sectorNombre, cebos: d.cebosTotal, uv: d.uvTotal };
+  const s = DB.sectores.find(x => x.id === d.sectorId) || { id: d.sectorId, nombre: d.sectorNombre, cebos: d.cebosTotal, uv: d.uvTotal, grupos: d.grupos || null };
   operario = d.operario;
   if (d.plantaId) plantaActual = DB.plantas.find(p => p.id === d.plantaId) || plantaActual;
   $('whoName').textContent = operario; $('whoBadge').style.display = 'flex';
@@ -907,7 +959,7 @@ function guardarBorrador() {
     operario, sectorId: sector.id, sectorNombre: sector.nombre,
     plantaId: plantaActual ? plantaActual.id : null,
     plantaNombre: plantaActual ? plantaActual.nombre : '',
-    cebosTotal: sector.cebos, uvTotal: sector.uv,
+    cebosTotal: sector.cebos, uvTotal: sector.uv, grupos: sector.grupos || null,
     cebos: marcas, uv: marcasUV, actualizado: hoyISO(),
   };
   persistir();
@@ -916,17 +968,35 @@ function guardarBorrador() {
 /* ============ desratización: grilla ============ */
 function buildGrid() {
   const g = $('stGrid'); g.innerHTML = '';
-  for (let i = 1; i <= sector.cebos; i++) {
-    const c = document.createElement('button');
-    c.className = 'st'; c.id = 'st-' + i;
-    c.innerHTML = `<span class="num">${i}</span><span class="tag" id="tag-${i}">—</span>`;
-    c.onclick = () => openSheet('cebo', i);
-    g.appendChild(c);
-    if (marcas[i]) paint('cebo', i, marcas[i]);
-  }
+  const gs = gruposDe(sector);
+  const agrupado = gs.length > 1;
+  g.classList.toggle('grouped', agrupado);
+  gs.forEach((grp, gi) => {
+    let cont = g;
+    if (agrupado) {
+      const t = document.createElement('div');
+      t.className = 'grp-title';
+      t.innerHTML = `${esc(grp.nombre)}<span id="grpcount-${gi}"></span>`;
+      g.appendChild(t);
+      cont = document.createElement('div');
+      cont.className = 'st-grid';
+      g.appendChild(cont);
+    }
+    for (let k = 1; k <= grp.cebos; k++) {
+      const i = grp.desde + k - 1;             // número interno (corrido)
+      const c = document.createElement('button');
+      c.className = 'st'; c.id = 'st-' + i;
+      c.innerHTML = `<span class="num">${k}</span><span class="tag" id="tag-${i}">—</span>`;
+      c.onclick = () => openSheet('cebo', i);
+      cont.appendChild(c);
+      if (marcas[i]) paint('cebo', i, marcas[i]);
+    }
+  });
+  const modeloPl = modeloPara(plantaActual ? plantaActual.nombre : '');
+  $('legendT').style.display = (sector.uv && modeloPl.tuboLuminico) ? 'inline-flex' : 'none';
   const uvB = $('uvBlock');
   if (sector.uv) {
-    const modelo = modeloPara(plantaActual ? plantaActual.nombre : '');
+    const modelo = modeloPl;
     uvB.querySelector('h2').textContent = modelo.uvGrupo === 'PLACAS ADHESIVAS' ? 'Placas adhesivas' : 'Trampas UV';
     uvB.style.display = 'block';
     const ug = $('uvGrid'); ug.innerHTML = '';
@@ -944,10 +1014,12 @@ function buildGrid() {
 
 function openSheet(tipo, num) {
   sheetTarget = { tipo, num };
-  $('sheetKind').textContent = tipo === 'uv' ? 'Trampa UV' : 'Estación';
-  $('sheetNum').textContent = num;
+  const et = tipo === 'uv' ? null : etiquetaCebo(sector, num);
+  $('sheetKind').textContent = tipo === 'uv' ? 'Trampa UV' : (et.grupo ? et.grupo + ' · Estación' : 'Estación');
+  $('sheetNum').textContent = tipo === 'uv' ? num : et.num;
   const box = $('estadoBtns'); box.innerHTML = '';
-  const lista = tipo === 'uv' ? ESTADOS.filter(e => ESTADOS_UV.includes(e.k)) : ESTADOS;
+  const permitidos = tipo === 'uv' ? estadosUVDe(plantaActual ? plantaActual.nombre : '') : ESTADOS_CEBO;
+  const lista = ESTADOS.filter(e => permitidos.includes(e.k));
   lista.forEach(e => {
     const b = document.createElement('button');
     b.className = 'e-btn e' + e.k;
@@ -984,6 +1056,11 @@ function refresh() {
   const done = Object.keys(marcas).length;
   $('recCount').textContent = `${done} / ${sector.cebos}`;
   $('recBar').style.width = (done / sector.cebos * 100) + '%';
+  const gs = gruposDe(sector);
+  if (gs.length > 1) gs.forEach((grp, gi) => {
+    let d = 0; for (let k = 0; k < grp.cebos; k++) if (marcas[grp.desde + k]) d++;
+    const el = $('grpcount-' + gi); if (el) el.textContent = `${d} / ${grp.cebos}`;
+  });
   if (sector.uv) $('uvCount').textContent = `${Object.keys(marcasUV).length} / ${sector.uv} revisadas`;
 }
 function markRestantes() {
@@ -1009,7 +1086,7 @@ function goResumen() {
   const al = $('resAlert');
   if (faltan.length || faltanUV.length) {
     const t = [];
-    if (faltan.length) t.push(`faltan revisar ${faltan.length} estaciones (${resumenNums(faltan)})`);
+    if (faltan.length) t.push(`faltan revisar ${faltan.length} estaciones (${resumenFaltantes(sector, faltan)})`);
     if (faltanUV.length) t.push(`faltan ${faltanUV.length} trampas UV`);
     $('resAlertTxt').textContent = t.join(' y ') + '. Podés volver y completarlas, o guardar igual.';
     al.style.display = 'flex';
@@ -1018,7 +1095,7 @@ function goResumen() {
   $('resEyebrow').textContent = `Desratización · ${sector.nombre} · ${fFecha(hoyISO())}`;
   const counts = contarEstados(marcas);
   let html = '';
-  ESTADOS.forEach(e => {
+  ESTADOS.filter(e => ESTADOS_CEBO.includes(e.k) || counts[e.k]).forEach(e => {
     html += `<div class="sum-row"><span class="pill"><i style="background:${COLORES[e.k]}"></i>${e.n}</span><span class="num">${counts[e.k] || 0}</span></div>`;
   });
   if (faltan.length) html += `<div class="sum-row"><span class="pill"><i style="background:var(--ink-3)"></i>Sin revisar</span><span class="num">${faltan.length}</span></div>`;
@@ -1030,17 +1107,29 @@ function resumenNums(arr) {
   if (arr.length <= 6) return 'N° ' + arr.join(', ');
   return 'N° ' + arr.slice(0, 5).join(', ') + '…';
 }
+// Lista de estaciones faltantes en la numeración que ve el operario
+// (por grupo cuando el sector está agrupado).
+function resumenFaltantes(s, faltan) {
+  const gs = gruposDe(s);
+  if (gs.length === 1) return resumenNums(faltan);
+  return gs.map(grp => {
+    const loc = faltan.filter(n => n >= grp.desde && n < grp.desde + grp.cebos).map(n => n - grp.desde + 1);
+    return loc.length ? `${grp.nombre}: ${resumenNums(loc)}` : null;
+  }).filter(Boolean).join(' · ');
+}
 
 function guardarRegistro() {
   const reg = {
     id: 'r' + Date.now(),
     fecha: hoyISO(),
     operario,
+    plantaId: plantaActual ? plantaActual.id : null,
     plantaNombre: plantaActual ? plantaActual.nombre : '',
     sectorId: sector.id,
     sectorNombre: sector.nombre,
     cebosTotal: sector.cebos,
     uvTotal: sector.uv,
+    grupos: sector.grupos ? sector.grupos.map(g => ({ nombre: g.nombre, cebos: g.cebos })) : null,
     cebos: Object.assign({}, marcas),
     uv: Object.assign({}, marcasUV),
     obs: $('obsGral').value.trim(),
@@ -1086,6 +1175,7 @@ function guardarOrden() {
     numero: anio + '-' + String(DB.seqOrden[anio]).padStart(4, '0'),
     fecha: hoyISO(),
     operario,
+    plantaId: plantaActual ? plantaActual.id : null,
     plantaNombre: plantaActual ? plantaActual.nombre : '',
     tipo: tipo.dataset.v,
     sectores: secs,
@@ -1513,12 +1603,18 @@ function abrirDetalleRegistro(r) {
   if (r.uvTotal) html += `<div class="sum-row"><span class="pill"><i style="background:var(--ink-3)"></i>Trampas UV revisadas</span><span class="num">${Object.keys(r.uv).length} / ${r.uvTotal}</span></div>`;
   html += '</div>';
 
-  html += '<div class="card"><div class="st-grid" style="margin-top:0">';
-  for (let i = 1; i <= r.cebosTotal; i++) {
-    const k = r.cebos[i];
-    html += `<div class="st mini" ${k ? `data-e="${k}"` : ''}><span class="num">${i}</span><span class="tag">${k ? nombreEstado(k) : '—'}</span></div>`;
-  }
-  html += '</div>';
+  html += '<div class="card">';
+  const gsDet = gruposDe(r);
+  gsDet.forEach((grp, gi) => {
+    if (gsDet.length > 1) html += `<div class="section-title" style="margin:${gi ? 16 : 0}px 0 6px"><h2>${esc(grp.nombre)}</h2></div>`;
+    html += '<div class="st-grid" style="margin-top:0">';
+    for (let k = 1; k <= grp.cebos; k++) {
+      const i = grp.desde + k - 1;
+      const e = r.cebos[i];
+      html += `<div class="st mini" ${e ? `data-e="${e}"` : ''}><span class="num">${k}</span><span class="tag">${e ? nombreEstado(e) : '—'}</span></div>`;
+    }
+    html += '</div>';
+  });
   if (r.uvTotal) {
     html += '<div class="section-title" style="margin:16px 0 6px"><h2>Trampas UV</h2></div><div class="st-grid" style="margin-top:0">';
     for (let i = 1; i <= r.uvTotal; i++) {
@@ -1609,7 +1705,7 @@ function textoRegistro(r) {
   ESTADOS.forEach(e => { if (c[e.k]) lineas.push(`• ${e.n}: ${c[e.k]}`); });
   if (sinRevisar > 0) lineas.push(`• Sin revisar: ${sinRevisar}`);
   const noB = Object.keys(r.cebos).filter(i => r.cebos[i] !== 'B');
-  if (noB.length) lineas.push('', 'Novedades por estación: ' + noB.map(i => `N°${i} ${nombreEstado(r.cebos[i]).toLowerCase()}`).join(', '));
+  if (noB.length) lineas.push('', 'Novedades por estación: ' + noB.map(i => `${etiquetaCebo(r, Number(i)).largo} ${nombreEstado(r.cebos[i]).toLowerCase()}`).join(', '));
   if (r.uvTotal) {
     const cu = contarEstados(r.uv);
     const uvNoB = Object.keys(r.uv).filter(i => r.uv[i] !== 'B');
@@ -1706,7 +1802,10 @@ async function enviarReporte(tipo, obj, boton) {
     confirmar('Faltan las firmas', 'El reporte necesita la firma del operario y la del supervisor antes de poder enviarse.', () => abrirFirmas(obj, tipo), 'Firmar ahora');
     return;
   }
-  const planta = DB.plantas.find(p => p.id === obj.plantaId);
+  // La casilla es la de la planta del reporte (por id; los registros viejos
+  // no guardaban el id, se buscan por nombre). Si no tiene, la por defecto.
+  const planta = DB.plantas.find(p => p.id === obj.plantaId)
+    || DB.plantas.find(p => obj.plantaNombre && p.nombre === obj.plantaNombre);
   const para = (planta && planta.mail) || DB.config.mailDestino;
   if (!DB.config.gasUrl || !para) {
     confirmar('Falta configurar el envío',
@@ -1750,11 +1849,16 @@ const LOGO_ADC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIYAAABkCAYAAABD
 const PRODUCTO_TECNOPHOS = 'Producto utilizado: Difethialone (Rodillon de Bayer) Bloques Parafinados';
 const CERT_MODELOS = [
   { match: ['cabildo'], paraEmpresa: 'FRIGORIFICO CABILDO', empresa: 'ADC SRL',
-    seed: { nombre: 'Frigorífico Cabildo', sector: 'Cebadera perímetro y trampas UV', cebos: 60, uv: 20 } },
+    mail: 'fcabildo-calidad@cooperativa.coop',
+    tuboLuminico: true, // referencia "T: Cambio de tubo lumínico" para las trampas UV
+    seed: { nombre: 'Frigorífico Cabildo', sector: 'Cebadera perímetro y trampas UV', cebos: 60, uv: 24,
+      grupos: [{ nombre: 'Perímetro externo', cebos: 37 }, { nombre: 'Perímetro de edificio', cebos: 23 }],
+      renombrar: ['Perímetro'] } },
   { match: ['manera'], paraEmpresa: 'MOLINO LA NUEVA MANERA', empresa: 'ADC SRL',
     uvEtiqueta: 'CAJ', uvGrupo: 'PLACAS ADHESIVAS',
     pie: { elaboro: 'BRAIAN RISSO', reviso: 'MANUEL FRANCIULLI', aprobo: 'LIC. ALEJANDRO BRITEZ', fecha: '13-07-2026' },
-    seed: { nombre: 'Molino La Nueva Manera', sector: 'Cebadera perímetro y placas adhesivas', cebos: 48, uv: 30 },
+    seed: { nombre: 'Molino La Nueva Manera', sector: 'Cebadera perímetro y trampas UV', cebos: 48, uv: 30,
+      renombrar: ['Cebadera perímetro y placas adhesivas'] },
     monitoreoUV: {
       frecuencia: 'SEMANAL',
       equipos: ['Molino Planta Baja', 'Molino - Primer piso', 'Molino - Segundo Piso', 'Molino - Tercer Piso', 'Depósito robot', 'Depósito Surgente'],
@@ -1787,6 +1891,7 @@ function modeloPara(plantaNombre) {
     pie: m.pie || null,
     monitoreoUV: m.monitoreoUV || null,
     palomas: !!m.palomas,
+    tuboLuminico: !!m.tuboLuminico,
   };
 }
 
@@ -1830,6 +1935,7 @@ function bloqueReferencias(r, empresa, modelo) {
       <div>O: Oculto</div>
       <div>B: Bien</div>
       <div>X: Cambio de pegamento</div>
+      ${modelo.tuboLuminico ? '<div>T: Cambio de tubo luminico</div>' : ''}
     </td>
     <td style="vertical-align:top; font-size:11px">
       <div style="font-weight:700; margin-bottom:5px">Ref: &nbsp;${esc((r.sectorNombre || '').toUpperCase())}</div>
@@ -1854,33 +1960,36 @@ function bloqueReferencias(r, empresa, modelo) {
 function planillaDesratizacion(r, empresa) {
   const modelo = modeloPara(r.plantaNombre);
   const filas = 26;
-  const colsCebo = Math.max(1, Math.ceil(r.cebosTotal / filas));
-  const colsUV = r.uvTotal ? Math.ceil(r.uvTotal / filas) : 0;
-  const etUV = modelo.uvEtiqueta;
   const celda = 'border:1px solid #000; padding:1px 5px; font-size:10px; text-align:center; height:15px';
   const head = 'border:1px solid #000; padding:1px 4px; font-size:9.5px; text-align:center; background:#d9d9d9';
+  // Bloques de columnas: uno por grupo de cebos (numeración propia) y uno
+  // para las trampas UV / placas. Cada bloque ocupa ceil(total/26) pares
+  // CEBO|EST. Cuando hay más de un bloque con título se agrega la fila de
+  // encabezado de grupo (como en las planillas de Cabildo y Molino).
+  const gs = gruposDe(r);
+  const agrupado = gs.length > 1;
+  const bloques = gs.map(g => ({ titulo: agrupado ? g.nombre.toUpperCase() : (modelo.uvGrupo && r.uvTotal ? 'CEBOS' : null), etiqueta: 'CEBO', total: g.cebos, datos: r.cebos, offset: g.desde - 1 }));
+  if (r.uvTotal) bloques.push({ titulo: modelo.uvGrupo || (agrupado ? 'TRAMPAS UV' : null), etiqueta: modelo.uvEtiqueta, total: r.uvTotal, datos: r.uv, offset: 0 });
+  bloques.forEach(b => b.cols = Math.max(1, Math.ceil(b.total / filas)));
+  const conTitulos = bloques.some(b => b.titulo);
   let tabla = '<table style="width:100%; border-collapse:collapse; font-family:Arial">';
-  if (modelo.uvGrupo && colsUV) {
-    tabla += `<tr><th style="${head}" colspan="${colsCebo * 2}">CEBOS</th><th style="${head}" colspan="${colsUV * 2}">${esc(modelo.uvGrupo)}</th><th style="${head}; width:36%; font-weight:700" rowspan="2">OBSERVACIONES GENERALES</th></tr><tr>`;
-    for (let c = 0; c < colsCebo; c++) tabla += `<th style="${head}">CEBO</th><th style="${head}">EST.</th>`;
-    for (let c = 0; c < colsUV; c++) tabla += `<th style="${head}">${esc(etUV)}</th><th style="${head}">EST.</th>`;
-    tabla += '</tr>';
-  } else {
+  if (conTitulos) {
     tabla += '<tr>';
-    for (let c = 0; c < colsCebo; c++) tabla += `<th style="${head}">CEBO</th><th style="${head}">EST.</th>`;
-    for (let c = 0; c < colsUV; c++) tabla += `<th style="${head}">${esc(etUV)}</th><th style="${head}">EST.</th>`;
-    tabla += `<th style="${head}; width:36%; font-weight:700">OBSERVACIONES GENERALES</th></tr>`;
+    bloques.forEach(b => { tabla += `<th style="${head}" colspan="${b.cols * 2}">${esc(b.titulo || '')}</th>`; });
+    tabla += `<th style="${head}; width:36%; font-weight:700" rowspan="2">OBSERVACIONES GENERALES</th></tr>`;
   }
+  tabla += '<tr>';
+  bloques.forEach(b => { for (let c = 0; c < b.cols; c++) tabla += `<th style="${head}">${esc(b.etiqueta)}</th><th style="${head}">EST.</th>`; });
+  if (!conTitulos) tabla += `<th style="${head}; width:36%; font-weight:700">OBSERVACIONES GENERALES</th>`;
+  tabla += '</tr>';
   for (let f = 0; f < filas; f++) {
     tabla += '<tr>';
-    for (let c = 0; c < colsCebo; c++) {
-      const n = c * filas + f + 1;
-      tabla += n <= r.cebosTotal ? `<td style="${celda}">${n}</td><td style="${celda}">${esc(r.cebos[n] || '')}</td>` : '<td></td><td></td>';
-    }
-    for (let c = 0; c < colsUV; c++) {
-      const n = c * filas + f + 1;
-      tabla += n <= r.uvTotal ? `<td style="${celda}">${n}</td><td style="${celda}">${esc(r.uv[n] || '')}</td>` : '<td></td><td></td>';
-    }
+    bloques.forEach(b => {
+      for (let c = 0; c < b.cols; c++) {
+        const n = c * filas + f + 1;                 // número que se imprime (propio del bloque)
+        tabla += n <= b.total ? `<td style="${celda}">${n}</td><td style="${celda}">${esc(b.datos[n + b.offset] || '')}</td>` : '<td></td><td></td>';
+      }
+    });
     if (f === 0) tabla += `<td rowspan="${filas}" style="border:1px solid #000; vertical-align:top; padding:6px 8px; font-size:11px"><div style="font-weight:700; text-align:center; margin-bottom:8px">Novedades de los distintos sectores:</div>${esc(r.obs || '')}</td>`;
     tabla += '</tr>';
   }
@@ -2059,7 +2168,8 @@ function renderAjustes() {
     const div = document.createElement('div');
     div.className = 'ajuste-item';
     const pl = DB.plantas.find(p => p.id === s.plantaId);
-    div.innerHTML = `<span class="nom">${esc(s.nombre)}<br><span class="meta">${pl ? esc(pl.nombre) + ' · ' : ''}${s.cebos} estaciones${s.uv ? ' + ' + s.uv + ' UV' : ''}</span></span>`;
+    const detalleCebos = s.grupos && s.grupos.length > 1 ? s.grupos.map(g => `${esc(g.nombre)} ${g.cebos}`).join(' + ') + ' estaciones' : `${s.cebos} estaciones`;
+    div.innerHTML = `<span class="nom">${esc(s.nombre)}<br><span class="meta">${pl ? esc(pl.nombre) + ' · ' : ''}${detalleCebos}${s.uv ? ' + ' + s.uv + ' UV' : ''}</span></span>`;
     const be = document.createElement('button'); be.className = 'mini-btn'; be.textContent = 'Editar';
     be.onclick = () => editarSector(idx);
     const bq = document.createElement('button'); bq.className = 'mini-btn rojo'; bq.textContent = 'Quitar';
@@ -2127,13 +2237,29 @@ function editarSector(idx) {
   const s = DB.sectores[idx];
   const nombre = prompt('Nombre del sector:', s.nombre);
   if (nombre === null) return;
-  const cebos = prompt('Cantidad de estaciones de cebado:', s.cebos);
-  if (cebos === null) return;
+  let nc, nuevosGrupos = null;
+  if (s.grupos && s.grupos.length > 1) {
+    // Sector con grupos de numeración propia: se pide la cantidad de cada grupo.
+    nuevosGrupos = [];
+    for (const g of s.grupos) {
+      const v = prompt(`Cantidad de estaciones en "${g.nombre}":`, g.cebos);
+      if (v === null) return;
+      const n = parseInt(v, 10);
+      if (!n || n < 1) { toast('Datos inválidos, no se guardó'); return; }
+      nuevosGrupos.push({ nombre: g.nombre, cebos: n });
+    }
+    nc = nuevosGrupos.reduce((a, g) => a + g.cebos, 0);
+  } else {
+    const cebos = prompt('Cantidad de estaciones de cebado:', s.cebos);
+    if (cebos === null) return;
+    nc = parseInt(cebos, 10);
+  }
   const uv = prompt('Cantidad de trampas UV (0 si no tiene):', s.uv);
   if (uv === null) return;
-  const nc = parseInt(cebos, 10), nu = parseInt(uv, 10);
+  const nu = parseInt(uv, 10);
   if (!nombre.trim() || !nc || nc < 1 || isNaN(nu) || nu < 0) { toast('Datos inválidos, no se guardó'); return; }
   s.nombre = nombre.trim(); s.cebos = nc; s.uv = nu;
+  if (nuevosGrupos) s.grupos = nuevosGrupos;
   persistir(); renderAjustes();
 }
 
