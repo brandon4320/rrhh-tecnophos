@@ -736,9 +736,11 @@ function migrar(db) {
     } else if (m.seed) {
       const id = 'pm' + i;
       db.plantas.push({ id, nombre: m.seed.nombre, mail: m.mail || '', empresa: m.empresa });
-      const sec = { id: 'sm' + i, plantaId: id, nombre: m.seed.sector, cebos: m.seed.cebos, uv: m.seed.uv };
-      if (m.seed.grupos) sec.grupos = m.seed.grupos.map(g => ({ nombre: g.nombre, cebos: g.cebos }));
-      db.sectores.push(sec);
+      if (m.seed.sector) { // plantas sin planilla conocida todavía se crean sin sectores
+        const sec = { id: 'sm' + i, plantaId: id, nombre: m.seed.sector, cebos: m.seed.cebos, uv: m.seed.uv };
+        if (m.seed.grupos) sec.grupos = m.seed.grupos.map(g => ({ nombre: g.nombre, cebos: g.cebos }));
+        db.sectores.push(sec);
+      }
     }
   });
   // Consistencia: en sectores agrupados el total es la suma de los grupos.
@@ -1855,6 +1857,7 @@ const CERT_MODELOS = [
       grupos: [{ nombre: 'Perímetro externo', cebos: 37 }, { nombre: 'Perímetro de edificio', cebos: 23 }],
       renombrar: ['Perímetro'] } },
   { match: ['manera'], paraEmpresa: 'MOLINO LA NUEVA MANERA', empresa: 'ADC SRL',
+    mail: 'dcompagnucci@lanuevamanera.com.ar, laboratorio@lanuevamanera.com.ar',
     uvEtiqueta: 'CAJ', uvGrupo: 'PLACAS ADHESIVAS',
     pie: { elaboro: 'BRAIAN RISSO', reviso: 'MANUEL FRANCIULLI', aprobo: 'LIC. ALEJANDRO BRITEZ', fecha: '13-07-2026' },
     seed: { nombre: 'Molino La Nueva Manera', sector: 'Cebadera perímetro y trampas UV', cebos: 48, uv: 30,
@@ -1873,6 +1876,12 @@ const CERT_MODELOS = [
   { match: ['galvan'], paraEmpresa: 'BUNGE SA', empresa: 'TECNOPHOS',
     titulo: 'DESRATIZACIÓN EN PUERTO GALVAN', producto: PRODUCTO_TECNOPHOS,
     seed: { nombre: 'Bunge - Puerto Galván', sector: 'Puerto Galván', cebos: 134, uv: 0 } },
+  // ADM Agro: cliente de Tecnophos. Todavía sin modelo de certificado propio
+  // (usa el genérico con logo Tecnophos); los sectores se cargan cuando llegue
+  // su planilla oficial.
+  { match: ['adm agro'], paraEmpresa: 'ADM AGRO', empresa: 'TECNOPHOS',
+    mail: 'David.toffalo@adm.com',
+    seed: { nombre: 'ADM Agro' } },
 ];
 function normalizarTxt(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
