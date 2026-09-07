@@ -568,6 +568,13 @@
       </div>
     </div>
 
+    <div class="section-title"><h2>Puesta en marcha</h2></div>
+    <div class="card">
+      <p style="font-size:14.5px">Cuando terminen las pruebas, borrá todos los reportes de esta tablet para arrancar en limpio. Se conservan las plantas, los sectores, los operarios y la configuración de envío.</p>
+      <p style="font-size:14.5px; margin-top:6px" id="pruebasResumenTxt"></p>
+      <button class="ghost" style="color:var(--bad); margin-top:10px" onclick="borrarTodosLosRegistros()">Borrar todos los registros de esta tablet</button>
+    </div>
+
     <button class="backlink" onclick="go(operario ? 'scr-menu' : 'scr-quien')">‹ Volver</button>
   </section>
 
@@ -2222,6 +2229,10 @@ function renderAjustes() {
   $('cfgMail').value = DB.config.mailDestino || '';
   $('cfgWa').value = DB.config.waNumero || '';
 
+  const totReg = DB.registros.length + DB.ordenes.length + DB.monitoreos.length + DB.palomas.length;
+  $('pruebasResumenTxt').textContent = totReg
+    ? `Hoy hay ${DB.registros.length} desratizaciones, ${DB.ordenes.length} órdenes, ${DB.monitoreos.length} monitoreos y ${DB.palomas.length} registros de palomas en esta tablet.`
+    : 'No hay registros guardados en esta tablet.';
   $('ultimoRespaldoTxt').textContent = DB.ultimoRespaldo
     ? 'Última copia: ' + fFecha(DB.ultimoRespaldo, true)
     : 'Todavía no se exportó ninguna copia.';
@@ -2302,6 +2313,21 @@ function editarSector(idx) {
 }
 
 /* ============ respaldo ============ */
+/* Puesta en marcha: borra TODOS los reportes de la tablet (pruebas) y deja
+   plantas, sectores, operarios y configuración. Solo desde Ajustes (PIN). */
+function borrarTodosLosRegistros() {
+  const total = DB.registros.length + DB.ordenes.length + DB.monitoreos.length + DB.palomas.length;
+  if (!total && !DB.borrador) { toast('No hay registros para borrar'); return; }
+  confirmar('¿Borrar todos los registros?',
+    `Se eliminan de esta tablet ${total} reportes (desratizaciones, órdenes, monitoreos y palomas) y el borrador si lo hay. La numeración de órdenes vuelve a empezar. No se puede recuperar. Los mails y PDFs ya enviados no se tocan.`,
+    () => {
+      DB.registros = []; DB.ordenes = []; DB.monitoreos = []; DB.palomas = [];
+      DB.borrador = null; DB.seqOrden = {};
+      persistir(); renderAjustes();
+      toast('Registros borrados. La tablet quedó en limpio.');
+    }, 'Eliminar');
+}
+
 function exportarRespaldo() {
   DB.ultimoRespaldo = hoyISO();
   persistir();
