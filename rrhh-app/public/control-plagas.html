@@ -1365,6 +1365,35 @@ function faltanFirmas(obj) { return !firmaSupDe(obj) || !firmaOpDe(obj); }
 let pendienteFirma = null; // { obj, tipo: 'registro' | 'orden' }
 const pads = {};           // op / sup: { canvas, ctx, dibujada }
 
+/* Tamaño con el que se GUARDA y se ENVÍA la firma. El pad dibuja a 1200px
+   para que el trazo sea fino, pero el conversor a PDF de Google no respeta
+   max-height y una imagen más ancha que la hoja directamente no se imprime.
+   Se reduce a 480x136 con fondo blanco (~12 KB). */
+const FIRMA_ANCHO = 480, FIRMA_ALTO = 136;
+function reducirCanvasFirma(fuente) {
+  const s = document.createElement('canvas');
+  s.width = FIRMA_ANCHO; s.height = FIRMA_ALTO;
+  const ctx = s.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, s.width, s.height);
+  ctx.drawImage(fuente, 0, 0, s.width, s.height);
+  return s.toDataURL('image/png');
+}
+// Firmas guardadas por versiones anteriores (1200px) se reducen al enviar.
+function reducirFirma(dataUrl) {
+  return new Promise(res => {
+    if (typeof dataUrl !== 'string' || dataUrl.indexOf('data:image/') !== 0) return res(dataUrl);
+    const im = new Image();
+    im.onload = () => { try { res(im.naturalWidth > FIRMA_ANCHO ? reducirCanvasFirma(im) : dataUrl); } catch (e) { res(dataUrl); } };
+    im.onerror = () => res(dataUrl);
+    im.src = dataUrl;
+  });
+}
+async function objetoParaEnvio(obj) {
+  const copia = Object.assign({}, obj);
+  for (const k of ['firmaOp', 'firmaSup', 'firma']) if (copia[k]) copia[k] = await reducirFirma(copia[k]);
+  return copia;
+}
+
 function abrirFirmas(obj, tipo) {
   pendienteFirma = { obj, tipo };
   $('firmaEyebrow').textContent = tipo === 'orden'
@@ -1457,8 +1486,8 @@ function guardarFirmas() {
   if (!okOp || !okSup) return;
   const p = pendienteFirma;
   if (!p) return;
-  p.obj.firmaOp = pads.op.canvas.toDataURL('image/png');
-  p.obj.firmaSup = pads.sup.canvas.toDataURL('image/png');
+  p.obj.firmaOp = reducirCanvasFirma(pads.op.canvas);
+  p.obj.firmaSup = reducirCanvasFirma(pads.sup.canvas);
   p.obj.firmante = $('firmanteInput').value.trim();
   persistir();
   pendienteFirma = null;
@@ -1820,8 +1849,8 @@ async function enviarReporte(tipo, obj, boton) {
   const original = boton ? boton.textContent : '';
   if (boton) { boton.disabled = true; boton.textContent = 'Enviando…'; }
   const payload = { clave: CLAVE_ENVIO, tipo, para, empresa: empresaDe(obj) };
-  payload[tipo] = obj;
   try {
+    payload[tipo] = await objetoParaEnvio(obj);
     const res = await fetch(DB.config.gasUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -2019,7 +2048,7 @@ function planillaDesratizacion(r, empresa) {
 }
 
 function filaFirmas(obj, empresa, firmaIzq) {
-  const img = f => f ? `<img src="${f}" alt="Firma" style="max-height:55px">` : '<div style="height:55px"></div>';
+  const img = f => f ? `<img src="${f}" alt="Firma" width="190" height="54" style="width:190px; height:54px">` : '<div style="height:55px"></div>';
   return `
   <table style="width:100%; margin-top:30px; font-family:Arial"><tr>
     <td style="text-align:center; font-size:11px; vertical-align:bottom">
@@ -2098,8 +2127,8 @@ function planillaMonitoreoUV(m) {
         <th style="${th}; font-size:11px">Firma Cliente</th>
       </tr>
       <tr>
-        <td style="border:1px solid #000; height:65px; text-align:center; vertical-align:middle">${firmaOpDe(m) ? `<img src="${firmaOpDe(m)}" alt="Firma" style="max-height:55px">` : ''}</td>
-        <td style="border:1px solid #000; height:65px; text-align:center; vertical-align:middle">${firmaSupDe(m) ? `<img src="${firmaSupDe(m)}" alt="Firma" style="max-height:55px">` : ''}</td>
+        <td style="border:1px solid #000; height:65px; text-align:center; vertical-align:middle">${firmaOpDe(m) ? `<img src="${firmaOpDe(m)}" alt="Firma" width="190" height="54" style="width:190px; height:54px">` : ''}</td>
+        <td style="border:1px solid #000; height:65px; text-align:center; vertical-align:middle">${firmaSupDe(m) ? `<img src="${firmaSupDe(m)}" alt="Firma" width="190" height="54" style="width:190px; height:54px">` : ''}</td>
       </tr>
       <tr>
         <td style="padding:3px 4px; font-size:10.5px">Aclaración: ${esc(m.operario || '')}</td>
