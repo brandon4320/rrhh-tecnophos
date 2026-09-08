@@ -1,5 +1,6 @@
 import { Segmented } from '@/components/ui/segmented'
 import { TablaContenedores } from '@/components/arcor/TablaContenedores'
+import { AccionesArcor } from '@/components/arcor/AccionesArcor'
 import { getContenedores, getMeses } from '@/modules/arcor/queries'
 import { ESTADOS_CONTENEDOR, LUGARES, esMesValido, mesActual, tituloLugar, type EstadoContenedor } from '@/modules/arcor/reglas'
 
@@ -40,10 +41,13 @@ export default async function ArcorContenedoresPage({
             {lugar && ` · ${tituloLugar(lugar)}`}
           </p>
         </div>
-        <Segmented
-          active={mes}
-          tabs={opcionesMes.slice(0, 6).map((m) => ({ key: m, label: m.charAt(0) + m.slice(1).toLowerCase(), href: href({ mes: m }) }))}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <Segmented
+            active={mes}
+            tabs={opcionesMes.slice(0, 6).map((m) => ({ key: m, label: m.charAt(0) + m.slice(1).toLowerCase(), href: href({ mes: m }) }))}
+          />
+          <AccionesArcor revisar={items.filter((c) => c.estado === 'revisar_foto').length} />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

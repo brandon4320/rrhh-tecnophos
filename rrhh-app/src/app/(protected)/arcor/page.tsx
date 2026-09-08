@@ -6,6 +6,8 @@ import { BarraConsumo } from '@/components/arcor/BarraConsumo'
 import { AlertaCard } from '@/components/arcor/AlertaCard'
 import { ListaEventos } from '@/components/arcor/ListaEventos'
 import { ProvinciasBarras } from '@/components/arcor/ProvinciasBarras'
+import { AccionesArcor } from '@/components/arcor/AccionesArcor'
+import { ENLACES_ARCOR } from '@/modules/arcor/enlaces'
 import { getAlertasAbiertas, getEstados, getEventos, getResumenMes } from '@/modules/arcor/queries'
 import { evaluarSilencio, mesActual, mesAnterior, nivelCredito, severidadAEstado } from '@/modules/arcor/reglas'
 import type { EstadoClaude, EstadoHeartbeat, EstadoPublicaciones, EstadoWhatsapp, EventoRow } from '@/modules/arcor/tipos'
@@ -55,11 +57,14 @@ export default async function ArcorResumenPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Tecnophos - ARCOR</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Certificados de fumigación de contenedores · <span className="capitalize">{fmtFechaLargaAR(ahora.toISOString())}</span>
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Tecnophos - ARCOR</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Certificados de fumigación de contenedores · <span className="capitalize">{fmtFechaLargaAR(ahora.toISOString())}</span>
+          </p>
+        </div>
+        <AccionesArcor revisar={resumen.revisar} />
       </div>
 
       {/* ── Estado del sistema ── */}
@@ -145,16 +150,19 @@ export default async function ArcorResumenPage() {
               <p className="mt-0.5 text-sm text-muted-foreground">Cargados</p>
               <p className="text-xs text-muted-foreground">{resumen.publicados} publicados en Colabora</p>
             </div>
-            <div className="sm:px-6">
+            <Link href={`${mesHref}&estado=pendiente_arcor`} className="group sm:px-6">
               <p className={`text-3xl font-semibold tabular-nums ${resumen.pendientes > 0 ? 'text-warning' : ''}`}>{resumen.pendientes}</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">Pendiente ARCOR</p>
+              <p className="mt-0.5 text-sm text-muted-foreground group-hover:text-foreground">Pendiente ARCOR</p>
               <p className="text-xs text-muted-foreground">esperan carga en Colabora</p>
-            </div>
-            <div className="sm:pl-6">
+            </Link>
+            {/* Las dudosas se resuelven en la galería del sistema ARCOR: el tile abre ese formulario. */}
+            <a href={ENLACES_ARCOR.revisar} target="_blank" rel="noopener noreferrer" className="group sm:pl-6">
               <p className={`text-3xl font-semibold tabular-nums ${resumen.revisar > 0 ? 'text-danger' : ''}`}>{resumen.revisar}</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">Revisar foto</p>
-              <p className="text-xs text-muted-foreground">requieren una persona</p>
-            </div>
+              <p className="mt-0.5 text-sm text-muted-foreground group-hover:text-foreground">Revisar foto</p>
+              <p className="text-xs text-muted-foreground">
+                {resumen.revisar > 0 ? 'resolver en la galería ↗' : 'requieren una persona'}
+              </p>
+            </a>
           </div>
 
           <div className="mt-6 border-t border-border pt-5">

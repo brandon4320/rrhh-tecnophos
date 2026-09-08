@@ -244,6 +244,10 @@ solo muestra lo que ese sistema le reporta.
   BUENOS AIRES) están en `modules/arcor/reglas.ts` **con tests**. Si cambian en el servicio Python,
   cambian acá.
 - Fechas en hora AR: `src/lib/fechas-ar.ts` (compartible; comercial tiene su copia histórica).
+- **La operación vive en el sistema externo** (páginas `/cargar` y `/cargar/revisar` del droplet):
+  Gestión enlaza a ellas desde la sección (`components/arcor/AccionesArcor.tsx`, tile "Revisar
+  foto", vista "Carga manual" en la sidebar). URLs centralizadas en `modules/arcor/enlaces.ts`.
+  El hub ya no tiene fila externa de ARCOR (se unificó el 2026-09-08).
 
 ---
 
