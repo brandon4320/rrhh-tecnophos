@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getSignedUploadUrl } from '@/lib/r2/operations'
+import { esTipoRecibo, periodoDesdeMes } from '@/lib/recibos'
 
 /**
  * Devuelve una URL prefirmada para subir DIRECTO a R2 desde el navegador.
@@ -28,6 +29,22 @@ export async function POST(request: NextRequest) {
   const mimeType = (body?.mimeType as string) || 'application/octet-stream'
   const empleadoId = (body?.empleadoId as string) || ''
   const empresaSlug = (body?.empresaSlug as string) || 'docs'
+
+  // Comprobantes de sueldo: se cuelgan del EMPLEADO, no de un certificado.
+  // Misma regla: solo se firma si el empleado es visible por RLS para este usuario.
+  if (body?.recurso === 'recibo') {
+    const periodo = periodoDesdeMes(body?.periodo)
+    const tipo = esTipoRecibo(body?.tipo) ? body.tipo : 'mensual'
+    if (!empleadoId || !nombre || !periodo) {
+      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+    }
+    const { data: emp } = await supabase.from('empleados').select('id').eq('id', empleadoId).maybeSingle()
+    if (!emp) return NextResponse.json({ error: 'Empleado no encontrado o sin permiso.' }, { status: 403 })
+    const ext = nombre.split('.').pop() || 'bin'
+    const path = `recibos/${empresaSlug}/${empleadoId}/${periodo}-${tipo}-${Date.now()}.${ext}`
+    const url = await getSignedUploadUrl(path, mimeType, 300)
+    return NextResponse.json({ url, path })
+  }
 
   if (!certId || !nombre) {
     return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
