@@ -874,6 +874,59 @@ export type Database = {
           },
         ]
       }
+      recibos_sueldo: {
+        Row: {
+          created_at: string
+          empleado_id: string
+          id: string
+          mime_type: string | null
+          nombre_archivo: string
+          notas: string | null
+          origen: string
+          path: string
+          periodo: string
+          size_bytes: number | null
+          tipo: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          empleado_id: string
+          id?: string
+          mime_type?: string | null
+          nombre_archivo: string
+          notas?: string | null
+          origen?: string
+          path: string
+          periodo: string
+          size_bytes?: number | null
+          tipo?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          empleado_id?: string
+          id?: string
+          mime_type?: string | null
+          nombre_archivo?: string
+          notas?: string | null
+          origen?: string
+          path?: string
+          periodo?: string
+          size_bytes?: number | null
+          tipo?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recibos_sueldo_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tipos_certificado: {
         Row: {
           aplica_empresa: boolean | null

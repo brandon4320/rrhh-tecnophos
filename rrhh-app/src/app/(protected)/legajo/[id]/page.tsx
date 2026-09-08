@@ -14,7 +14,7 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
 
   if (!empleado) notFound()
 
-  const [{ data: certificados }, { data: tiposCert }, { data: empresas }, { data: { user } }] = await Promise.all([
+  const [{ data: certificados }, { data: tiposCert }, { data: empresas }, { data: { user } }, { data: recibos }] = await Promise.all([
     supabase
       .from('certificados')
       .select('*, tipo:tipos_certificado(nombre, orden), archivos(*)')
@@ -30,6 +30,11 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
       .select('*')
       .order('nombre'),
     supabase.auth.getUser(),
+    supabase
+      .from('recibos_sueldo')
+      .select('*')
+      .eq('empleado_id', id)
+      .order('periodo', { ascending: false }),
   ])
 
   const { data: perfil } = await supabase
@@ -44,6 +49,7 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
       certificados={certificados ?? []}
       tiposCertificado={tiposCert ?? []}
       empresas={empresas ?? []}
+      recibos={recibos ?? []}
       isAdmin={perfil?.rol === 'admin'}
       canEdit={perfil?.rol === 'admin' || perfil?.rol === 'usuario'}
     />

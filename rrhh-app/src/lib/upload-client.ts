@@ -89,3 +89,89 @@ export async function subirArchivo(
   if (!regRes.ok) throw new Error(regPayload?.error ?? 'El archivo se subió pero no se pudo registrar.')
   return regPayload.archivo as ArchivoSubido
 }
+
+// ============================================================
+// Comprobantes de sueldo: mismo circuito (URL prefirmada → PUT directo →
+// registrar), pero la fila va a recibos_sueldo y se cuelga del empleado.
+// ============================================================
+export interface ReciboSubido {
+  id: string
+  empleado_id: string
+  periodo: string
+  tipo: string
+  nombre_archivo: string
+  path: string
+}
+
+export async function subirRecibo(
+  file: File,
+  opts: { empleadoId: string; empresaSlug: string; periodo: string; tipo: string; notas?: string }
+): Promise<ReciboSubido> {
+  const urlRes = await fetch('/api/upload-url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      recurso: 'recibo',
+      empleadoId: opts.empleadoId,
+      empresaSlug: opts.empresaSlug,
+      periodo: opts.periodo,
+      tipo: opts.tipo,
+      nombre: file.name,
+      mimeType: file.type || 'application/octet-stream',
+    }),
+  })
+  if (!urlRes.ok) {
+    const payload = await urlRes.json().catch(() => null)
+    throw new Error(payload?.error ?? 'No se pudo preparar la subida.')
+  }
+  const { url, path } = await urlRes.json()
+
+  let putOk = false
+  try {
+    const putRes = await fetch(url, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+    })
+    putOk = putRes.ok
+  } catch {
+    putOk = false
+  }
+
+  if (!putOk) {
+    if (file.size > LIMITE_FALLBACK) {
+      throw new Error(
+        `El archivo pesa ${(file.size / 1048576).toFixed(1)}MB y la subida directa falló. Reintentá; si sigue fallando, avisá al administrador.`
+      )
+    }
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('empleadoId', opts.empleadoId)
+    fd.append('empresaSlug', opts.empresaSlug)
+    fd.append('periodo', opts.periodo)
+    fd.append('tipo', opts.tipo)
+    if (opts.notas) fd.append('notas', opts.notas)
+    const res = await fetch('/api/recibos', { method: 'POST', body: fd })
+    const payload = await res.json().catch(() => null)
+    if (!res.ok) throw new Error(payload?.error ?? 'No se pudo cargar el comprobante.')
+    return payload.recibo as ReciboSubido
+  }
+
+  const regRes = await fetch('/api/recibos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      empleadoId: opts.empleadoId,
+      periodo: opts.periodo,
+      tipo: opts.tipo,
+      notas: opts.notas ?? '',
+      path,
+      nombre: file.name,
+      mimeType: file.type || null,
+      sizeBytes: file.size,
+    }),
+  })
+  const regPayload = await regRes.json().catch(() => null)
+  if (!regRes.ok) throw new Error(regPayload?.error ?? 'El archivo se subió pero no se pudo registrar.')
+  return regPayload.recibo as ReciboSubido
+}

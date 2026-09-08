@@ -28,6 +28,9 @@ export type Archivo = Tables<'archivos'> & {
   url?: string
 }
 
+/** Comprobante de sueldo de un empleado (tabla recibos_sueldo, archivo en R2). */
+export type Recibo = Tables<'recibos_sueldo'>
+
 export type Certificado = Tables<'certificados'> & {
   tipo?: TipoCertificado | null
   empleado?: Empleado | null

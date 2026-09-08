@@ -154,6 +154,11 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   `tipos_certificado` tiene flags `aplica_personal/empresa/vehiculo/equipo`.
   `equipos` tiene `categoria` (texto) y las secciones viven en `activo_secciones`
   (pueden existir vacías; matchean por nombre).
+- **Comprobantes de sueldo** (migración 15): tabla `recibos_sueldo` colgada de `empleados`
+  (período = primer día del mes, tipo mensual/sac/liquidacion_final/otro, archivo en R2,
+  `origen` manual|automatico, unique empleado+periodo+tipo). NO son certificados: no vencen
+  ni entran en `/vencimientos`. RLS espejo de `empleados`. UI en el legajo
+  (`legajo/[id]/RecibosSueldo.tsx`), API `/api/recibos`, reglas puras en `lib/recibos.ts`.
 - **En los `<select>` de tipo de certificado, la opción "Otro" usa el valor
   `'otro'`, que NO es un UUID**: al guardar va `tipo_id: null` +
   `tipo_nombre_custom`. Ese bug ya se arregló una vez — no lo reintroduzcas.
@@ -197,7 +202,10 @@ Por eso la subida es **directa a R2 con URL prefirmada**:
 3. `POST /api/upload` (JSON) registra la fila en `archivos` (gated por RLS).
 
 El helper es `src/lib/upload-client.ts` (`subirArchivo`) — usalo siempre; tiene
-fallback multipart para archivos ≤4MB si el PUT directo falla.
+fallback multipart para archivos ≤4MB si el PUT directo falla. Los comprobantes de sueldo
+usan el mismo circuito con `subirRecibo` (`/api/upload-url` con `recurso: 'recibo'`, fila en
+`recibos_sueldo` vía `/api/recibos`); `GET /api/archivo` valida el path contra `archivos`
+**o** `recibos_sueldo` antes de firmar.
 
 - `GET /api/archivo` verifica que el archivo exista **vía RLS antes de firmar** la
   URL de descarga (fix de un IDOR real). `DELETE` borra la fila primero y R2 después.

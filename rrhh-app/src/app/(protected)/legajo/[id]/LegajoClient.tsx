@@ -8,7 +8,8 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { subirArchivo } from '@/lib/upload-client'
 import { getEstadoVencimiento } from '@/types'
-import type { Empleado, TipoCertificado, Empresa, Archivo } from '@/types'
+import type { Empleado, TipoCertificado, Empresa, Archivo, Recibo } from '@/types'
+import RecibosSueldo from './RecibosSueldo'
 import type { Tables } from '@/types/database'
 import { Monograma } from '@/components/ui/monograma'
 import { EstadoPill } from '@/components/ui/estado-pill'
@@ -25,6 +26,7 @@ interface Props {
   certificados: CertConRelaciones[]
   tiposCertificado: TipoCertificado[]
   empresas: Empresa[]
+  recibos: Recibo[]
   isAdmin: boolean
   canEdit: boolean
 }
@@ -34,6 +36,7 @@ export default function LegajoClient({
   certificados: initCerts,
   tiposCertificado,
   empresas,
+  recibos,
   isAdmin,
   canEdit,
 }: Props) {
@@ -770,6 +773,13 @@ export default function LegajoClient({
           </div>
         </div>
       )}
+
+      <RecibosSueldo
+        empleadoId={empleado.id}
+        empresaSlug={empleado.empresa?.slug ?? 'docs'}
+        recibos={recibos}
+        canEdit={canEdit}
+      />
     </div>
   )
 }
