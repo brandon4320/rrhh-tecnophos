@@ -30,6 +30,7 @@ Un solo login con **módulos** (registro en `src/config/modules.ts`):
 | **RRHH** | `/(protected)` → `/dashboard`, `/empleados`, `/empresa/[slug]`, `/legajo/[id]`, `/vencimientos`, `/admin/*` | Carpeta documental: empleados, certificados con vencimiento, vehículos, equipos/activos (matafuegos, Draeger), habilitaciones de empresa, archivos adjuntos | Administración (desktop) |
 | ~~Operaciones~~ | — | **Eliminado (2026-09)**: reemplazado por el sistema externo unipar-app.vercel.app (repo aparte). Las tablas `limpieza_*` y los usuarios con roles de limpieza siguen en la DB como legacy. | — |
 | **Gestión Comercial** | `/comercial` | CRM: clientes, proyectos (pipeline), tareas, agenda, viajes, equipo, reportes. Workspace estilo Notion con kanban | Equipo comercial (MUY mobile) |
+| **Tecnophos - ARCOR** | `/(protected)/arcor` (+ `/actividad`, `/alertas`, `/contenedores`) | **Observabilidad** del sistema externo de certificados de fumigación de contenedores (repo `C:\Dev\Arcor`: FastAPI + n8n en un droplet). Espejo de la planilla de contenedores, feed de actividad, estado de WhatsApp/crédito Claude/cola Colabora y alertas con historial. Solo lectura: los datos entran por `POST /api/arcor/ingest` | Admin + usuarios RRHH que ven todas las empresas |
 | Mantenimiento | — | `enabled: false`, futuro | — |
 
 **Regla de arquitectura (decisión de Brandon):** los módulos son contextos
@@ -78,17 +79,19 @@ rrhh-app/src/
 │   │   │   ├── VehiculosClient     #   vehículos + certificados
 │   │   │   └── EquiposClient       #   activos por sección (Matafuegos, Draeger…)
 │   │   ├── empleados/  legajo/[id]/  vencimientos/  admin/
+│   │   └── arcor/                  # ═══ TECNOPHOS - ARCOR (observabilidad) ═══ ver §8b
 │   ├── operaciones/                # ═══ MÓDULO OPERACIONES ═══
 │   ├── comercial/                  # ═══ MÓDULO COMERCIAL ═══
 │   └── api/
 │       ├── upload-url/             # firma URL para PUT directo a R2
 │       ├── upload/                 # registra fila archivo (+fallback multipart)
 │       ├── archivo/                # GET url firmada (valida RLS) / DELETE
+│       ├── arcor/ingest/           # ★ entrada de datos del sistema ARCOR (token, service role)
 │       └── comercial/{tarea,proyecto,tags,tarea-rapida}/
 ├── components/
 │   ├── layout/AppShell.tsx         # Sidebar única RRHH (empresa activa)
 │   ├── ui/                         # sistema de diseño (ver §7)
-│   ├── comercial/  operaciones/  brand/
+│   ├── comercial/  arcor/  brand/
 ├── config/modules.ts               # registro de módulos + acceso por rol
 ├── lib/
 │   ├── auth/{roles,session}.ts     # ★ autorización central
@@ -96,6 +99,7 @@ rrhh-app/src/
 │   ├── r2/{client,operations}.ts
 │   └── upload-client.ts            # helper de subida (browser)
 ├── modules/comercial/              # queries/actions/tipos/reglas del CRM
+├── modules/arcor/                  # reglas (puras, con tests) / queries / acceso / tipos del módulo ARCOR
 ├── types/{index,database}.ts       # dominio + tipos generados de la DB
 supabase/                           # schema.sql + migraciones numeradas (ver §6)
 ```
@@ -144,6 +148,7 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   como se vino haciendo).
 - Las tablas `comercial_*` **no están** en `database.ts`: el módulo comercial usa
   `cdb()` (cliente casteado a `any`) + casts `rows<T>()`. Es deliberado (MVP).
+  Las `arcor_*` siguen el mismo criterio (`modules/arcor/db.ts`).
 - Modelo RRHH clave: `certificados` tiene dueño **excluyente** (constraint
   `check_owner`): empleado_id | empresa_id | vehiculo_id | equipo_id.
   `tipos_certificado` tiene flags `aplica_personal/empresa/vehiculo/equipo`.
@@ -201,6 +206,36 @@ fallback multipart para archivos ≤4MB si el PUT directo falla.
   (AllowedOrigins: dominios de la app; Methods PUT/GET/HEAD). Al momento de escribir
   esto estaba **pendiente de configurar en el dashboard de Cloudflare** — si los
   archivos grandes fallan, verificá eso primero.
+
+---
+
+## 8b. Sección Tecnophos - ARCOR (observabilidad del sistema externo)
+
+El sistema de certificados de fumigación de contenedores para ARCOR es **otro proyecto**
+(`C:\Dev\Arcor`, repo privado `AgusAlvarez3/tecnophos-arcor`): FastAPI + n8n + Evolution
+(WhatsApp) en un droplet, con Google Sheets como fuente de verdad. Gestión **no lo opera**:
+solo muestra lo que ese sistema le reporta.
+
+- **Modelo push.** El servicio (`servicio/gestion.py`) y tres workflows de n8n (WF0 fallos,
+  WF10 crédito Claude, WF12 guardia WhatsApp) hacen `POST /api/arcor/ingest` con items
+  `contenedor` / `evento` / `estado`. n8n no toca Supabase ni conoce el token: llama a
+  `POST servicio:8077/gestion/notificar` y el servicio reenvía.
+- **Auth del ingest:** `Authorization: Bearer <token>`; sha256 del token en
+  `arcor_config.ingest_token_hash` (el route handler usa service role). El token en claro vive
+  en el `.env` del droplet y en Bitwarden. **No hay env var nueva en Vercel** a propósito.
+  La ruta está en `PUBLIC_PATHS` del proxy.
+- **Tablas `arcor_*`** (migración 14): `arcor_contenedores` (unique `(contenedor, mes)`, misma
+  clave que el appendOrUpdate del Sheets), `arcor_eventos` (log; las alertas con estado usan
+  `clave_alerta` + `resuelto_en`: una abierta por clave), `arcor_estado` (clave → último valor:
+  whatsapp, claude, heartbeat, publicaciones), `arcor_config`. RLS de lectura
+  `app_es_rrhh() and app_ve_todas_empresas()` = `puedeVerArcor()`; **sin policies de
+  escritura** para authenticated. No están en `database.ts`: `modules/arcor/db.ts` castea.
+- **Silencio del sistema** no vive en la DB: `evaluarSilencio()` compara el heartbeat con
+  la hora AR al renderizar (3 h de día, 11 h de noche). Cualquier request al ingest toca el heartbeat.
+- Las reglas de negocio espejadas (4 lugares, `mesDeFecha` = pestaña del Sheets, fallback
+  BUENOS AIRES) están en `modules/arcor/reglas.ts` **con tests**. Si cambian en el servicio Python,
+  cambian acá.
+- Fechas en hora AR: `src/lib/fechas-ar.ts` (compartible; comercial tiene su copia histórica).
 
 ---
 

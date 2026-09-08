@@ -25,8 +25,15 @@ export interface EmpresaNav {
   sectores: { nombre: string; count: number }[]
 }
 
+/** Portal del selector "Empresa activa": una empresa real (RRHH) o una entrada virtual. */
+type Portal =
+  | (EmpresaNav & { tipo: 'empresa' })
+  | { tipo: 'extra'; id: string; slug: string; nombre: string; subtitulo: string; logo: string; href: string }
+
 interface Props {
   empresas: EmpresaNav[]
+  /** Muestra la entrada virtual "Tecnophos - ARCOR" (ver modules/arcor/acceso.ts). */
+  arcor?: boolean
   sesion: { nombre: string | null; email: string | null; rol: string }
   children: React.ReactNode
 }
@@ -42,8 +49,23 @@ const LOGO_EMPRESA: Record<string, string> = {
   serviwhite: '/logo-serviwhite-iso.png',
 }
 
-function LogoEmpresa({ slug, nombre, size }: { slug: string; nombre: string; size: 'sm' | 'md' }) {
-  const src = LOGO_EMPRESA[slug]
+// Entrada virtual: no es una empresa de la tabla `empresas` (no tiene empleados ni
+// legajos), es la observabilidad del sistema externo de certificados ARCOR.
+const PORTAL_ARCOR: Portal = {
+  tipo: 'extra',
+  id: 'arcor',
+  slug: 'arcor',
+  nombre: 'Tecnophos - ARCOR',
+  subtitulo: 'Certificados de fumigación',
+  logo: '/logo-tecnophos-iso.png',
+  href: '/arcor',
+}
+
+function logoDe(p: Portal): string | undefined {
+  return p.tipo === 'extra' ? p.logo : LOGO_EMPRESA[p.slug]
+}
+
+function LogoPortal({ src, nombre, size }: { src?: string; nombre: string; size: 'sm' | 'md' }) {
   const cls = size === 'md' ? 'size-9 p-1' : 'size-7 p-0.5'
   if (!src) return <Monograma nombre={nombre} size={size} />
   return (
@@ -54,14 +76,24 @@ function LogoEmpresa({ slug, nombre, size }: { slug: string; nombre: string; siz
   )
 }
 
-export default function AppShell({ empresas, sesion, children }: Props) {
+function subtituloDe(p: Portal): string {
+  if (p.tipo === 'extra') return p.subtitulo
+  return `${p.total} ${p.total === 1 ? 'empleado' : 'empleados'}`
+}
+
+export default function AppShell({ empresas, arcor = false, sesion, children }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
   const [selectorOpen, setSelectorOpen] = useState(false)
   const [preferida, setPreferida] = useState<string | null>(null)
 
-  // Empresa activa: URL (/empresa/[slug] o ?empresa=) → última usada → primera
+  const portales = useMemo<Portal[]>(
+    () => [...empresas.map((e) => ({ ...e, tipo: 'empresa' as const })), ...(arcor ? [PORTAL_ARCOR] : [])],
+    [empresas, arcor]
+  )
+
+  // Portal activo: URL (/empresa/[slug], /arcor o ?empresa=) → último usado → primero
   useEffect(() => {
     try {
       const url = new URL(window.location.href)
@@ -76,21 +108,25 @@ export default function AppShell({ empresas, sesion, children }: Props) {
     } catch { /* sin preferencia */ }
   }, [pathname])
 
-  const slugEnPath = pathname.startsWith('/empresa/') ? pathname.split('/')[2] : null
+  const slugEnPath = pathname.startsWith('/arcor')
+    ? 'arcor'
+    : pathname.startsWith('/empresa/')
+      ? pathname.split('/')[2]
+      : null
 
   const activa = useMemo(() => {
-    const porPath = slugEnPath && empresas.find((e) => e.slug === slugEnPath)
+    const porPath = slugEnPath && portales.find((e) => e.slug === slugEnPath)
     if (porPath) return porPath
-    const porPref = preferida && empresas.find((e) => e.slug === preferida)
+    const porPref = preferida && portales.find((e) => e.slug === preferida)
     if (porPref) return porPref
-    return empresas[0] ?? null
-  }, [slugEnPath, preferida, empresas])
+    return portales[0] ?? null
+  }, [slugEnPath, preferida, portales])
 
   useEffect(() => {
-    if (slugEnPath && empresas.some((e) => e.slug === slugEnPath)) {
+    if (slugEnPath && portales.some((e) => e.slug === slugEnPath)) {
       try { localStorage.setItem(STORAGE_KEY, slugEnPath) } catch { /* no-op */ }
     }
-  }, [slugEnPath, empresas])
+  }, [slugEnPath, portales])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -98,23 +134,33 @@ export default function AppShell({ empresas, sesion, children }: Props) {
     router.refresh()
   }
 
-  function cambiarEmpresa(slug: string) {
-    try { localStorage.setItem(STORAGE_KEY, slug) } catch { /* no-op */ }
-    setPreferida(slug)
+  function cambiarPortal(p: Portal) {
+    try { localStorage.setItem(STORAGE_KEY, p.slug) } catch { /* no-op */ }
+    setPreferida(p.slug)
     setSelectorOpen(false)
-    router.push(`/empresa/${slug}`)
+    router.push(p.tipo === 'extra' ? p.href : `/empresa/${p.slug}`)
   }
 
   const esAdmin = sesion.rol === 'admin'
 
-  const vistas = activa
-    ? [
-        { key: 'resumen', label: 'Resumen', href: `/empresa/${activa.slug}`, active: pathname === `/empresa/${activa.slug}` },
-        { key: 'empleados', label: 'Empleados', href: `/empleados?empresa=${activa.slug}`, active: pathname.startsWith('/empleados') },
-        { key: 'vencimientos', label: 'Vencimientos', href: `/vencimientos?empresa=${activa.slug}`, active: pathname.startsWith('/vencimientos') },
-        { key: 'documentacion', label: 'Documentación', href: `/empresa/${activa.slug}?vista=documentacion`, active: false },
-      ]
-    : []
+  const vistas = !activa
+    ? []
+    : activa.tipo === 'extra'
+      ? [
+          { key: 'resumen', label: 'Resumen', href: '/arcor', active: pathname === '/arcor' },
+          { key: 'actividad', label: 'Actividad', href: '/arcor/actividad', active: pathname.startsWith('/arcor/actividad') },
+          { key: 'alertas', label: 'Alertas', href: '/arcor/alertas', active: pathname.startsWith('/arcor/alertas') },
+          { key: 'contenedores', label: 'Contenedores', href: '/arcor/contenedores', active: pathname.startsWith('/arcor/contenedores') },
+        ]
+      : [
+          { key: 'resumen', label: 'Resumen', href: `/empresa/${activa.slug}`, active: pathname === `/empresa/${activa.slug}` },
+          { key: 'empleados', label: 'Empleados', href: `/empleados?empresa=${activa.slug}`, active: pathname.startsWith('/empleados') },
+          { key: 'vencimientos', label: 'Vencimientos', href: `/vencimientos?empresa=${activa.slug}`, active: pathname.startsWith('/vencimientos') },
+          { key: 'documentacion', label: 'Documentación', href: `/empresa/${activa.slug}?vista=documentacion`, active: false },
+        ]
+
+  const sectores = activa && activa.tipo === 'empresa' ? activa.sectores : []
+  const primerExtra = portales.findIndex((p) => p.tipo === 'extra')
 
   const itemCls = (active: boolean) =>
     cn(
@@ -151,12 +197,10 @@ export default function AppShell({ empresas, sesion, children }: Props) {
               onClick={() => setSelectorOpen((v) => !v)}
               className="flex w-full items-center gap-3 rounded-xl border border-border bg-background px-3 py-2.5 text-left transition-colors hover:border-input"
             >
-              <LogoEmpresa slug={activa.slug} nombre={activa.nombre} size="md" />
+              <LogoPortal src={logoDe(activa)} nombre={activa.nombre} size="md" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{activa.nombre}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {activa.total} {activa.total === 1 ? 'empleado' : 'empleados'}
-                </span>
+                <span className="block text-xs text-muted-foreground">{subtituloDe(activa)}</span>
               </span>
               <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
             </button>
@@ -165,18 +209,21 @@ export default function AppShell({ empresas, sesion, children }: Props) {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setSelectorOpen(false)} />
                 <div className="absolute left-3 right-3 z-50 mt-2 overflow-hidden rounded-xl border border-border bg-popover shadow-lg">
-                  {empresas.map((e) => (
+                  {portales.map((p, i) => (
                     <button
-                      key={e.id}
-                      onClick={() => cambiarEmpresa(e.slug)}
-                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted"
+                      key={p.id}
+                      onClick={() => cambiarPortal(p)}
+                      className={cn(
+                        'flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted',
+                        i === primerExtra && i > 0 && 'border-t border-border'
+                      )}
                     >
-                      <LogoEmpresa slug={e.slug} nombre={e.nombre} size="sm" />
+                      <LogoPortal src={logoDe(p)} nombre={p.nombre} size="sm" />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm">{e.nombre}</span>
-                        <span className="block text-[11px] text-muted-foreground">{e.total} empleados</span>
+                        <span className="block truncate text-sm">{p.nombre}</span>
+                        <span className="block text-[11px] text-muted-foreground">{subtituloDe(p)}</span>
                       </span>
-                      {e.id === activa.id && <Check className="size-4 shrink-0 text-primary" strokeWidth={2} />}
+                      {p.id === activa.id && <Check className="size-4 shrink-0 text-primary" strokeWidth={2} />}
                     </button>
                   ))}
                 </div>
@@ -203,13 +250,13 @@ export default function AppShell({ empresas, sesion, children }: Props) {
             ))}
           </div>
 
-          {activa && activa.sectores.length > 0 && (
+          {activa && activa.tipo === 'empresa' && sectores.length > 0 && (
             <>
               <p className="px-2 pb-2 pt-6 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Sectores
               </p>
               <div className="space-y-0.5">
-                {activa.sectores.map((s) => (
+                {sectores.map((s) => (
                   <Link
                     key={s.nombre}
                     href={`/empresa/${activa.slug}`}

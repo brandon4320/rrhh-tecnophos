@@ -5,7 +5,7 @@
 // ============================================================
 import type { Rol } from '@/lib/auth/roles'
 
-export type ModuloKey = 'rrhh' | 'mantenimiento' | 'comercial'
+export type ModuloKey = 'rrhh' | 'mantenimiento' | 'comercial' | 'arcor'
 
 /** Empresas dueñas de un módulo (para mostrar marca en el menú). */
 export type EmpresaMarca = 'tecnophos' | 'adc' | 'serviwhite'
@@ -51,6 +51,18 @@ export const MODULOS: ModuloDef[] = [
     icon: 'BriefcaseBusiness',
     roles: ['admin', 'direccion', 'gerente_comercial', 'vendedor', 'asistente_comercial'],
     empresas: ['tecnophos', 'adc', 'serviwhite'],
+    enabled: true,
+  },
+  {
+    // Observabilidad del sistema externo de certificados ARCOR (droplet + n8n):
+    // contenedores, actividad y alertas. Vive dentro del shell de RRHH y, además
+    // del rol, exige ver todas las empresas — ver modules/arcor/acceso.ts.
+    key: 'arcor',
+    label: 'Tecnophos - ARCOR',
+    href: '/arcor',
+    icon: 'Container',
+    roles: ['admin', 'usuario'],
+    empresas: ['tecnophos'],
     enabled: true,
   },
 ]

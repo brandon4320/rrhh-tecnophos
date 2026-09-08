@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSesion } from '@/lib/auth/session'
 import { tieneRol, RRHH_ROLES } from '@/lib/auth/roles'
 import AppShell, { type EmpresaNav } from '@/components/layout/AppShell'
+import { puedeVerArcor } from '@/modules/arcor/acceso'
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const sesion = await getSesion()
@@ -45,6 +46,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   return (
     <AppShell
       empresas={nav}
+      arcor={puedeVerArcor(sesion)}
       sesion={{ nombre: sesion.nombre, email: sesion.email, rol: sesion.rol }}
     >
       {children}
