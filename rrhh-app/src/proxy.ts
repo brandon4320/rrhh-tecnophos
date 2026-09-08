@@ -10,7 +10,9 @@ import { env } from '@/lib/env'
 
 // /control-plagas.html es la app de registro para operarios (estática, datos
 // en el dispositivo): los iPads la abren sin sesión del portal.
-const PUBLIC_PATHS = ['/login', '/control-plagas.html']
+// /api/arcor/ingest lo llama el servidor de ARCOR (máquina a máquina): no hay
+// sesión de navegador, la ruta valida su propio token (ver el route handler).
+const PUBLIC_PATHS = ['/login', '/control-plagas.html', '/api/arcor/ingest']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })

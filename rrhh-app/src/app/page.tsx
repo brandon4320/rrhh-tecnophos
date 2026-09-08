@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard, Bug, FileQuestionMark, ExternalLink } from 'lucide-react'
+import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard, Bug, FileQuestionMark, ExternalLink, Container } from 'lucide-react'
 import { requireSesion } from '@/lib/auth/session'
 import { modulosPara } from '@/config/modules'
+import { puedeVerArcor } from '@/modules/arcor/acceso'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -39,6 +40,7 @@ export default async function HubPage() {
 
   const puedeRrhh = modulos.some((m) => m.key === 'rrhh')
   const puedeComercial = modulos.some((m) => m.key === 'comercial')
+  const puedeArcor = puedeVerArcor(sesion)
 
   const supabase = await createClient()
   const empresasQuery = supabase.from('empresas').select('id, nombre, slug').order('nombre')
@@ -157,6 +159,14 @@ export default async function HubPage() {
                       <span className="min-w-0 flex-1 truncate">Control de Plagas</span>
                       <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                     </a>
+                  )}
+
+                  {marca.key === 'tecnophos' && puedeArcor && (
+                    <Link href="/arcor" className={filaCls}>
+                      <Container className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <span className="min-w-0 flex-1 truncate">Contenedores - ARCOR</span>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
+                    </Link>
                   )}
 
                   {marca.key === 'tecnophos' && (
