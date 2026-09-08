@@ -26,6 +26,9 @@ import {
 } from '@/modules/arcor/reglas'
 
 export const dynamic = 'force-dynamic'
+// Lotes del backfill: 150 items son ~300 viajes a Supabase (São Paulo) desde Vercel.
+// Por encima de los 10 s por defecto; 60 s es el máximo del plan.
+export const maxDuration = 60
 
 const MAX_ITEMS = 500
 
@@ -253,26 +256,37 @@ export async function POST(request: NextRequest) {
   const origenReq = str(body?.origen, 30) ?? 'servicio'
   const ahora = new Date().toISOString()
 
-  const resultados: unknown[] = []
+  const resultados: unknown[] = new Array(items.length)
   const errores: { indice: number; error: string }[] = []
-  for (let i = 0; i < items.length; i++) {
-    const it = obj(items[i])
-    try {
-      if (!it) throw new ItemError('item no es un objeto')
-      if (it.kind === 'contenedor') resultados.push(await procesarContenedor(admin, it, origenReq, ahora))
-      else if (it.kind === 'evento') resultados.push(await procesarEvento(admin, it, origenReq, ahora))
-      else if (it.kind === 'estado') resultados.push(await procesarEstado(admin, it, ahora))
-      else throw new ItemError(`kind desconocido: ${String(it.kind)}`)
-    } catch (e) {
-      errores.push({ indice: i, error: e instanceof Error ? e.message : String(e) })
+  // Paralelismo acotado: cada item son 1-2 viajes a Supabase (~100 ms desde Vercel a
+  // São Paulo) y en serie un lote de 150 superaba el timeout (pasó en el backfill del
+  // 08/09/2026). Las alertas con estado podrían carrerear si la MISMA clave viniera
+  // repetida en un lote: no ocurre (cada workflow manda una por corrida).
+  const CONCURRENCIA = 8
+  let cursor = 0
+  async function worker() {
+    while (cursor < items.length) {
+      const i = cursor++
+      const it = obj(items[i])
+      try {
+        if (!it) throw new ItemError('item no es un objeto')
+        if (it.kind === 'contenedor') resultados[i] = await procesarContenedor(admin, it, origenReq, ahora)
+        else if (it.kind === 'evento') resultados[i] = await procesarEvento(admin, it, origenReq, ahora)
+        else if (it.kind === 'estado') resultados[i] = await procesarEstado(admin, it, ahora)
+        else throw new ItemError(`kind desconocido: ${String(it.kind)}`)
+      } catch (e) {
+        errores.push({ indice: i, error: e instanceof Error ? e.message : String(e) })
+      }
     }
   }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCIA, items.length) }, worker))
+  const procesados = resultados.filter((r) => r !== undefined)
 
   // Latido: cualquier request válida prueba que el sistema ARCOR está vivo.
   await admin
     .from('arcor_estado')
     .upsert({ clave: 'heartbeat', valor: { ts: ahora, origen: origenReq, items: items.length }, updated_at: ahora }, { onConflict: 'clave' })
 
-  const status = resultados.length > 0 ? 200 : 400
-  return NextResponse.json({ ok: errores.length === 0, procesados: resultados.length, resultados, errores }, { status })
+  const status = procesados.length > 0 ? 200 : 400
+  return NextResponse.json({ ok: errores.length === 0, procesados: procesados.length, resultados: procesados, errores }, { status })
 }
