@@ -15,7 +15,9 @@ import {
   Home,
   ChevronsUpDown,
   Check,
+  ExternalLink,
 } from 'lucide-react'
+import { ENLACES_ARCOR } from '@/modules/arcor/enlaces'
 
 export interface EmpresaNav {
   id: string
@@ -143,7 +145,8 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
 
   const esAdmin = sesion.rol === 'admin'
 
-  const vistas = !activa
+  type Vista = { key: string; label: string; href: string; active: boolean; external?: boolean }
+  const vistas: Vista[] = !activa
     ? []
     : activa.tipo === 'extra'
       ? [
@@ -151,6 +154,8 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           { key: 'actividad', label: 'Actividad', href: '/arcor/actividad', active: pathname.startsWith('/arcor/actividad') },
           { key: 'alertas', label: 'Alertas', href: '/arcor/alertas', active: pathname.startsWith('/arcor/alertas') },
           { key: 'contenedores', label: 'Contenedores', href: '/arcor/contenedores', active: pathname.startsWith('/arcor/contenedores') },
+          // La operación (subir/corregir certificados) vive en el sistema externo: se abre aparte.
+          { key: 'carga', label: 'Carga manual', href: ENLACES_ARCOR.cargar, active: false, external: true },
         ]
       : [
           { key: 'resumen', label: 'Resumen', href: `/empresa/${activa.slug}`, active: pathname === `/empresa/${activa.slug}` },
@@ -237,17 +242,25 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
             Vistas
           </p>
           <div className="space-y-0.5">
-            {vistas.map((v) => (
-              <Link key={v.key} href={v.href} className={itemCls(v.active)}>
-                <span
-                  className={cn(
-                    'size-1.5 shrink-0 rounded-full',
-                    v.active ? 'bg-primary' : 'bg-muted-foreground/30'
-                  )}
-                />
-                {v.label}
-              </Link>
-            ))}
+            {vistas.map((v) =>
+              v.external ? (
+                <a key={v.key} href={v.href} target="_blank" rel="noopener noreferrer" className={itemCls(false)}>
+                  <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/30" />
+                  <span className="flex-1">{v.label}</span>
+                  <ExternalLink className="size-3.5 shrink-0 text-muted-foreground/60" strokeWidth={1.75} />
+                </a>
+              ) : (
+                <Link key={v.key} href={v.href} className={itemCls(v.active)}>
+                  <span
+                    className={cn(
+                      'size-1.5 shrink-0 rounded-full',
+                      v.active ? 'bg-primary' : 'bg-muted-foreground/30'
+                    )}
+                  />
+                  {v.label}
+                </Link>
+              )
+            )}
           </div>
 
           {activa && activa.tipo === 'empresa' && sectores.length > 0 && (
