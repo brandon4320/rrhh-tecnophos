@@ -927,6 +927,113 @@ export type Database = {
           },
         ]
       }
+      stock_items: {
+        Row: {
+          activo: boolean | null
+          categoria: string | null
+          created_at: string
+          empresa_id: string
+          id: string
+          nombre: string
+          notas: string | null
+          stock_minimo: number
+          unidad: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean | null
+          categoria?: string | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nombre: string
+          notas?: string | null
+          stock_minimo?: number
+          unidad?: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean | null
+          categoria?: string | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nombre?: string
+          notas?: string | null
+          stock_minimo?: number
+          unidad?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_items_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_movimientos: {
+        Row: {
+          cantidad: number
+          comprobante: string | null
+          created_at: string
+          created_by: string | null
+          empresa_id: string
+          fecha: string
+          id: string
+          item_id: string
+          notas: string | null
+          precio_unitario: number | null
+          proveedor: string | null
+          tipo: string
+        }
+        Insert: {
+          cantidad: number
+          comprobante?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id: string
+          fecha?: string
+          id?: string
+          item_id: string
+          notas?: string | null
+          precio_unitario?: number | null
+          proveedor?: string | null
+          tipo: string
+        }
+        Update: {
+          cantidad?: number
+          comprobante?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          item_id?: string
+          notas?: string | null
+          precio_unitario?: number | null
+          proveedor?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movimientos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movimientos_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "stock_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tipos_certificado: {
         Row: {
           aplica_empresa: boolean | null

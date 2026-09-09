@@ -27,7 +27,7 @@ Un solo login con **módulos** (registro en `src/config/modules.ts`):
 
 | Módulo | Ruta | Qué hace | Quién lo usa |
 |---|---|---|---|
-| **RRHH** | `/(protected)` → `/dashboard`, `/empleados`, `/empresa/[slug]`, `/legajo/[id]`, `/vencimientos`, `/admin/*` | Carpeta documental: empleados, certificados con vencimiento, vehículos, equipos/activos (matafuegos, Draeger), habilitaciones de empresa, archivos adjuntos | Administración (desktop) |
+| **RRHH** | `/(protected)` → `/dashboard`, `/empleados`, `/empresa/[slug]`, `/legajo/[id]`, `/vencimientos`, `/stock`, `/admin/*` | Carpeta documental: empleados, certificados con vencimiento, vehículos, equipos/activos (matafuegos, Draeger), habilitaciones de empresa, archivos adjuntos, comprobantes de sueldo. **Stock por empresa** (`/stock?empresa=slug`): catálogo de ítems + compras/consumos/ajustes | Administración (desktop) |
 | ~~Operaciones~~ | — | **Eliminado (2026-09)**: reemplazado por el sistema externo unipar-app.vercel.app (repo aparte). Las tablas `limpieza_*` y los usuarios con roles de limpieza siguen en la DB como legacy. | — |
 | **Gestión Comercial** | `/comercial` | CRM: clientes, proyectos (pipeline), tareas, agenda, viajes, equipo, reportes. Workspace estilo Notion con kanban | Equipo comercial (MUY mobile) |
 | **Tecnophos - ARCOR** | `/(protected)/arcor` (+ `/actividad`, `/alertas`, `/contenedores`) | **Observabilidad** del sistema externo de certificados de fumigación de contenedores (repo `C:\Dev\Arcor`: FastAPI + n8n en un droplet). Espejo de la planilla de contenedores, feed de actividad, estado de WhatsApp/crédito Claude/cola Colabora y alertas con historial. Solo lectura: los datos entran por `POST /api/arcor/ingest` | Admin + usuarios RRHH que ven todas las empresas |
@@ -79,6 +79,7 @@ rrhh-app/src/
 │   │   │   ├── VehiculosClient     #   vehículos + certificados
 │   │   │   └── EquiposClient       #   activos por sección (Matafuegos, Draeger…)
 │   │   ├── empleados/  legajo/[id]/  vencimientos/  admin/
+│   │   ├── stock/                  # Stock por empresa: StockClient (CRUD ítems + movimientos)
 │   │   └── arcor/                  # ═══ TECNOPHOS - ARCOR (observabilidad) ═══ ver §8b
 │   ├── operaciones/                # ═══ MÓDULO OPERACIONES ═══
 │   ├── comercial/                  # ═══ MÓDULO COMERCIAL ═══
@@ -100,6 +101,7 @@ rrhh-app/src/
 │   └── upload-client.ts            # helper de subida (browser)
 ├── modules/comercial/              # queries/actions/tipos/reglas del CRM
 ├── modules/arcor/                  # reglas (puras, con tests) / queries / acceso / tipos del módulo ARCOR
+├── modules/stock/reglas.ts         # stock = suma de movimientos; estado por mínimo; compras del mes (con tests)
 ├── types/{index,database}.ts       # dominio + tipos generados de la DB
 supabase/                           # schema.sql + migraciones numeradas (ver §6)
 ```
@@ -159,6 +161,12 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   `origen` manual|automatico, unique empleado+periodo+tipo). NO son certificados: no vencen
   ni entran en `/vencimientos`. RLS espejo de `empleados`. UI en el legajo
   (`legajo/[id]/RecibosSueldo.tsx`), API `/api/recibos`, reglas puras en `lib/recibos.ts`.
+- **Stock** (migración 16): `stock_items` (catálogo por empresa, unique empresa+nombre, `activo`
+  = archivado conserva historial) + `stock_movimientos` (tipo compra/consumo/ajuste; `empresa_id`
+  denormalizado para que la RLS sea la misma de RRHH). **El stock actual nunca se guarda**: es la
+  suma de movimientos (`modules/stock/reglas.ts::calcularStock`, en JS — volúmenes chicos). El
+  ajuste guarda la DIFERENCIA contra el stock contado, con signo. Mutaciones directas con el
+  cliente de Supabase desde `StockClient` (RLS decide) + estado local + `router.refresh()`.
 - **En los `<select>` de tipo de certificado, la opción "Otro" usa el valor
   `'otro'`, que NO es un UUID**: al guardar va `tipo_id: null` +
   `tipo_nombre_custom`. Ese bug ya se arregló una vez — no lo reintroduzcas.

@@ -162,6 +162,7 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           { key: 'empleados', label: 'Empleados', href: `/empleados?empresa=${activa.slug}`, active: pathname.startsWith('/empleados') },
           { key: 'vencimientos', label: 'Vencimientos', href: `/vencimientos?empresa=${activa.slug}`, active: pathname.startsWith('/vencimientos') },
           { key: 'documentacion', label: 'Documentación', href: `/empresa/${activa.slug}?vista=documentacion`, active: false },
+          { key: 'stock', label: 'Stock', href: `/stock?empresa=${activa.slug}`, active: pathname.startsWith('/stock') },
         ]
 
   const sectores = activa && activa.tipo === 'empresa' ? activa.sectores : []
