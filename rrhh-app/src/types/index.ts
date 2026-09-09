@@ -31,6 +31,10 @@ export type Archivo = Tables<'archivos'> & {
 /** Comprobante de sueldo de un empleado (tabla recibos_sueldo, archivo en R2). */
 export type Recibo = Tables<'recibos_sueldo'>
 
+/** Stock por empresa: catálogo + libro de movimientos (el stock actual se calcula). */
+export type StockItem = Tables<'stock_items'>
+export type StockMovimiento = Tables<'stock_movimientos'>
+
 export type Certificado = Tables<'certificados'> & {
   tipo?: TipoCertificado | null
   empleado?: Empleado | null
