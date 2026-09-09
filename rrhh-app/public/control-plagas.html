@@ -377,6 +377,7 @@
         <label>Sectores donde se trabajó</label>
         <div class="chips" id="chipsSector"></div>
       </div>
+      <div><label for="detalleSectores">Detalle de los sectores trabajados</label><textarea id="detalleSectores" placeholder="Contá dónde se trabajó dentro de cada sector (equipos, pasillos, silos…)"></textarea></div>
       <div><label for="obsOrden">Observaciones</label><textarea id="obsOrden" placeholder="Pedido por Higiene y Seguridad, motivo, detalles de la aplicación…"></textarea></div>
       <p class="field-err" id="ordenError">Completá el tipo de tarea y al menos un sector.</p>
       <button class="primary" onclick="guardarOrden()">Guardar orden de trabajo</button>
@@ -739,6 +740,14 @@ function migrar(db) {
           s.nombre = m.seed.sector; s.cebos = m.seed.cebos; s.uv = m.seed.uv;
           if (m.seed.grupos) s.grupos = m.seed.grupos.map(g => ({ nombre: g.nombre, cebos: g.cebos }));
         });
+      }
+      // Planta creada antes de conocerse su planilla (quedó sin sectores):
+      // se le agrega ahora la cebadera del certificado. Si el administrador
+      // ya le cargó sectores a mano, no se toca nada.
+      if (m.seed && m.seed.sector && !db.sectores.some(s => s.plantaId === existente.id)) {
+        const sec = { id: 'sm' + i, plantaId: existente.id, nombre: m.seed.sector, cebos: m.seed.cebos, uv: m.seed.uv };
+        if (m.seed.grupos) sec.grupos = m.seed.grupos.map(g => ({ nombre: g.nombre, cebos: g.cebos }));
+        db.sectores.push(sec);
       }
     } else if (m.seed) {
       const id = 'pm' + i;
@@ -1167,6 +1176,7 @@ function abrirOrden() {
     b.onclick = () => b.classList.toggle('on');
     cs.appendChild(b);
   });
+  $('detalleSectores').value = '';
   $('obsOrden').value = '';
   $('ordenError').style.display = 'none';
   go('scr-orden');
@@ -1188,6 +1198,7 @@ function guardarOrden() {
     plantaNombre: plantaActual ? plantaActual.nombre : '',
     tipo: tipo.dataset.v,
     sectores: secs,
+    sectoresDetalle: $('detalleSectores').value.trim(),
     obs: $('obsOrden').value.trim(),
     firma: null,
     firmante: '',
@@ -1710,6 +1721,7 @@ function abrirDetalleOrden(o) {
   $('detMail').onclick = ev => enviarReporte('orden', o, ev.currentTarget);
   let html = '<div class="card">';
   html += `<div class="sum-row"><span>Sectores</span><span style="font-weight:650; text-align:right">${esc(o.sectores.join(', '))}</span></div>`;
+  if (o.sectoresDetalle) html += `<div class="sum-row"><span>Detalle</span><span style="font-weight:650; text-align:right">${esc(o.sectoresDetalle)}</span></div>`;
   if (o.producto) html += `<div class="sum-row"><span>Producto</span><span style="font-weight:650">${esc(o.producto)}</span></div>`;
   if (o.dosis) html += `<div class="sum-row"><span>Dosis</span><span style="font-weight:650">${esc(o.dosis)}</span></div>`;
   html += `<div class="sum-row"><span>Firmas</span><span style="font-weight:650">${faltanFirmas(o) ? 'pendientes' : '✓ operario y supervisor'}</span></div>`;
@@ -1763,6 +1775,7 @@ function textoOrden(o) {
     '',
     'Sectores: ' + o.sectores.join(', '),
   ];
+  if (o.sectoresDetalle) lineas.push('Detalle: ' + o.sectoresDetalle);
   if (o.producto) lineas.push('Producto: ' + o.producto);
   if (o.dosis) lineas.push('Dosis: ' + o.dosis);
   if (o.obs) lineas.push('', 'Observaciones: ' + o.obs);
@@ -1904,6 +1917,7 @@ const CERT_MODELOS = [
     },
     palomas: true },
   { match: ['millagro'], paraEmpresa: 'MILLAGRO S.A.', empresa: 'TECNOPHOS',
+    mail: 'fcalvo@millagro.com.ar',
     producto: PRODUCTO_TECNOPHOS, firmaIzq: 'Personal MILLAGRO SA',
     seed: { nombre: 'Millagro S.A.', sector: 'Planta industrial', cebos: 34, uv: 0 } },
   { match: ['calado'], paraEmpresa: 'BUNGE SA', empresa: 'TECNOPHOS',
@@ -1912,12 +1926,12 @@ const CERT_MODELOS = [
   { match: ['galvan'], paraEmpresa: 'BUNGE SA', empresa: 'TECNOPHOS',
     titulo: 'DESRATIZACIÓN EN PUERTO GALVAN', producto: PRODUCTO_TECNOPHOS,
     seed: { nombre: 'Bunge - Puerto Galván', sector: 'Puerto Galván', cebos: 134, uv: 0 } },
-  // ADM Agro: cliente de Tecnophos. Todavía sin modelo de certificado propio
-  // (usa el genérico con logo Tecnophos); los sectores se cargan cuando llegue
-  // su planilla oficial.
+  // ADM Agro: cliente de Tecnophos. Usa el mismo formato de certificado que
+  // Millagro, con su propia cebadera de 116 estaciones.
   { match: ['adm agro'], paraEmpresa: 'ADM AGRO', empresa: 'TECNOPHOS',
     mail: 'David.toffalo@adm.com',
-    seed: { nombre: 'ADM Agro' } },
+    producto: PRODUCTO_TECNOPHOS, firmaIzq: 'Personal ADM AGRO',
+    seed: { nombre: 'ADM Agro', sector: 'Planta industrial', cebos: 116, uv: 0 } },
 ];
 function normalizarTxt(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -2160,6 +2174,7 @@ function imprimirOrden(o) {
       ${o.plantaNombre ? `<span><b>Planta:</b> ${esc(o.plantaNombre)}</span>` : ''}
       <span><b>Tipo de tarea:</b> ${esc(o.tipo)}</span>
       <span><b>Sectores:</b> ${esc(o.sectores.join(', '))}</span>
+      ${o.sectoresDetalle ? `<span><b>Detalle de los sectores trabajados:</b> ${esc(o.sectoresDetalle)}</span>` : ''}
       ${o.producto ? `<span><b>Producto utilizado:</b> ${esc(o.producto)}</span>` : ''}
       ${o.dosis ? `<span><b>Dosis / dilución:</b> ${esc(o.dosis)}</span>` : ''}
       <span><b>Empresa:</b> ${esc(empresa)} &nbsp;&nbsp; <b>Operario:</b> ${esc(o.operario)}</span>
