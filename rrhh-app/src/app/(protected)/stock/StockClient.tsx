@@ -35,7 +35,8 @@ const btnMini = 'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs fon
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 
-const ITEM_VACIO = { nombre: '', categoria: '', unidad: 'unidad', stock_minimo: '', notas: '', stock_inicial: '' }
+// Mínimo 1 por defecto (criterio acordado el 10/09/2026: avisar cuando queda la última unidad).
+const ITEM_VACIO = { nombre: '', categoria: '', unidad: 'unidad', stock_minimo: '1', notas: '', stock_inicial: '' }
 const MOV_VACIO = { item_id: '', tipo: 'compra' as TipoMovimiento, cantidad: '', nuevo_stock: '', fecha: hoyISO(), proveedor: '', precio_unitario: '', comprobante: '', notas: '' }
 
 /**
