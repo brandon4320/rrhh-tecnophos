@@ -81,10 +81,16 @@ export function calcularStock(items: ItemBase[], movimientos: MovimientoBase[]):
   return out
 }
 
-/** Sin stock → rojo; bajo el mínimo (si hay mínimo) → naranja; si no, OK. */
+/**
+ * Sin stock → rojo; bajo el mínimo → naranja; si no, OK.
+ * Mínimo 0 (o null) significa "sin alerta" DE VERDAD: un ítem que no se controla
+ * (p. ej. EPP que esa empresa no maneja) no aparece en rojo por estar en 0 — se
+ * muestra gris "Sin alerta". Con stock > 0 sigue siendo OK.
+ */
 export function estadoStock(stock: number, minimo: number | null | undefined): EstadoVencimiento {
-  if (stock <= 0) return 'vencido'
-  if (minimo != null && minimo > 0 && stock <= minimo) return 'proximo'
+  const sinAlerta = minimo == null || minimo <= 0
+  if (stock <= 0) return sinAlerta ? 'sin_fecha' : 'vencido'
+  if (!sinAlerta && stock <= minimo) return 'proximo'
   return 'vigente'
 }
 
@@ -92,7 +98,7 @@ export const ESTADO_STOCK_LABEL: Record<EstadoVencimiento, string> = {
   vencido: 'Sin stock',
   proximo: 'Bajo mínimo',
   vigente: 'OK',
-  sin_fecha: '—',
+  sin_fecha: 'Sin alerta',
 }
 
 /** Compras de un mes ('YYYY-MM'): cuántas y cuánto (solo las que tienen precio). */

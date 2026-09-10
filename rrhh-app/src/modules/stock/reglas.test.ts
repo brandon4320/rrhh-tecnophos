@@ -53,12 +53,17 @@ describe('calcularStock', () => {
 describe('estadoStock', () => {
   it('sin stock / bajo mínimo / ok', () => {
     expect(estadoStock(0, 5)).toBe('vencido')
-    expect(estadoStock(-1, 0)).toBe('vencido')
+    expect(estadoStock(-1, 1)).toBe('vencido')
     expect(estadoStock(3, 5)).toBe('proximo')
     expect(estadoStock(5, 5)).toBe('proximo')
     expect(estadoStock(6, 5)).toBe('vigente')
     expect(estadoStock(1, 0)).toBe('vigente')
     expect(estadoStock(1, null)).toBe('vigente')
+  })
+  it('mínimo 0 = sin alerta: en cero no se pone rojo', () => {
+    expect(estadoStock(0, 0)).toBe('sin_fecha')
+    expect(estadoStock(0, null)).toBe('sin_fecha')
+    expect(estadoStock(-1, 0)).toBe('sin_fecha')
   })
 })
 
