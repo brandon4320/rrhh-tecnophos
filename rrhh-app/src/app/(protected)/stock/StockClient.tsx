@@ -81,7 +81,7 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
   const visibles = items.filter((i) => {
     if (!verArchivados && i.activo === false) return false
     if (categoria && (i.categoria ?? '') !== categoria) return false
-    if (soloAlerta && estadoStock(stock.get(i.id)?.stock ?? 0, i.stock_minimo) === 'vigente') return false
+    if (soloAlerta && !['vencido', 'proximo'].includes(estadoStock(stock.get(i.id)?.stock ?? 0, i.stock_minimo))) return false
     if (q && !`${i.nombre} ${i.categoria ?? ''}`.toLowerCase().includes(q.toLowerCase())) return false
     return true
   })
