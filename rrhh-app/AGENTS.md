@@ -27,7 +27,7 @@ Un solo login con **módulos** (registro en `src/config/modules.ts`):
 
 | Módulo | Ruta | Qué hace | Quién lo usa |
 |---|---|---|---|
-| **RRHH** | `/(protected)` → `/dashboard`, `/empleados`, `/empresa/[slug]`, `/legajo/[id]`, `/vencimientos`, `/stock`, `/admin/*` | Carpeta documental: empleados, certificados con vencimiento, vehículos, equipos/activos (matafuegos, Draeger), habilitaciones de empresa, archivos adjuntos, comprobantes de sueldo. **Stock por empresa** (`/stock?empresa=slug`): catálogo de ítems + compras/consumos/ajustes | Administración (desktop) |
+| **RRHH** | `/(protected)` → `/dashboard`, `/empleados`, `/empresa/[slug]`, `/legajo/[id]`, `/vencimientos`, `/documentos`, `/stock`, `/admin/*` | Carpeta documental: empleados, certificados con vencimiento, vehículos, equipos/activos (matafuegos, Draeger), habilitaciones de empresa, archivos adjuntos, comprobantes de sueldo. **Documentación mensual** (`/documentos?empresa=slug&anio=`): AÑO → MES → carpetas fijas (F931, ART, SVO…) con archivos. **Stock por empresa** (`/stock?empresa=slug`): catálogo de ítems + compras/consumos/ajustes | Administración (desktop) |
 | ~~Operaciones~~ | — | **Eliminado (2026-09)**: reemplazado por el sistema externo unipar-app.vercel.app (repo aparte). Las tablas `limpieza_*` y los usuarios con roles de limpieza siguen en la DB como legacy. | — |
 | **Gestión Comercial** | `/comercial` | CRM: clientes, proyectos (pipeline), tareas, agenda, viajes, equipo, reportes. Workspace estilo Notion con kanban | Equipo comercial (MUY mobile) |
 | **Tecnophos - ARCOR** | `/(protected)/arcor` (+ `/actividad`, `/alertas`, `/contenedores`) | **Observabilidad** del sistema externo de certificados de fumigación de contenedores (repo `C:\Dev\Arcor`: FastAPI + n8n en un droplet). Espejo de la planilla de contenedores, feed de actividad, estado de WhatsApp/crédito Claude/cola Colabora y alertas con historial. Solo lectura: los datos entran por `POST /api/arcor/ingest` | Admin + usuarios RRHH que ven todas las empresas |
@@ -79,6 +79,7 @@ rrhh-app/src/
 │   │   │   ├── VehiculosClient     #   vehículos + certificados
 │   │   │   └── EquiposClient       #   activos por sección (Matafuegos, Draeger…)
 │   │   ├── empleados/  legajo/[id]/  vencimientos/  admin/
+│   │   ├── documentos/             # Documentación mensual por empresa: DocumentosClient (año → mes → carpetas)
 │   │   ├── stock/                  # Stock por empresa: StockClient (CRUD ítems + movimientos)
 │   │   └── arcor/                  # ═══ TECNOPHOS - ARCOR (observabilidad) ═══ ver §8b
 │   ├── operaciones/                # ═══ MÓDULO OPERACIONES ═══
@@ -87,6 +88,7 @@ rrhh-app/src/
 │       ├── upload-url/             # firma URL para PUT directo a R2
 │       ├── upload/                 # registra fila archivo (+fallback multipart)
 │       ├── archivo/                # GET url firmada (valida RLS) / DELETE
+│       ├── recibos/  documentos/   # registran filas de recibos_sueldo / documentos_mensuales (+fallback, DELETE)
 │       ├── arcor/ingest/           # ★ entrada de datos del sistema ARCOR (token, service role)
 │       └── comercial/{tarea,proyecto,tags,tarea-rapida}/
 ├── components/
@@ -102,6 +104,7 @@ rrhh-app/src/
 ├── modules/comercial/              # queries/actions/tipos/reglas del CRM
 ├── modules/arcor/                  # reglas (puras, con tests) / queries / acceso / tipos del módulo ARCOR
 ├── modules/stock/reglas.ts         # stock = suma de movimientos; estado por mínimo; compras del mes (con tests)
+├── modules/documentos/reglas.ts    # carpetas fijas del mes, completitud, estado del mes, claves R2 (con tests)
 ├── types/{index,database}.ts       # dominio + tipos generados de la DB
 supabase/                           # schema.sql + migraciones numeradas (ver §6)
 ```
@@ -116,7 +119,9 @@ supabase/                           # schema.sql + migraciones numeradas (ver §
   (service role, solo server).
 - **`src/lib/auth/session.ts`**: usar SIEMPRE `getSesion()` (cacheada por request) /
   `requireSesion()` / `requireRol()` / `requireModulo()`. NO hacer
-  `getUser()` + query a `perfiles` a mano.
+  `getUser()` + query a `perfiles` a mano. En **route handlers** (JSON) usar
+  `sesionApi(roles, mensaje403)`: devuelve `{ error: NextResponse }` o `{ supabase, sesion }`
+  en vez de redirigir (lo usan `/api/recibos` y `/api/documentos`).
 - **`src/lib/auth/roles.ts`**: roles y grupos (`RRHH_ROLES`, `LEGAJO_ESCRITURA`,
   `COMERCIAL_GESTION`, etc.).
 
@@ -167,6 +172,15 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   suma de movimientos (`modules/stock/reglas.ts::calcularStock`, en JS — volúmenes chicos). El
   ajuste guarda la DIFERENCIA contra el stock contado, con signo. Mutaciones directas con el
   cliente de Supabase desde `StockClient` (RLS decide) + estado local + `router.refresh()`.
+- **Documentación mensual** (migración 17): `documentos_mensuales` colgada de `empresas`
+  (`periodo` = primer día del mes, `carpeta` texto con `''` = archivos sueltos del mes, archivo en
+  R2, `origen` manual|automatico, `clave_externa` única por empresa para que un proceso automático
+  pueda re-correr sin duplicar). Réplica de las carpetas en disco de la oficinista: las **6 carpetas
+  fijas** (Aportes sindicales, ART, F931, Pagos, Recibos de sueldos, SVO) viven en código
+  (`modules/documentos/reglas.ts::CARPETAS_FIJAS`) y se muestran siempre; se admiten carpetas
+  extra escritas a mano. Son documentos de la EMPRESA: lo de cada persona sigue en `recibos_sueldo`
+  (la carpeta "Recibos de sueldos" muestra cuántos empleados activos ya tienen el suyo y cuenta como
+  completa si están todos). UI en `documentos/DocumentosClient.tsx`, API `/api/documentos`.
 - **En los `<select>` de tipo de certificado, la opción "Otro" usa el valor
   `'otro'`, que NO es un UUID**: al guardar va `tipo_id: null` +
   `tipo_nombre_custom`. Ese bug ya se arregló una vez — no lo reintroduzcas.
@@ -212,8 +226,11 @@ Por eso la subida es **directa a R2 con URL prefirmada**:
 El helper es `src/lib/upload-client.ts` (`subirArchivo`) — usalo siempre; tiene
 fallback multipart para archivos ≤4MB si el PUT directo falla. Los comprobantes de sueldo
 usan el mismo circuito con `subirRecibo` (`/api/upload-url` con `recurso: 'recibo'`, fila en
-`recibos_sueldo` vía `/api/recibos`); `GET /api/archivo` valida el path contra `archivos`
-**o** `recibos_sueldo` antes de firmar.
+`recibos_sueldo` vía `/api/recibos`) y la documentación mensual con `subirDocumento` (`recurso:
+'documento'`, fila en `documentos_mensuales` vía `/api/documentos`, path `documentos/<empresaId>/…`
+que el registro valida); `GET /api/archivo` elige la tabla dueña por el **prefijo del path**
+(`recibos/` → `recibos_sueldo`, `documentos/` → `documentos_mensuales`, resto → `archivos`) y
+valida vía RLS antes de firmar. Por eso `recibos` y `documentos` son slugs de empresa reservados.
 
 - `GET /api/archivo` verifica que el archivo exista **vía RLS antes de firmar** la
   URL de descarga (fix de un IDOR real). `DELETE` borra la fila primero y R2 después.

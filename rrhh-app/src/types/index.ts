@@ -35,6 +35,9 @@ export type Recibo = Tables<'recibos_sueldo'>
 export type StockItem = Tables<'stock_items'>
 export type StockMovimiento = Tables<'stock_movimientos'>
 
+/** Documentación mensual de la empresa (F931, ART, SVO… por mes y carpeta, archivo en R2). */
+export type DocumentoMensual = Tables<'documentos_mensuales'>
+
 export type Certificado = Tables<'certificados'> & {
   tipo?: TipoCertificado | null
   empleado?: Empleado | null

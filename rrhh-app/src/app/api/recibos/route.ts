@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { deleteFromR2, uploadToR2 } from '@/lib/r2/operations'
-import { tieneRol, LEGAJO_ESCRITURA, type Rol } from '@/lib/auth/roles'
+import { sesionApi } from '@/lib/auth/session'
+import { LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import { esTipoRecibo, periodoDesdeMes, validarArchivoRecibo } from '@/lib/recibos'
 
 /**
@@ -12,15 +12,9 @@ import { esTipoRecibo, periodoDesdeMes, validarArchivoRecibo } from '@/lib/recib
  * Toda escritura pasa por el cliente de sesión: la RLS (recibos_rrhh_all) es la que decide.
  */
 
-async function sesionEscritura() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: NextResponse.json({ error: 'No autorizado' }, { status: 401 }) }
-  const { data: perfil } = await supabase.from('perfiles').select('rol').eq('id', user.id).single()
-  if (!tieneRol(perfil?.rol as Rol | null, LEGAJO_ESCRITURA)) {
-    return { error: NextResponse.json({ error: 'No tenés permisos para cargar comprobantes.' }, { status: 403 }) }
-  }
-  return { supabase, user }
+/** Sesión + rol de escritura, vía getSesion() (AGENTS.md §5). */
+function sesionEscritura() {
+  return sesionApi(LEGAJO_ESCRITURA, 'No tenés permisos para cargar comprobantes.')
 }
 
 function errorInsert(message: string) {
@@ -34,7 +28,7 @@ function errorInsert(message: string) {
 export async function POST(request: NextRequest) {
   const s = await sesionEscritura()
   if ('error' in s) return s.error
-  const { supabase, user } = s
+  const { supabase, sesion } = s
 
   // ── Modo registro (JSON): el archivo ya está en R2 ──
   if (request.headers.get('content-type')?.includes('application/json')) {
@@ -63,7 +57,7 @@ export async function POST(request: NextRequest) {
         size_bytes: typeof body?.sizeBytes === 'number' ? body.sizeBytes : null,
         notas: (String(body?.notas ?? '').trim() || null),
         origen: 'manual',
-        uploaded_by: user.id,
+        uploaded_by: sesion.userId,
       })
       .select()
       .single()
@@ -96,7 +90,7 @@ export async function POST(request: NextRequest) {
     .from('recibos_sueldo')
     .insert({
       empleado_id: empleadoId, periodo, tipo, nombre_archivo: file.name, path,
-      mime_type: file.type || null, size_bytes: file.size, notas, origen: 'manual', uploaded_by: user.id,
+      mime_type: file.type || null, size_bytes: file.size, notas, origen: 'manual', uploaded_by: sesion.userId,
     })
     .select()
     .single()

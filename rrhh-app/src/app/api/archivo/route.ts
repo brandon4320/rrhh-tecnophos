@@ -11,17 +11,16 @@ export async function GET(request: NextRequest) {
   if (!path) return NextResponse.json({ error: 'Falta path' }, { status: 400 })
 
   // El path es atacable por query string: verificamos que el archivo exista
-  // y sea visible para el usuario vía RLS (archivos_rrhh_all scopea por empresa)
-  // ANTES de firmar la URL. Sin esto sería un IDOR sobre todo el bucket.
-  // Adjuntos de certificados (archivos) o comprobantes de sueldo (recibos_sueldo):
-  // ambas tablas tienen RLS por empresa, así que un maybeSingle vacío = sin permiso.
-  const { data: archivo } = await supabase
-    .from('archivos').select('id').eq('path', path).maybeSingle()
-  if (!archivo) {
-    const { data: recibo } = await supabase
-      .from('recibos_sueldo').select('id').eq('path', path).maybeSingle()
-    if (!recibo) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
-  }
+  // y sea visible para el usuario vía RLS ANTES de firmar la URL. Sin esto
+  // sería un IDOR sobre todo el bucket. Cada tabla con archivos en R2 tiene su
+  // prefijo de clave (ver /api/upload-url), así que alcanza con UNA consulta a
+  // la tabla dueña; todas tienen RLS por empresa: maybeSingle vacío = sin permiso.
+  // OJO: por eso `recibos` y `documentos` son slugs de empresa reservados.
+  const tabla = path.startsWith('recibos/') ? 'recibos_sueldo'
+    : path.startsWith('documentos/') ? 'documentos_mensuales'
+    : 'archivos'
+  const { data: fila } = await supabase.from(tabla).select('id').eq('path', path).maybeSingle()
+  if (!fila) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
 
   const url = await getSignedDownloadUrl(path, 120)
   return NextResponse.json({ url })
