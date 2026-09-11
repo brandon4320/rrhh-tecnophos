@@ -168,6 +168,62 @@ export type Database = {
         }
         Relationships: []
       }
+      documentos_mensuales: {
+        Row: {
+          carpeta: string
+          clave_externa: string | null
+          created_at: string
+          empresa_id: string
+          id: string
+          mime_type: string | null
+          nombre_archivo: string
+          notas: string | null
+          origen: string
+          path: string
+          periodo: string
+          size_bytes: number | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          carpeta?: string
+          clave_externa?: string | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          mime_type?: string | null
+          nombre_archivo: string
+          notas?: string | null
+          origen?: string
+          path: string
+          periodo: string
+          size_bytes?: number | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          carpeta?: string
+          clave_externa?: string | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          mime_type?: string | null
+          nombre_archivo?: string
+          notas?: string | null
+          origen?: string
+          path?: string
+          periodo?: string
+          size_bytes?: number | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_mensuales_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empleados: {
         Row: {
           activo: boolean | null
