@@ -11,10 +11,11 @@ import {
 import { EstadoPill } from '@/components/ui/estado-pill'
 import type { DocumentoMensual } from '@/types'
 import { subirDocumento } from '@/lib/upload-client'
+import { labelPeriodo } from '@/lib/recibos'
 import {
-  CARPETAS_FIJAS, CARPETA_RAIZ, CARPETA_RECIBOS, ESTADO_MES_LABEL, LABEL_RAIZ, MESES_CORTOS, agruparPorCarpeta,
-  carpetasDelMes, completitudMes, estadoMes, fmtBytes, labelPeriodo, normalizarCarpeta, periodoAnterior, periodoDe,
-  validarArchivoDocumento,
+  CARPETAS_FIJAS, CARPETA_RAIZ, CARPETA_RECIBOS, ESTADO_MES_LABEL, LABEL_RAIZ, MESES_CORTOS, agruparPorCarpeta, anioMesAR,
+  carpetasDelMes, carpetasExtra, completitudMes, esCarpetaFija, estadoMes, fmtBytes, normalizarCarpeta, periodoActual,
+  periodoAnterior, periodoDe, validarArchivoDocumento,
 } from '@/modules/documentos/reglas'
 import { fmtFechaAR } from '@/lib/fechas-ar'
 
@@ -22,32 +23,41 @@ interface Props {
   empresa: { id: string; nombre: string; slug: string }
   anio: number
   documentos: DocumentoMensual[]
-  /** periodo → cantidad de empleados con recibo mensual cargado en el legajo */
+  /** periodo → cantidad de empleados ACTIVOS con recibo mensual cargado en el legajo */
   recibosPorPeriodo: Record<string, number>
   empleadosActivos: number
   canEdit: boolean
 }
 
 const OTRA = '__otra__'
+/** Subidas en paralelo: cada archivo son 3 requests (firma, PUT a R2, registro). */
+const SUBIDAS_EN_PARALELO = 3
 
 const inputCls =
   'w-full px-3.5 py-2.5 rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring'
 const labelCls = 'mb-1 block text-xs font-medium text-foreground'
 const btnPrimary =
   'inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50'
-const btnMini = 'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors'
+const btnMini = 'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50'
 
 /**
  * Réplica de las carpetas en disco de la oficinista: AÑO → MES → carpetas fijas
  * (+ sueltos). Los archivos van directo a R2 y la fila a documentos_mensuales
  * vía /api/documentos (RLS). Cuando exista la carga automática, esos archivos
  * aparecen acá mismo con origen='automatico' — la UI no cambia.
+ *
+ * Estado local `docs` + router.refresh(): misma convención que StockClient. Las
+ * altas/bajas propias se reflejan al instante; lo que cargue otro usuario
+ * aparece al cambiar de año/empresa o recargar.
  */
 export default function DocumentosClient({ empresa, anio, documentos, recibosPorPeriodo, empleadosActivos, canEdit }: Props) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
-  const hoy = new Date()
-  const anioActual = hoy.getFullYear()
+  // "Hoy" fijo por montaje (y en hora AR): así el SSR en UTC y el browser coinciden
+  // y el memo de meses tiene una dependencia estable.
+  const [hoy] = useState(() => new Date())
+  const anioActual = anioMesAR(hoy).anio
+  const limiteActual = periodoActual(hoy)
 
   const [docs, setDocs] = useState<DocumentoMensual[]>(documentos)
   const [mesSel, setMesSel] = useState<number>(() => {
@@ -60,14 +70,20 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
     abierto: false, mes: mesSel, carpeta: CARPETAS_FIJAS[0], otra: '', notas: '', archivos: [],
   })
   const [progreso, setProgreso] = useState<{ actual: number; total: number } | null>(null)
+  const subiendo = progreso !== null
   const [borrando, setBorrando] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)
 
   // ── Derivados por mes ──
   const meses = useMemo(() => {
+    const porPeriodo = new Map<string, DocumentoMensual[]>()
+    for (const d of docs) {
+      if (!porPeriodo.has(d.periodo)) porPeriodo.set(d.periodo, [])
+      porPeriodo.get(d.periodo)!.push(d)
+    }
     return Array.from({ length: 12 }, (_, i) => {
       const periodo = periodoDe(anio, i + 1)
-      const delMes = docs.filter((d) => d.periodo === periodo)
+      const delMes = porPeriodo.get(periodo) ?? []
       const conRecibo = recibosPorPeriodo[periodo] ?? 0
       const recibosCompletos = empleadosActivos > 0 && conRecibo >= empleadosActivos
       const completitud = completitudMes(delMes, recibosCompletos ? [CARPETA_RECIBOS] : [])
@@ -76,35 +92,34 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
         estado: estadoMes(periodo, completitud, delMes.length, hoy),
       }
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [docs, anio, recibosPorPeriodo, empleadosActivos])
+  }, [docs, anio, recibosPorPeriodo, empleadosActivos, hoy])
 
   const actual = meses[mesSel - 1]
   const porCarpeta = useMemo(() => agruparPorCarpeta(actual.docs), [actual])
   const carpetas = useMemo(() => carpetasDelMes(actual.docs), [actual])
-  const carpetasExtra = useMemo(() => {
-    const s = new Set<string>()
-    for (const d of docs) {
-      const c = normalizarCarpeta(d.carpeta)
-      if (c && !(CARPETAS_FIJAS as readonly string[]).includes(c)) s.add(c)
-    }
-    return [...s].sort((a, b) => a.localeCompare(b, 'es'))
-  }, [docs])
+  // Carpetas extra de TODO el año, para ofrecerlas en el selector del formulario.
+  const extrasDelAnio = useMemo(() => carpetasExtra(docs), [docs])
 
-  const transcurridos = meses.filter((m) => m.periodo < periodoDe(anioActual, hoy.getMonth() + 1)).length
-  const completos = meses.filter((m) => m.estado === 'vigente').length
+  // "X de Y meses completos" se mide sobre los meses ya transcurridos, para que
+  // completar el mes en curso no dé "9 de 8".
+  const transcurridos = meses.filter((m) => m.periodo < limiteActual)
+  const completos = transcurridos.filter((m) => m.estado === 'vigente').length
 
   // ── Formulario de carga ──
   function abrirCarga(carpeta: string, archivos: File[] = []) {
-    const esFija = (CARPETAS_FIJAS as readonly string[]).includes(carpeta) || carpetasExtra.includes(carpeta) || carpeta === CARPETA_RAIZ
-    setForm({ abierto: true, mes: mesSel, carpeta: esFija ? carpeta : OTRA, otra: esFija ? '' : carpeta, notas: '', archivos })
+    if (subiendo) {
+      toast.error('Esperá a que termine la carga en curso.')
+      return
+    }
+    const conocida = esCarpetaFija(carpeta) || extrasDelAnio.includes(carpeta) || carpeta === CARPETA_RAIZ
+    setForm({ abierto: true, mes: mesSel, carpeta: conocida ? carpeta : OTRA, otra: conocida ? '' : carpeta, notas: '', archivos })
   }
   function cerrarCarga() {
     setForm((f) => ({ ...f, abierto: false, archivos: [], notas: '', otra: '' }))
     if (fileRef.current) fileRef.current.value = ''
   }
   function agregarArchivos(lista: FileList | File[] | null) {
-    if (!lista) return
+    if (!lista || subiendo) return
     const nuevos = Array.from(lista)
     setForm((f) => {
       const claves = new Set(f.archivos.map((a) => `${a.name}|${a.size}`))
@@ -116,6 +131,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
   }
 
   async function subir() {
+    if (subiendo) return
     if (form.archivos.length === 0) return toast.error('Elegí al menos un archivo.')
     const carpeta = form.carpeta === OTRA ? normalizarCarpeta(form.otra) : form.carpeta
     if (form.carpeta === OTRA && !carpeta) return toast.error('Escribí el nombre de la carpeta.')
@@ -124,19 +140,33 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
       if (invalido) return toast.error(invalido)
     }
     const periodo = periodoDe(anio, form.mes)
-    setProgreso({ actual: 0, total: form.archivos.length })
-    const errores: string[] = []
+    const archivos = form.archivos
+    const opts = { empresaId: empresa.id, periodo: periodo.slice(0, 7), carpeta, notas: form.notas }
+    const total = archivos.length
+    let hechos = 0
     let ok = 0
-    for (let i = 0; i < form.archivos.length; i++) {
-      setProgreso({ actual: i + 1, total: form.archivos.length })
-      try {
-        const nuevo = await subirDocumento(form.archivos[i], { empresaId: empresa.id, periodo: periodo.slice(0, 7), carpeta, notas: form.notas })
-        setDocs((prev) => [nuevo as DocumentoMensual, ...prev])
-        ok++
-      } catch (e) {
-        errores.push(e instanceof Error ? e.message : `No se pudo cargar "${form.archivos[i].name}".`)
+    const errores: string[] = []
+    setProgreso({ actual: 0, total })
+
+    // Pool chico: N subidas en vuelo, cada una firma → PUT → registra.
+    let siguiente = 0
+    const worker = async () => {
+      while (siguiente < archivos.length) {
+        const a = archivos[siguiente++]
+        try {
+          const nuevo = await subirDocumento(a, opts)
+          setDocs((prev) => [nuevo as DocumentoMensual, ...prev])
+          ok++
+        } catch (e) {
+          errores.push(e instanceof Error ? e.message : `No se pudo cargar "${a.name}".`)
+        } finally {
+          hechos++
+          setProgreso({ actual: hechos, total })
+        }
       }
     }
+    await Promise.all(Array.from({ length: Math.min(SUBIDAS_EN_PARALELO, total) }, worker))
+
     setProgreso(null)
     if (ok > 0) {
       toast.success(`${ok} ${ok === 1 ? 'archivo cargado' : 'archivos cargados'} en ${carpeta || LABEL_RAIZ.toLowerCase()} · ${labelPeriodo(periodo)}.`)
@@ -170,12 +200,12 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
 
   // ── Drag & drop sobre una carpeta ──
   function onDragOver(e: DragEvent, carpeta: string) {
-    if (!canEdit) return
+    if (!canEdit || subiendo) return
     e.preventDefault()
     if (dragOver !== carpeta) setDragOver(carpeta)
   }
   function onDrop(e: DragEvent, carpeta: string) {
-    if (!canEdit) return
+    if (!canEdit || subiendo) return
     e.preventDefault()
     setDragOver(null)
     const archivos = Array.from(e.dataTransfer.files ?? [])
@@ -183,7 +213,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
     abrirCarga(carpeta, archivos)
   }
 
-  const opcionesCarpeta = [...CARPETAS_FIJAS, ...carpetasExtra]
+  const opcionesCarpeta = [...CARPETAS_FIJAS, ...extrasDelAnio]
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
@@ -193,7 +223,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
           <h1 className="text-2xl font-semibold tracking-tight">Documentación mensual</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {empresa.nombre}
-            {transcurridos > 0 && ` · ${completos} de ${transcurridos} ${transcurridos === 1 ? 'mes completo' : 'meses completos'}`}
+            {transcurridos.length > 0 && ` · ${completos} de ${transcurridos.length} ${transcurridos.length === 1 ? 'mes completo' : 'meses completos'}`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -211,7 +241,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
             )}
           </div>
           {canEdit && (
-            <button onClick={() => abrirCarga(CARPETAS_FIJAS[0])} className={btnPrimary}>
+            <button onClick={() => abrirCarga(CARPETAS_FIJAS[0])} className={btnPrimary} disabled={subiendo}>
               <Upload className="size-4" strokeWidth={2} />
               Cargar archivos
             </button>
@@ -257,11 +287,11 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
         <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm font-semibold text-foreground">Cargar archivos</p>
-            <button onClick={cerrarCarga} className="text-muted-foreground hover:text-foreground" aria-label="Cerrar">
+            <button onClick={cerrarCarga} className="text-muted-foreground hover:text-foreground disabled:opacity-50" aria-label="Cerrar" disabled={subiendo}>
               <X className="size-4" strokeWidth={2} />
             </button>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <fieldset disabled={subiendo} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Mes *</label>
               <select value={form.mes} onChange={(e) => setForm((f) => ({ ...f, mes: Number(e.target.value) }))} className={inputCls}>
@@ -305,7 +335,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
                       <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
                       <span className="min-w-0 flex-1 truncate">{a.name}</span>
                       <span className="text-xs tabular-nums text-muted-foreground">{fmtBytes(a.size)}</span>
-                      <button onClick={() => quitarArchivo(i)} className="text-muted-foreground hover:text-foreground" aria-label="Quitar" disabled={!!progreso}>
+                      <button onClick={() => quitarArchivo(i)} className="text-muted-foreground hover:text-foreground disabled:opacity-50" aria-label="Quitar">
                         <X className="size-3.5" strokeWidth={2} />
                       </button>
                     </li>
@@ -317,15 +347,15 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
               <label className={labelCls}>Notas</label>
               <input type="text" value={form.notas} onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))} className={inputCls} placeholder="Opcional: rectificativa, complementaria, etc." />
             </div>
-          </div>
+          </fieldset>
           <div className="mt-4 flex items-center gap-3">
-            <button onClick={subir} disabled={!!progreso || form.archivos.length === 0} className={btnPrimary}>
+            <button onClick={subir} disabled={subiendo || form.archivos.length === 0} className={btnPrimary}>
               <Upload className="size-4" strokeWidth={2} />
               {progreso
                 ? `Subiendo ${progreso.actual} de ${progreso.total}…`
                 : form.archivos.length > 1 ? `Cargar ${form.archivos.length} archivos` : 'Cargar archivo'}
             </button>
-            <button onClick={cerrarCarga} className="px-2 py-2 text-sm text-muted-foreground hover:text-foreground" disabled={!!progreso}>
+            <button onClick={cerrarCarga} className="px-2 py-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={subiendo}>
               Cancelar
             </button>
           </div>
@@ -349,55 +379,46 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {carpetas.map((c) => (
-            <CarpetaCard
-              key={c}
-              nombre={c}
-              docs={porCarpeta.get(c) ?? []}
-              canEdit={canEdit}
-              cubierta={actual.completitud.completas.includes(c as (typeof CARPETAS_FIJAS)[number])}
-              dragOver={dragOver === c}
-              borrando={borrando}
-              onAgregar={() => abrirCarga(c)}
-              onVer={ver}
-              onEliminar={eliminar}
-              onDragOver={(e) => onDragOver(e, c)}
-              onDragLeave={() => setDragOver(null)}
-              onDrop={(e) => onDrop(e, c)}
-              extra={
-                c === CARPETA_RECIBOS ? (
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs">
-                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                      <Users className="size-3.5" strokeWidth={2} />
-                      {empleadosActivos === 0
-                        ? 'Sin empleados activos'
-                        : `${actual.conRecibo} de ${empleadosActivos} empleados con recibo en el legajo`}
-                    </span>
-                    <Link href={`/empleados?empresa=${empresa.slug}`} className="shrink-0 font-medium text-primary hover:underline">
-                      Ver empleados
-                    </Link>
-                  </div>
-                ) : null
-              }
-            />
-          ))}
-
-          <CarpetaCard
-            nombre={LABEL_RAIZ}
-            docs={porCarpeta.get(CARPETA_RAIZ) ?? []}
-            canEdit={canEdit}
-            cubierta={(porCarpeta.get(CARPETA_RAIZ)?.length ?? 0) > 0}
-            suelta
-            dragOver={dragOver === CARPETA_RAIZ}
-            borrando={borrando}
-            onAgregar={() => abrirCarga(CARPETA_RAIZ)}
-            onVer={ver}
-            onEliminar={eliminar}
-            onDragOver={(e) => onDragOver(e, CARPETA_RAIZ)}
-            onDragLeave={() => setDragOver(null)}
-            onDrop={(e) => onDrop(e, CARPETA_RAIZ)}
-            className="sm:col-span-2 xl:col-span-3"
-          />
+          {[...carpetas, CARPETA_RAIZ].map((c) => {
+            const esRaiz = c === CARPETA_RAIZ
+            const docsCarpeta = porCarpeta.get(c) ?? []
+            return (
+              <CarpetaCard
+                key={c || '__raiz__'}
+                nombre={esRaiz ? LABEL_RAIZ : c}
+                docs={docsCarpeta}
+                canEdit={canEdit}
+                subiendo={subiendo}
+                // Con contenido se pinta con el acento; la de recibos también si el legajo ya la cubre.
+                cubierta={docsCarpeta.length > 0 || (c === CARPETA_RECIBOS && actual.recibosCompletos)}
+                suelta={esRaiz}
+                dragOver={dragOver === c}
+                borrando={borrando}
+                className={esRaiz ? 'sm:col-span-2 xl:col-span-3' : undefined}
+                onAgregar={() => abrirCarga(c)}
+                onVer={ver}
+                onEliminar={eliminar}
+                onDragOver={(e) => onDragOver(e, c)}
+                onDragLeave={() => setDragOver(null)}
+                onDrop={(e) => onDrop(e, c)}
+                extra={
+                  c === CARPETA_RECIBOS ? (
+                    <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs">
+                      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                        <Users className="size-3.5" strokeWidth={2} />
+                        {empleadosActivos === 0
+                          ? 'Sin empleados activos'
+                          : `${actual.conRecibo} de ${empleadosActivos} empleados activos con recibo en el legajo`}
+                      </span>
+                      <Link href={`/empleados?empresa=${empresa.slug}`} className="shrink-0 font-medium text-primary hover:underline">
+                        Ver empleados
+                      </Link>
+                    </div>
+                  ) : null
+                }
+              />
+            )
+          })}
         </div>
       </section>
     </div>
@@ -407,12 +428,13 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
 // ── Carpeta ─────────────────────────────────────────────────────────────────
 
 function CarpetaCard({
-  nombre, docs, canEdit, cubierta, suelta, dragOver, borrando, extra, className,
+  nombre, docs, canEdit, subiendo, cubierta, suelta, dragOver, borrando, extra, className,
   onAgregar, onVer, onEliminar, onDragOver, onDragLeave, onDrop,
 }: {
   nombre: string
   docs: DocumentoMensual[]
   canEdit: boolean
+  subiendo: boolean
   cubierta: boolean
   suelta?: boolean
   dragOver: boolean
@@ -449,7 +471,7 @@ function CarpetaCard({
           </p>
         </div>
         {canEdit && (
-          <button onClick={onAgregar} className={clsx(btnMini, 'bg-primary/10 text-primary hover:bg-primary/20')} title={`Agregar a ${nombre}`}>
+          <button onClick={onAgregar} disabled={subiendo} className={clsx(btnMini, 'bg-primary/10 text-primary hover:bg-primary/20')} title={`Agregar a ${nombre}`}>
             <Plus className="size-3.5" strokeWidth={2.5} />
             Agregar
           </button>

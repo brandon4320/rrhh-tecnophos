@@ -119,7 +119,9 @@ supabase/                           # schema.sql + migraciones numeradas (ver §
   (service role, solo server).
 - **`src/lib/auth/session.ts`**: usar SIEMPRE `getSesion()` (cacheada por request) /
   `requireSesion()` / `requireRol()` / `requireModulo()`. NO hacer
-  `getUser()` + query a `perfiles` a mano.
+  `getUser()` + query a `perfiles` a mano. En **route handlers** (JSON) usar
+  `sesionApi(roles, mensaje403)`: devuelve `{ error: NextResponse }` o `{ supabase, sesion }`
+  en vez de redirigir (lo usan `/api/recibos` y `/api/documentos`).
 - **`src/lib/auth/roles.ts`**: roles y grupos (`RRHH_ROLES`, `LEGAJO_ESCRITURA`,
   `COMERCIAL_GESTION`, etc.).
 
@@ -226,8 +228,9 @@ fallback multipart para archivos ≤4MB si el PUT directo falla. Los comprobante
 usan el mismo circuito con `subirRecibo` (`/api/upload-url` con `recurso: 'recibo'`, fila en
 `recibos_sueldo` vía `/api/recibos`) y la documentación mensual con `subirDocumento` (`recurso:
 'documento'`, fila en `documentos_mensuales` vía `/api/documentos`, path `documentos/<empresaId>/…`
-que el registro valida); `GET /api/archivo` valida el path contra `archivos`, `recibos_sueldo`
-**o** `documentos_mensuales` antes de firmar.
+que el registro valida); `GET /api/archivo` elige la tabla dueña por el **prefijo del path**
+(`recibos/` → `recibos_sueldo`, `documentos/` → `documentos_mensuales`, resto → `archivos`) y
+valida vía RLS antes de firmar. Por eso `recibos` y `documentos` son slugs de empresa reservados.
 
 - `GET /api/archivo` verifica que el archivo exista **vía RLS antes de firmar** la
   URL de descarga (fix de un IDOR real). `DELETE` borra la fila primero y R2 después.

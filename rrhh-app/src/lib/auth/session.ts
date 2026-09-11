@@ -4,6 +4,7 @@
 // ============================================================
 import { cache } from 'react'
 import { redirect } from 'next/navigation'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { type Rol, tieneRol } from './roles'
 import { puedeAccederModulo, type ModuloKey } from '@/config/modules'
@@ -58,4 +59,24 @@ export async function requireModulo(modulo: ModuloKey): Promise<Sesion> {
   const s = await requireSesion()
   if (!puedeAccederModulo(s.rol, modulo)) redirect('/')
   return s
+}
+
+/**
+ * Variante para route handlers (JSON): en vez de redirigir devuelve la
+ * respuesta de error lista para retornar. Uso:
+ *   const s = await sesionApi(LEGAJO_ESCRITURA, 'No tenés permisos…')
+ *   if ('error' in s) return s.error
+ *   const { supabase, sesion } = s
+ * El `supabase` es el cliente de sesión: la RLS sigue decidiendo.
+ */
+export async function sesionApi(
+  permitidos: readonly Rol[],
+  mensajeSinPermiso = 'No tenés permisos para esta acción.'
+): Promise<{ error: NextResponse } | { supabase: Awaited<ReturnType<typeof createClient>>; sesion: Sesion }> {
+  const sesion = await getSesion()
+  if (!sesion) return { error: NextResponse.json({ error: 'No autorizado' }, { status: 401 }) }
+  if (!tieneRol(sesion.rol, permitidos)) {
+    return { error: NextResponse.json({ error: mensajeSinPermiso }, { status: 403 }) }
+  }
+  return { supabase: await createClient(), sesion }
 }

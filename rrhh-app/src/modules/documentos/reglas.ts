@@ -1,9 +1,12 @@
 // ============================================================
 // Reglas puras de la documentación mensual por empresa (sin I/O).
 // Réplica de las carpetas de la oficinista: AÑO → MES → carpetas fijas.
+// Los períodos ('YYYY-MM-01', etiqueta "Julio 2026") se comparten con los
+// comprobantes de sueldo: ver lib/recibos.ts (labelPeriodo, periodoDesdeMes).
 // ============================================================
 
 import type { EstadoVencimiento } from '@/types'
+import { diaClaveAR } from '@/lib/fechas-ar'
 
 /** Carpetas que se repiten todos los meses (en el orden en que se muestran). */
 export const CARPETAS_FIJAS = ['Aportes sindicales', 'ART', 'F931', 'Pagos', 'Recibos de sueldos', 'SVO'] as const
@@ -17,14 +20,14 @@ export const LABEL_RAIZ = 'Archivos sueltos del mes'
 export const CARPETA_RECIBOS: CarpetaFija = 'Recibos de sueldos'
 
 export const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'] as const
-export const MESES_LARGOS = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-] as const
 
 export interface DocMinimo {
   periodo: string        // 'YYYY-MM-01'
   carpeta: string
+}
+
+export function esCarpetaFija(c: string): c is CarpetaFija {
+  return (CARPETAS_FIJAS as readonly string[]).includes(c)
 }
 
 /** Colapsa espacios y, si coincide (sin importar mayúsculas) con una fija, devuelve el nombre canónico. */
@@ -36,14 +39,19 @@ export function normalizarCarpeta(v: unknown): string {
   return fija ?? limpio
 }
 
-/** Carpetas a mostrar en un mes: las fijas siempre, más las extra que tengan archivos (ordenadas). Nunca la raíz. */
-export function carpetasDelMes(docs: DocMinimo[]): string[] {
+/** Carpetas NO fijas con archivos, ordenadas (nunca la raíz). */
+export function carpetasExtra(docs: DocMinimo[]): string[] {
   const extras = new Set<string>()
   for (const d of docs) {
     const c = normalizarCarpeta(d.carpeta)
-    if (c && !(CARPETAS_FIJAS as readonly string[]).includes(c)) extras.add(c)
+    if (c && !esCarpetaFija(c)) extras.add(c)
   }
-  return [...CARPETAS_FIJAS, ...[...extras].sort((a, b) => a.localeCompare(b, 'es'))]
+  return [...extras].sort((a, b) => a.localeCompare(b, 'es'))
+}
+
+/** Carpetas a mostrar en un mes: las fijas siempre, más las extra que tengan archivos. */
+export function carpetasDelMes(docs: DocMinimo[]): string[] {
+  return [...CARPETAS_FIJAS, ...carpetasExtra(docs)]
 }
 
 /** Agrupa los documentos de un mes por carpeta ('' = raíz). */
@@ -82,24 +90,26 @@ export function periodoDe(anio: number, mes: number): string {
   return `${anio}-${String(mes).padStart(2, '0')}-01`
 }
 
-/** 'YYYY-MM-01' → 'Julio 2026'. */
-export function labelPeriodo(periodo: string): string {
-  const m = /^(\d{4})-(\d{2})/.exec(periodo)
-  if (!m) return periodo
-  const mes = Number(m[2])
-  if (mes < 1 || mes > 12) return periodo
-  return `${MESES_LARGOS[mes - 1]} ${m[1]}`
+/**
+ * Año y mes EN HORA ARGENTINA del instante dado. Vercel corre en UTC: entre las
+ * 21:00 y las 24:00 AR del último día del mes, `new Date().getMonth()` ya sería
+ * el mes siguiente (AGENTS.md §9). Por eso todo "hoy" pasa por acá.
+ */
+export function anioMesAR(now: Date = new Date()): { anio: number; mes: number } {
+  const clave = diaClaveAR(now) // 'YYYY-MM-DD'
+  return { anio: Number(clave.slice(0, 4)), mes: Number(clave.slice(5, 7)) }
 }
 
-/** Primer día del mes actual en 'YYYY-MM-01' (según el reloj que se pase). */
+/** Primer día del mes actual (hora AR) en 'YYYY-MM-01'. */
 export function periodoActual(now: Date = new Date()): string {
-  return periodoDe(now.getFullYear(), now.getMonth() + 1)
+  const { anio, mes } = anioMesAR(now)
+  return periodoDe(anio, mes)
 }
 
-/** Mes anterior al actual: lo habitual es cargar la documentación del mes que cerró. */
+/** Mes anterior al actual (hora AR): lo habitual es cargar la documentación del mes que cerró. */
 export function periodoAnterior(now: Date = new Date()): string {
-  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  return periodoDe(d.getFullYear(), d.getMonth() + 1)
+  const { anio, mes } = anioMesAR(now)
+  return mes === 1 ? periodoDe(anio - 1, 12) : periodoDe(anio, mes - 1)
 }
 
 export const ESTADO_MES_LABEL: Record<EstadoVencimiento, string> = {
@@ -154,12 +164,19 @@ const MIME_PERMITIDOS = [
   'text/plain', 'application/zip', 'application/x-zip-compressed',
 ] as const
 
-/** Lo que baja de ARCA/ART/sindicatos: PDF casi siempre, a veces planillas o TXT (F931). */
+/**
+ * Lo que baja de ARCA/ART/sindicatos: PDF casi siempre, a veces planillas o TXT (F931).
+ * Se aplica en el browser Y en el servidor (firma de URL y registro). El tamaño
+ * que llega al servidor es el declarado por el cliente, así que ahí vale como
+ * chequeo de coherencia, no como garantía.
+ */
 export function validarArchivoDocumento(file: { type: string; size: number; name: string }): string | null {
   if (!file.name) return 'Elegí un archivo.'
   if (file.size === 0) return `"${file.name}" está vacío.`
-  if (file.size > MAX_DOCUMENTO_BYTES) return `"${file.name}" pesa ${(file.size / 1048576).toFixed(1)} MB; el máximo es 25 MB.`
-  if (!(MIME_PERMITIDOS as readonly string[]).includes(file.type || '') && !EXT_PERMITIDAS.test(file.name)) {
+  if (file.size > MAX_DOCUMENTO_BYTES) return `"${file.name}" pesa ${fmtBytes(file.size)}; el máximo es 25 MB.`
+  // La extensión manda (el navegador deduce el mime de ahí); el mime, si viene, tiene que ser conocido o genérico.
+  const mimeOk = !file.type || file.type === 'application/octet-stream' || (MIME_PERMITIDOS as readonly string[]).includes(file.type)
+  if (!EXT_PERMITIDAS.test(file.name) || !mimeOk) {
     return `"${file.name}": solo se aceptan PDF, imágenes, Excel, Word, TXT o ZIP.`
   }
   return null

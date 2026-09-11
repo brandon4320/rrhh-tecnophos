@@ -209,6 +209,7 @@ export async function subirDocumento(
       carpeta: opts.carpeta,
       nombre: file.name,
       mimeType: file.type || 'application/octet-stream',
+      sizeBytes: file.size,
     }),
   })
   if (!urlRes.ok) {

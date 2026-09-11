@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { deleteFromR2, uploadToR2 } from '@/lib/r2/operations'
-import { tieneRol, LEGAJO_ESCRITURA, type Rol } from '@/lib/auth/roles'
+import { sesionApi } from '@/lib/auth/session'
+import { LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import { periodoDesdeMes } from '@/lib/recibos'
 import { normalizarCarpeta, pathDocumento, validarArchivoDocumento } from '@/modules/documentos/reglas'
 
@@ -14,21 +14,20 @@ import { normalizarCarpeta, pathDocumento, validarArchivoDocumento } from '@/mod
  * La carga automática futura NO pasa por acá: escribe en la tabla con origen='automatico'.
  */
 
-async function sesionEscritura() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: NextResponse.json({ error: 'No autorizado' }, { status: 401 }) }
-  const { data: perfil } = await supabase.from('perfiles').select('rol').eq('id', user.id).single()
-  if (!tieneRol(perfil?.rol as Rol | null, LEGAJO_ESCRITURA)) {
-    return { error: NextResponse.json({ error: 'No tenés permisos para cargar documentación.' }, { status: 403 }) }
+const SIN_PERMISO = 'No tenés permisos para cargar documentación.'
+
+function errorInsert(message: string) {
+  console.error('[api/documentos] insert:', message)
+  if (message.includes('duplicate key')) {
+    return NextResponse.json({ error: 'Ese archivo ya está registrado. Recargá la página.' }, { status: 409 })
   }
-  return { supabase, user }
+  return NextResponse.json({ error: `No se pudo registrar el documento: ${message}` }, { status: 500 })
 }
 
 export async function POST(request: NextRequest) {
-  const s = await sesionEscritura()
+  const s = await sesionApi(LEGAJO_ESCRITURA, SIN_PERMISO)
   if ('error' in s) return s.error
-  const { supabase, user } = s
+  const { supabase, sesion } = s
 
   // ── Modo registro (JSON): el archivo ya está en R2 ──
   if (request.headers.get('content-type')?.includes('application/json')) {
@@ -38,7 +37,12 @@ export async function POST(request: NextRequest) {
     const carpeta = normalizarCarpeta(body?.carpeta)
     const path = String(body?.path ?? '')
     const nombre = String(body?.nombre ?? '').trim()
+    const mimeType = typeof body?.mimeType === 'string' ? body.mimeType : ''
+    const sizeBytes = Number.isInteger(body?.sizeBytes) && body.sizeBytes > 0 ? (body.sizeBytes as number) : null
     if (!empresaId || !periodo || !path || !nombre) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+    // Misma regla que en el browser: extensión/mime permitidos y tamaño declarado ≤ 25 MB.
+    const invalido = validarArchivoDocumento({ name: nombre, type: mimeType, size: sizeBytes ?? 1 })
+    if (invalido) return NextResponse.json({ error: invalido }, { status: 400 })
     // El path tiene que ser el que firmó /api/upload-url para ESTA empresa (evita registrar objetos ajenos).
     if (!path.startsWith(`documentos/${empresaId}/`)) return NextResponse.json({ error: 'Path inválido' }, { status: 400 })
 
@@ -50,15 +54,15 @@ export async function POST(request: NextRequest) {
         carpeta,
         nombre_archivo: nombre,
         path,
-        mime_type: (body?.mimeType as string) || null,
-        size_bytes: typeof body?.sizeBytes === 'number' ? body.sizeBytes : null,
+        mime_type: mimeType || null,
+        size_bytes: sizeBytes,
         notas: String(body?.notas ?? '').trim() || null,
         origen: 'manual',
-        uploaded_by: user.id,
+        uploaded_by: sesion.userId,
       })
       .select()
       .single()
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) return errorInsert(error.message)
     return NextResponse.json({ documento: data })
   }
 
@@ -78,25 +82,30 @@ export async function POST(request: NextRequest) {
   if (!emp) return NextResponse.json({ error: 'Empresa no encontrada o sin permiso.' }, { status: 403 })
 
   const path = pathDocumento(empresaId, periodo, carpeta, file.name)
-  await uploadToR2(path, Buffer.from(await file.arrayBuffer()), file.type || 'application/octet-stream')
+  try {
+    await uploadToR2(path, Buffer.from(await file.arrayBuffer()), file.type || 'application/octet-stream')
+  } catch (e) {
+    console.error('[api/documentos] R2 upload:', e)
+    return NextResponse.json({ error: 'No se pudo guardar el archivo en el almacenamiento.' }, { status: 502 })
+  }
 
   const { data, error } = await supabase
     .from('documentos_mensuales')
     .insert({
       empresa_id: empresaId, periodo, carpeta, nombre_archivo: file.name, path,
-      mime_type: file.type || null, size_bytes: file.size, notas, origen: 'manual', uploaded_by: user.id,
+      mime_type: file.type || null, size_bytes: file.size, notas, origen: 'manual', uploaded_by: sesion.userId,
     })
     .select()
     .single()
   if (error) {
     await deleteFromR2(path).catch(() => {})
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return errorInsert(error.message)
   }
   return NextResponse.json({ documento: data })
 }
 
 export async function DELETE(request: NextRequest) {
-  const s = await sesionEscritura()
+  const s = await sesionApi(LEGAJO_ESCRITURA, SIN_PERMISO)
   if ('error' in s) return s.error
   const { supabase } = s
 
@@ -104,10 +113,17 @@ export async function DELETE(request: NextRequest) {
   if (!id) return NextResponse.json({ error: 'Falta id' }, { status: 400 })
 
   // Primero la fila (gated por RLS); si no la puede ver, no se borra nada y no tocamos R2.
-  const { data: doc } = await supabase
+  // Un error real de la DB no es "no encontrado": se distingue.
+  const { data: doc, error } = await supabase
     .from('documentos_mensuales').delete().eq('id', id).select('path').maybeSingle()
+  if (error) {
+    console.error('[api/documentos] delete:', error.message)
+    return NextResponse.json({ error: `No se pudo eliminar el documento: ${error.message}` }, { status: 500 })
+  }
   if (!doc) return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 })
 
-  await deleteFromR2(doc.path)
+  // La fila ya no existe: si R2 falla queda un objeto huérfano, pero para el
+  // usuario la operación se completó. Se loguea, no se reporta como fallo.
+  await deleteFromR2(doc.path).catch((e) => console.error('[api/documentos] R2 delete:', doc.path, e))
   return NextResponse.json({ ok: true })
 }
