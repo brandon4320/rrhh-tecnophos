@@ -277,8 +277,8 @@ solo muestra lo que ese sistema le reporta.
   `procesados`/`errores`.
 - **Reglas del ingest para contenedores:** un reporte posterior con MENOS datos no borra lo que
   ya se sabía (booking/OE/hash se conservan si vienen vacíos; observaciones ídem — trampa #17) y
-  un contenedor `encontrado` **no vuelve** a `pendiente_arcor`/`revisar_foto` por una foto
-  re-enviada o una fila vieja del NO ENCONTRADOS. Los `(ilegible)` sin hash se clavean por
+  un contenedor `encontrado` **no vuelve** a `pendiente_arcor`, `revisar_foto` ni `descartado`
+  por una foto re-enviada, una fila vieja del NO ENCONTRADOS o una limpieza de la galería. Los `(ilegible)` sin hash se clavean por
   `fecha|lugar|observaciones` (backfill idempotente). Las alertas abiertas se refrescan también en
   `severidad`/`titulo` (warning → critical se ve). Las lecturas (`queries.ts`) **lanzan** si
   Supabase falla y `arcor/error.tsx` lo muestra: en observabilidad, "no pude leer" nunca puede
