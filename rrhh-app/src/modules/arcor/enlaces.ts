@@ -11,6 +11,4 @@ export const ENLACES_ARCOR = {
   cargar: `${BASE}/cargar`,
   /** Galería de lecturas dudosas: cada foto se resuelve tipeando el N° de contenedor. */
   revisar: `${BASE}/cargar/revisar`,
-  /** Cargar la respuesta de ARCOR (Booking + OE) a un reclamo. */
-  respuestaArcor: `${BASE}/subir-respuesta-arcor`,
 } as const

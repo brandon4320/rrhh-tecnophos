@@ -13,7 +13,7 @@ import { EstadoPill } from '@/components/ui/estado-pill'
 import type { StockItem, StockMovimiento } from '@/types'
 import {
   ESTADO_STOCK_LABEL, TIPO_MOVIMIENTO_LABEL, UNIDADES_SUGERIDAS, calcularStock, categoriasDe, comprasDelMes,
-  estadoStock, fmtCantidad, fmtMoneda, mesClave, normalizarNombre, parseCantidad, type TipoMovimiento,
+  estadoStock, fmtCantidad, fmtMoneda, hoyClave, mesClave, normalizarNombre, parseCantidad, sumarStock, type TipoMovimiento,
 } from '@/modules/stock/reglas'
 import { fmtFechaAR } from '@/lib/fechas-ar'
 
@@ -33,7 +33,8 @@ const btnOutline =
   'inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
 const btnMini = 'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors'
 
-const hoyISO = () => new Date().toISOString().slice(0, 10)
+// Hoy en hora Argentina (toISOString() sería UTC: a las 22:00 AR ya es "mañana").
+const hoyISO = () => hoyClave()
 
 // Mínimo 1 por defecto (criterio acordado el 10/09/2026: avisar cuando queda la última unidad).
 const ITEM_VACIO = { nombre: '', categoria: '', unidad: 'unidad', stock_minimo: '1', notas: '', stock_inicial: '' }
@@ -127,11 +128,14 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
       nombre, categoria: normalizarNombre(fItem.categoria) || null, unidad: normalizarNombre(fItem.unidad) || 'unidad',
       stock_minimo: minimo, notas: fItem.notas.trim() || null,
     }
+    // 23505 = ya existe un ítem con ese nombre en la empresa (otro usuario lo creó, o el estado local está viejo).
+    const yaExiste = (e: { code?: string } | null) => e?.code === '23505'
     if (editandoId) {
       const { data, error } = await supabase
         .from('stock_items').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', editandoId).select().single()
       setSaving(false)
-      if (error || !data) return toast.error('No se pudo guardar el ítem.')
+      if (yaExiste(error)) return toast.error(`Ya existe un ítem llamado "${nombre}" en ${empresa.nombre}. Recargá la página.`)
+      if (error || !data) return toast.error(`No se pudo guardar el ítem${error ? `: ${error.message}` : '.'}`)
       setItems((prev) => prev.map((i) => (i.id === editandoId ? data : i)))
       toast.success('Ítem actualizado.')
     } else {
@@ -139,7 +143,8 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
         .from('stock_items').insert({ ...payload, empresa_id: empresa.id }).select().single()
       if (error || !data) {
         setSaving(false)
-        return toast.error('No se pudo crear el ítem.')
+        if (yaExiste(error)) return toast.error(`Ya existe un ítem llamado "${nombre}" en ${empresa.nombre}. Recargá la página.`)
+        return toast.error(`No se pudo crear el ítem${error ? `: ${error.message}` : '.'}`)
       }
       let nuevosMovs: StockMovimiento[] = []
       if (inicial && inicial > 0) {
@@ -189,11 +194,23 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
     if (!it) return toast.error('Elegí el ítem.')
     if (!fMov.fecha) return toast.error('La fecha es obligatoria.')
     let cantidad: number | null
+    let notasExtra = ''
     if (fMov.tipo === 'ajuste') {
       const nuevo = parseCantidad(fMov.nuevo_stock)
       if (nuevo == null || nuevo < 0) return toast.error('Ingresá el stock real contado (número ≥ 0).')
-      cantidad = Math.round((nuevo - (stock.get(it.id)?.stock ?? 0)) * 100) / 100
-      if (cantidad === 0) return toast.error('El stock contado es igual al actual: no hay nada que ajustar.')
+      // El ajuste guarda la DIFERENCIA contra el stock actual: se calcula con los
+      // movimientos FRESCOS del ítem, no con el estado de esta pestaña (otro usuario
+      // pudo haber registrado algo desde que se abrió la página).
+      setSaving(true)
+      const { data: frescos, error: eFrescos } = await supabase
+        .from('stock_movimientos').select('tipo, cantidad').eq('item_id', it.id)
+      setSaving(false)
+      if (eFrescos) return toast.error(`No se pudo leer el stock actual: ${eFrescos.message}`)
+      const actual = sumarStock(frescos ?? [])
+      cantidad = Math.round((nuevo - actual) * 100) / 100
+      if (cantidad === 0) return toast.error(`El stock contado (${fmtCantidad(nuevo, it.unidad)}) es igual al actual: no hay nada que ajustar.`)
+      // Queda registrado lo que se contó, no solo la diferencia (auditable a mano).
+      notasExtra = `Conteo: ${fmtCantidad(nuevo, it.unidad)} (había ${fmtCantidad(actual, it.unidad)})`
     } else {
       cantidad = parseCantidad(fMov.cantidad)
       if (cantidad == null || cantidad <= 0) return toast.error('La cantidad tiene que ser mayor a 0.')
@@ -215,11 +232,11 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
         proveedor: fMov.tipo === 'compra' ? normalizarNombre(fMov.proveedor) || null : null,
         precio_unitario: precio,
         comprobante: fMov.tipo === 'compra' ? fMov.comprobante.trim() || null : null,
-        notas: fMov.notas.trim() || null,
+        notas: [fMov.notas.trim(), notasExtra].filter(Boolean).join(' · ') || null,
       })
       .select().single()
     setSaving(false)
-    if (error || !data) return toast.error('No se pudo registrar el movimiento.')
+    if (error || !data) return toast.error(`No se pudo registrar el movimiento${error ? `: ${error.message}` : '.'}`)
     setMovs((prev) => [data, ...prev])
     const verbo = fMov.tipo === 'compra' ? 'Compra registrada' : fMov.tipo === 'consumo' ? 'Consumo registrado' : 'Stock ajustado'
     toast.success(`${verbo}: ${it.nombre}.`)
@@ -368,11 +385,13 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
               <div>
                 <label className={labelCls}>Stock real contado *</label>
                 <input type="text" inputMode="decimal" value={fMov.nuevo_stock} onChange={(e) => setFMov((f) => ({ ...f, nuevo_stock: e.target.value }))} className={inputCls} placeholder={itemMov ? `actual: ${fmtCantidad(stock.get(itemMov.id)?.stock ?? 0)}` : ''} autoFocus={!!fMov.item_id} />
+                <PreviewCantidad texto={fMov.nuevo_stock} unidad={itemMov?.unidad} />
               </div>
             ) : (
               <div>
                 <label className={labelCls}>Cantidad *{itemMov ? ` (${itemMov.unidad})` : ''}</label>
                 <input type="text" inputMode="decimal" value={fMov.cantidad} onChange={(e) => setFMov((f) => ({ ...f, cantidad: e.target.value }))} className={inputCls} placeholder="Ej: 20" autoFocus={!!fMov.item_id} />
+                <PreviewCantidad texto={fMov.cantidad} unidad={itemMov?.unidad} />
               </div>
             )}
             <div>
@@ -572,4 +591,14 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
       )}
     </div>
   )
+}
+
+/**
+ * Muestra cómo se interpreta lo tipeado ("1.250" es mil doscientos cincuenta; "1,25" es uno
+ * coma veinticinco) para que el separador no sorprenda al guardar.
+ */
+function PreviewCantidad({ texto, unidad }: { texto: string; unidad?: string | null }) {
+  const n = texto.trim() ? parseCantidad(texto) : null
+  if (n == null || /^\d+$/.test(texto.trim())) return null
+  return <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">Se registra: {fmtCantidad(n, unidad)}</p>
 }

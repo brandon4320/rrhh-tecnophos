@@ -10,23 +10,23 @@ import { claveMes, resumenPorLugar } from './reglas'
 
 export async function getEstados(): Promise<Record<string, EstadoRow>> {
   const db = await adb()
-  const { data } = await db.from('arcor_estado').select('clave, valor, updated_at')
+  const res = await db.from('arcor_estado').select('clave, valor, updated_at')
   const out: Record<string, EstadoRow> = {}
-  for (const r of rows<EstadoRow>(data)) out[r.clave] = r
+  for (const r of rows<EstadoRow>(res)) out[r.clave] = r
   return out
 }
 
 /** Alertas con estado que siguen abiertas (warning/critical, sin resuelto_en). */
 export async function getAlertasAbiertas(): Promise<EventoRow[]> {
   const db = await adb()
-  const { data } = await db
+  const res = await db
     .from('arcor_eventos')
     .select('*')
     .not('clave_alerta', 'is', null)
     .is('resuelto_en', null)
     .in('severidad', ['warning', 'critical'])
     .order('ts', { ascending: false })
-  return rows<EventoRow>(data)
+  return rows<EventoRow>(res)
 }
 
 export async function getEventos(opts: {
@@ -45,8 +45,7 @@ export async function getEventos(opts: {
   if (opts.soloAlertas) q = q.or('clave_alerta.not.is.null,severidad.neq.info')
   if (opts.soloResueltas) q = q.not('clave_alerta', 'is', null).not('resuelto_en', 'is', null).in('severidad', ['warning', 'critical'])
   if (opts.soloIncidentes) q = q.is('clave_alerta', null).in('severidad', ['warning', 'critical'])
-  const { data } = await q
-  return rows<EventoRow>(data)
+  return rows<EventoRow>(await q)
 }
 
 export async function getContenedores(opts: {
@@ -65,15 +64,18 @@ export async function getContenedores(opts: {
   if (opts.mes) q = q.eq('mes', opts.mes)
   if (opts.lugar) q = q.eq('lugar', opts.lugar)
   if (opts.estado) q = q.eq('estado', opts.estado)
-  const { data } = await q
-  return rows<ContenedorRow>(data)
+  return rows<ContenedorRow>(await q)
 }
 
-/** Meses con datos, del más reciente al más viejo. */
+/**
+ * Meses con datos, del más reciente al más viejo. Ordenado por fecha desc antes
+ * del límite: si algún día hay más de 5000 filas, se pierden los meses más viejos
+ * (nunca los recientes).
+ */
 export async function getMeses(): Promise<string[]> {
   const db = await adb()
-  const { data } = await db.from('arcor_contenedores').select('mes').limit(5000)
-  const set = new Set(rows<{ mes: string }>(data).map((r) => r.mes))
+  const res = await db.from('arcor_contenedores').select('mes').order('fecha', { ascending: false }).limit(5000)
+  const set = new Set(rows<{ mes: string }>(res).map((r) => r.mes))
   return [...set].sort((a, b) => claveMes(b) - claveMes(a))
 }
 
@@ -89,12 +91,12 @@ export interface ResumenMes {
 
 export async function getResumenMes(mes: string): Promise<ResumenMes> {
   const db = await adb()
-  const { data } = await db
+  const res = await db
     .from('arcor_contenedores')
     .select('lugar, estado, publicado')
     .eq('mes', mes)
     .limit(5000)
-  const items = rows<{ lugar: string; estado: string; publicado: boolean }>(data)
+  const items = rows<{ lugar: string; estado: string; publicado: boolean }>(res)
   const vivos = items.filter((i) => i.estado !== 'descartado')
   return {
     mes,

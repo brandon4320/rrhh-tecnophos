@@ -30,14 +30,16 @@ function nombreSede(nombreEmpresa: string) {
 
 export default async function HubPage() {
   const sesion = await requireSesion()
-  const modulos = modulosPara(sesion.rol)
+  const puedeArcor = puedeVerArcor(sesion)
+  // ARCOR exige además ver todas las empresas (puedeVerArcor espeja la RLS): para un
+  // usuario con empresa_acceso no cuenta como módulo disponible.
+  const modulos = modulosPara(sesion.rol).filter((m) => m.key !== 'arcor' || puedeArcor)
 
-  // Si solo tiene un módulo, entra directo (ej. UNIPAR → Operaciones).
+  // Si solo tiene un módulo, entra directo (p. ej. Soledad, usuario de una sola sede → RRHH).
   if (modulos.length === 1) redirect(modulos[0].href)
 
   const puedeRrhh = modulos.some((m) => m.key === 'rrhh')
   const puedeComercial = modulos.some((m) => m.key === 'comercial')
-  const puedeArcor = puedeVerArcor(sesion)
 
   const supabase = await createClient()
   const empresasQuery = supabase.from('empresas').select('id, nombre, slug').order('nombre')

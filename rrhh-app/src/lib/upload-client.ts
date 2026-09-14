@@ -118,6 +118,7 @@ export async function subirRecibo(
       tipo: opts.tipo,
       nombre: file.name,
       mimeType: file.type || 'application/octet-stream',
+      sizeBytes: file.size,
     }),
   })
   if (!urlRes.ok) {

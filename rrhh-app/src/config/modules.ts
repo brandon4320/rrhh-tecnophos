@@ -57,6 +57,8 @@ export const MODULOS: ModuloDef[] = [
     // Observabilidad del sistema externo de certificados ARCOR (droplet + n8n):
     // contenedores, actividad y alertas. Vive dentro del shell de RRHH y, además
     // del rol, exige ver todas las empresas — ver modules/arcor/acceso.ts.
+    // OJO: por eso `puedeAccederModulo(rol, 'arcor')` / `requireModulo('arcor')` NO
+    // alcanzan para gatear ARCOR: usar siempre `puedeVerArcor(sesion)`.
     key: 'arcor',
     label: 'Tecnophos - ARCOR',
     href: '/arcor',

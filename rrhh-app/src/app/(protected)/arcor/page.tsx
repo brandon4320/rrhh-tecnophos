@@ -9,8 +9,8 @@ import { ProvinciasBarras } from '@/components/arcor/ProvinciasBarras'
 import { AccionesArcor } from '@/components/arcor/AccionesArcor'
 import { ENLACES_ARCOR } from '@/modules/arcor/enlaces'
 import { getAlertasAbiertas, getEstados, getEventos, getResumenMes } from '@/modules/arcor/queries'
-import { evaluarSilencio, mesActual, mesAnterior, nivelCredito, severidadAEstado } from '@/modules/arcor/reglas'
-import type { EstadoClaude, EstadoHeartbeat, EstadoPublicaciones, EstadoWhatsapp, EventoRow } from '@/modules/arcor/tipos'
+import { alertaSilencio, evaluarSilencio, labelOrigen, mesActual, mesAnterior, nivelCredito, severidadAEstado } from '@/modules/arcor/reglas'
+import type { EstadoClaude, EstadoHeartbeat, EstadoPublicaciones, EstadoWhatsapp } from '@/modules/arcor/tipos'
 import { fmtFechaHoraAR, fmtFechaLargaAR, tiempoRelativo } from '@/lib/fechas-ar'
 
 export const dynamic = 'force-dynamic'
@@ -32,25 +32,12 @@ export default async function ArcorResumenPage() {
   const pub = estados.publicaciones?.valor as EstadoPublicaciones | undefined
 
   const silencio = evaluarSilencio(hb?.ts ?? null, ahora)
-  const nivel = nivelCredito(claude?.porcentaje_usado)
+  const nivel = nivelCredito(claude?.porcentaje_usado, claude?.sin_credito)
   const alertaWa = abiertas.find((a) => a.clave_alerta === 'whatsapp')
 
   // Alerta sintética: el sistema dejó de reportar (no vive en la DB, se evalúa al leer).
-  const alertaSilencio: EventoRow | null = silencio.silencio
-    ? {
-        id: 'silencio',
-        ts: hb?.ts ?? estados.heartbeat?.updated_at ?? ahora.toISOString(),
-        tipo: 'sistema_silencio',
-        severidad: 'critical',
-        titulo: hb ? 'El sistema ARCOR dejó de reportar' : 'El sistema ARCOR todavía no reportó nunca',
-        detalle: { umbral_min: silencio.umbralMin, minutos: silencio.minutos },
-        origen: 'gestion',
-        clave_alerta: 'silencio',
-        resuelto_en: null,
-        created_at: ahora.toISOString(),
-      }
-    : null
-  const todasAbiertas = alertaSilencio ? [alertaSilencio, ...abiertas] : abiertas
+  const sintetica = alertaSilencio(silencio, { ts: hb?.ts, updated_at: estados.heartbeat?.updated_at }, ahora)
+  const todasAbiertas = sintetica ? [sintetica, ...abiertas] : abiertas
 
   const mesHref = `/arcor/contenedores?mes=${encodeURIComponent(mes)}`
   const diff = resumen.total - resumenPrevio.total
@@ -96,12 +83,14 @@ export default async function ArcorResumenPage() {
             className="sm:px-6"
             label="Crédito Claude"
             estado={!claude ? 'sin_fecha' : severidadAEstado(nivel)}
-            pill={!claude ? 'Sin datos' : nivel === 'critical' ? 'Agotándose' : nivel === 'warning' ? 'Bajo' : 'OK'}
+            pill={!claude ? 'Sin datos' : claude.sin_credito ? 'Sin crédito' : nivel === 'critical' ? 'Agotándose' : nivel === 'warning' ? 'Bajo' : 'OK'}
             valor={claude ? `US$ ${Number(claude.restante_usd).toFixed(2)}` : '—'}
             sub={
-              claude
-                ? `${Number(claude.gastado_usd).toFixed(2)} de ${Number(claude.presupuesto_usd).toFixed(0)} usados${claude.certificados_restantes_estimados != null ? ` · ~${claude.certificados_restantes_estimados} certificados` : ''}`
-                : 'Todavía no reportó'
+              !claude
+                ? 'Todavía no reportó'
+                : claude.sin_credito
+                  ? `La API rechazó la última llamada por falta de crédito${claude.sin_credito_desde ? ` · desde ${fmtFechaHoraAR(claude.sin_credito_desde)}` : ''}`
+                  : `${Number(claude.gastado_usd).toFixed(2)} de ${Number(claude.presupuesto_usd).toFixed(0)} usados${claude.certificados_restantes_estimados != null ? ` · ~${claude.certificados_restantes_estimados} certificados` : ''}`
             }
             extra={claude ? <BarraConsumo pct={claude.porcentaje_usado ?? 0} nivel={nivel} /> : undefined}
           />
@@ -111,7 +100,7 @@ export default async function ArcorResumenPage() {
             estado={!hb ? 'sin_fecha' : silencio.silencio ? 'vencido' : 'vigente'}
             pill={!hb ? 'Sin datos' : silencio.silencio ? 'Sin señal' : 'Reportando'}
             valor={hb ? tiempoRelativo(hb.ts, ahora) : '—'}
-            sub={hb ? `${fmtFechaHoraAR(hb.ts)} · vía ${hb.origen}` : 'Todavía no reportó'}
+            sub={hb ? `${fmtFechaHoraAR(hb.ts)} · vía ${labelOrigen(hb.origen)}${hb.errores ? ` · ${hb.errores} con error` : ''}` : 'Todavía no reportó'}
           />
           <TileEstado
             className="sm:pl-6"

@@ -2,8 +2,8 @@ import { CircleCheck } from 'lucide-react'
 import { AlertaCard } from '@/components/arcor/AlertaCard'
 import { ListaEventos } from '@/components/arcor/ListaEventos'
 import { getAlertasAbiertas, getEstados, getEventos } from '@/modules/arcor/queries'
-import { evaluarSilencio } from '@/modules/arcor/reglas'
-import type { EstadoHeartbeat, EventoRow } from '@/modules/arcor/tipos'
+import { alertaSilencio, evaluarSilencio } from '@/modules/arcor/reglas'
+import type { EstadoHeartbeat } from '@/modules/arcor/tipos'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,21 +19,8 @@ export default async function ArcorAlertasPage() {
 
   const hb = estados.heartbeat?.valor as EstadoHeartbeat | undefined
   const silencio = evaluarSilencio(hb?.ts ?? null, ahora)
-  const alertaSilencio: EventoRow | null = silencio.silencio
-    ? {
-        id: 'silencio',
-        ts: hb?.ts ?? estados.heartbeat?.updated_at ?? ahora.toISOString(),
-        tipo: 'sistema_silencio',
-        severidad: 'critical',
-        titulo: hb ? 'El sistema ARCOR dejó de reportar' : 'El sistema ARCOR todavía no reportó nunca',
-        detalle: { umbral_min: silencio.umbralMin, minutos: silencio.minutos },
-        origen: 'gestion',
-        clave_alerta: 'silencio',
-        resuelto_en: null,
-        created_at: ahora.toISOString(),
-      }
-    : null
-  const todasAbiertas = alertaSilencio ? [alertaSilencio, ...abiertas] : abiertas
+  const sintetica = alertaSilencio(silencio, { ts: hb?.ts, updated_at: estados.heartbeat?.updated_at }, ahora)
+  const todasAbiertas = sintetica ? [sintetica, ...abiertas] : abiertas
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">

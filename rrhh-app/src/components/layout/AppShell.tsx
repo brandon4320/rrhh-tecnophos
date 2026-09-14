@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/theme-toggle'
@@ -85,6 +85,8 @@ function subtituloDe(p: Portal): string {
 
 export default function AppShell({ empresas, arcor = false, sesion, children }: Props) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const empresaEnQuery = searchParams.get('empresa')
   const router = useRouter()
   const supabase = createClient()
   const [selectorOpen, setSelectorOpen] = useState(false)
@@ -95,20 +97,20 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
     [empresas, arcor]
   )
 
-  // Portal activo: URL (/empresa/[slug], /arcor o ?empresa=) → último usado → primero
+  // Portal activo: URL (/empresa/[slug], /arcor o ?empresa=) → último usado → primero.
+  // Depende también del query: los selectores de /stock y /documentos navegan cambiando
+  // solo ?empresa= (mismo pathname).
   useEffect(() => {
     try {
-      const url = new URL(window.location.href)
-      const porQuery = url.searchParams.get('empresa')
-      if (porQuery) {
-        setPreferida(porQuery)
-        localStorage.setItem(STORAGE_KEY, porQuery)
+      if (empresaEnQuery) {
+        setPreferida(empresaEnQuery)
+        localStorage.setItem(STORAGE_KEY, empresaEnQuery)
         return
       }
       const guardada = localStorage.getItem(STORAGE_KEY)
       if (guardada) setPreferida(guardada)
     } catch { /* sin preferencia */ }
-  }, [pathname])
+  }, [pathname, empresaEnQuery])
 
   const slugEnPath = pathname.startsWith('/arcor')
     ? 'arcor'
@@ -119,13 +121,16 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
   const activa = useMemo(() => {
     const porPath = slugEnPath && portales.find((e) => e.slug === slugEnPath)
     if (porPath) return porPath
-    const porPref = preferida && portales.find((e) => e.slug === preferida)
+    // "Último usado" solo entre EMPRESAS: un portal virtual (ARCOR) recordado no puede
+    // colonizar /dashboard, /empleados, etc. y dejar la sidebar sin las vistas de RRHH.
+    const porPref = preferida && portales.find((e) => e.slug === preferida && e.tipo === 'empresa')
     if (porPref) return porPref
-    return portales[0] ?? null
+    return portales.find((e) => e.tipo === 'empresa') ?? portales[0] ?? null
   }, [slugEnPath, preferida, portales])
 
   useEffect(() => {
-    if (slugEnPath && portales.some((e) => e.slug === slugEnPath)) {
+    const p = slugEnPath && portales.find((e) => e.slug === slugEnPath)
+    if (p && p.tipo === 'empresa') {
       try { localStorage.setItem(STORAGE_KEY, slugEnPath) } catch { /* no-op */ }
     }
   }, [slugEnPath, portales])
@@ -137,8 +142,10 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
   }
 
   function cambiarPortal(p: Portal) {
-    try { localStorage.setItem(STORAGE_KEY, p.slug) } catch { /* no-op */ }
-    setPreferida(p.slug)
+    if (p.tipo === 'empresa') {
+      try { localStorage.setItem(STORAGE_KEY, p.slug) } catch { /* no-op */ }
+      setPreferida(p.slug)
+    }
     setSelectorOpen(false)
     router.push(p.tipo === 'extra' ? p.href : `/empresa/${p.slug}`)
   }

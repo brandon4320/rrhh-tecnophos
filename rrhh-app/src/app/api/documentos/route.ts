@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { deleteFromR2, uploadToR2 } from '@/lib/r2/operations'
 import { sesionApi } from '@/lib/auth/session'
 import { LEGAJO_ESCRITURA } from '@/lib/auth/roles'
-import { periodoDesdeMes } from '@/lib/recibos'
+import { esPeriodoFuturo, periodoDesdeMes } from '@/lib/recibos'
 import { normalizarCarpeta, pathDocumento, validarArchivoDocumento } from '@/modules/documentos/reglas'
 
 /**
@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     const mimeType = typeof body?.mimeType === 'string' ? body.mimeType : ''
     const sizeBytes = Number.isInteger(body?.sizeBytes) && body.sizeBytes > 0 ? (body.sizeBytes as number) : null
     if (!empresaId || !periodo || !path || !nombre) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+    if (esPeriodoFuturo(periodo)) return NextResponse.json({ error: 'El período no puede ser un mes futuro.' }, { status: 400 })
     // Misma regla que en el browser: extensión/mime permitidos y tamaño declarado ≤ 25 MB.
     const invalido = validarArchivoDocumento({ name: nombre, type: mimeType, size: sizeBytes ?? 1 })
     if (invalido) return NextResponse.json({ error: invalido }, { status: 400 })
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
   const carpeta = normalizarCarpeta(fd.get('carpeta'))
   const notas = String(fd.get('notas') ?? '').trim() || null
   if (!file || !empresaId || !periodo) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+  if (esPeriodoFuturo(periodo)) return NextResponse.json({ error: 'El período no puede ser un mes futuro.' }, { status: 400 })
   const invalido = validarArchivoDocumento(file)
   if (invalido) return NextResponse.json({ error: invalido }, { status: 400 })
 

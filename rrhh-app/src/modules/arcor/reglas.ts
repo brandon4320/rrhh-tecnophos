@@ -5,6 +5,7 @@
 // excel_store.nombre_tab) — si cambian allá, cambian acá.
 // ============================================================
 import type { EstadoVencimiento } from '@/types'
+import type { EventoRow } from './tipos'
 
 export const LUGARES = ['BUENOS AIRES', 'CORDOBA', 'MENDOZA', 'ROSARIO'] as const
 export type Lugar = (typeof LUGARES)[number]
@@ -36,15 +37,35 @@ function sinAcentos(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
-/** 'Rodríguez Peña' / 'TPR Rosario' / 'bs as' → una de las 4 provincias, o null si no reconoce nada. */
+/**
+ * Localidades/terminales → provincia. Espejo de core.ALIAS_LUGAR del servicio
+ * (si agregan una allá, agregarla acá). Sin la comparación difusa de difflib:
+ * lo que no matchea devuelve null y el ingest cae a BUENOS AIRES, igual que allá.
+ */
+export const ALIAS_LUGAR: Record<string, Lugar> = {
+  'ZARATE': 'BUENOS AIRES', 'CAMPANA': 'BUENOS AIRES', 'ESCOBAR': 'BUENOS AIRES',
+  'DOCK SUD': 'BUENOS AIRES', 'LA PLATA': 'BUENOS AIRES', 'ENSENADA': 'BUENOS AIRES',
+  'BAHIA BLANCA': 'BUENOS AIRES', 'EXOLGAN': 'BUENOS AIRES', 'TRP': 'BUENOS AIRES',
+  'TERMINAL 4': 'BUENOS AIRES', 'PUERTO NUEVO': 'BUENOS AIRES',
+  'SAN LORENZO': 'ROSARIO', 'PUERTO GENERAL SAN MARTIN': 'ROSARIO', 'TIMBUES': 'ROSARIO',
+  'VILLA MARIA': 'CORDOBA', 'RIO CUARTO': 'CORDOBA', 'ARROYITO': 'CORDOBA',
+  'SAN RAFAEL': 'MENDOZA', 'LUJAN DE CUYO': 'MENDOZA', 'RODRIGUEZ PENA': 'MENDOZA',
+  'GODOY CRUZ': 'MENDOZA', 'GUAYMALLEN': 'MENDOZA', 'LAS HERAS': 'MENDOZA',
+  'PALMIRA': 'MENDOZA', 'SAN MARTIN DE MENDOZA': 'MENDOZA',
+}
+
+/** 'Rodríguez Peña' / 'TPR Rosario' / 'bs as' / 'Zárate' → una de las 4 provincias, o null si no reconoce nada. */
 export function normalizarLugar(raw: unknown): Lugar | null {
   if (typeof raw !== 'string') return null
-  const s = sinAcentos(raw).toUpperCase().replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim()
+  const s = sinAcentos(raw).toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
   if (!s) return null
   if (s.includes('ROSARIO')) return 'ROSARIO'
   if (s.includes('CORDOBA')) return 'CORDOBA'
   if (s.includes('MENDOZA')) return 'MENDOZA'
   if (s.includes('AIRES') || /\bBS\b/.test(s) || /\bBSAS\b/.test(s) || /\bCABA\b/.test(s)) return 'BUENOS AIRES'
+  for (const [alias, lugar] of Object.entries(ALIAS_LUGAR)) {
+    if (s.includes(alias)) return lugar
+  }
   return null
 }
 
@@ -106,17 +127,28 @@ export function horaAR(now: Date = new Date()): number {
   return Number(h) % 24
 }
 
+/** Minuto (0-59) en Argentina. */
+export function minutoAR(now: Date = new Date()): number {
+  return Number(new Intl.DateTimeFormat('en-US', { timeZone: TZ_AR, minute: 'numeric' }).format(now))
+}
+
+/** Hasta qué minuto después de las 08:00 AR se sigue tolerando el silencio nocturno (la guardia de las 08:00 puede demorar). */
+export const GRACIA_AMANECER_MIN = 30
+
 /**
  * ¿El sistema dejó de reportar? Todo lo que ARCOR manda a Gestión toca el
  * heartbeat; la guardia de WhatsApp (WF12) lo hace cada 2 h entre las 8 y las 22.
  * De día se tolera 3 h de silencio; de noche (22-08) no hay guardia, se toleran 11 h.
+ * Entre las 08:00 y las 08:30 sigue valiendo el umbral nocturno: el último latido
+ * seguro es el de las 22:00 y la corrida de las 08:00 todavía puede estar en camino.
  */
 export function evaluarSilencio(
   heartbeatTs: string | null | undefined,
   now: Date = new Date()
 ): { silencio: boolean; minutos: number | null; umbralMin: number } {
   const h = horaAR(now)
-  const umbralMin = h >= 8 && h < 22 ? 180 : 660
+  const amanecer = h === 8 && minutoAR(now) < GRACIA_AMANECER_MIN
+  const umbralMin = h >= 8 && h < 22 && !amanecer ? 180 : 660
   if (!heartbeatTs) return { silencio: true, minutos: null, umbralMin }
   const t = new Date(heartbeatTs).getTime()
   if (Number.isNaN(t)) return { silencio: true, minutos: null, umbralMin }
@@ -138,12 +170,61 @@ export function resumenPorLugar(
   })
 }
 
-/** Umbrales del WF10 (aviso de crédito): ≥70 % usado = warning; ≥90 % = critical. */
-export function nivelCredito(porcentajeUsado: number | null | undefined): Severidad {
+/**
+ * Umbrales del WF10 (aviso de crédito): ≥70 % usado = warning; ≥90 % = critical.
+ * `sinCredito` es la señal REAL del servicio (la API rechazó la última llamada por
+ * falta de crédito): manda sobre el medidor local, que es solo una estimación.
+ */
+export function nivelCredito(porcentajeUsado: number | null | undefined, sinCredito?: boolean | null): Severidad {
+  if (sinCredito) return 'critical'
   if (porcentajeUsado == null || Number.isNaN(porcentajeUsado)) return 'info'
   if (porcentajeUsado >= 90) return 'critical'
   if (porcentajeUsado >= 70) return 'warning'
   return 'info'
+}
+
+/** Etiquetas del campo `origen` de eventos y heartbeat (quién reportó). */
+export const ORIGEN_LABEL: Record<string, string> = {
+  servicio: 'servicio',
+  n8n: 'n8n',
+  wf0: 'n8n · errores',
+  wf7: 'n8n · publicaciones',
+  wf8: 'n8n · rechequeo',
+  wf10: 'n8n · crédito',
+  wf12: 'n8n · WhatsApp',
+  wf13: 'n8n · conciliación',
+  backfill: 'carga inicial',
+  gestion: 'Gestión',
+}
+
+export function labelOrigen(origen: string | null | undefined): string {
+  if (!origen) return '—'
+  return ORIGEN_LABEL[origen] ?? origen
+}
+
+/**
+ * Alerta sintética "el sistema dejó de reportar". No vive en la DB: se evalúa al
+ * leer, a partir del heartbeat. Devuelve null si el sistema está reportando.
+ */
+export function alertaSilencio(
+  silencio: ReturnType<typeof evaluarSilencio>,
+  heartbeat: { ts?: string | null; updated_at?: string | null } | null | undefined,
+  ahora: Date
+): EventoRow | null {
+  if (!silencio.silencio) return null
+  const iso = ahora.toISOString()
+  return {
+    id: 'silencio',
+    ts: heartbeat?.ts ?? heartbeat?.updated_at ?? iso,
+    tipo: 'sistema_silencio',
+    severidad: 'critical',
+    titulo: heartbeat?.ts ? 'El sistema ARCOR dejó de reportar' : 'El sistema ARCOR todavía no reportó nunca',
+    detalle: { umbral_min: silencio.umbralMin, minutos: silencio.minutos },
+    origen: 'gestion',
+    clave_alerta: 'silencio',
+    resuelto_en: null,
+    created_at: iso,
+  }
 }
 
 /** Severidad → estado visual (EstadoPill es el único encoding de estado de la app). */
