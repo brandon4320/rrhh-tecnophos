@@ -87,7 +87,12 @@ function tituloContenedor(c: { contenedor: string; lugar: string; estado: Estado
   }
 }
 
-const DEGRADANTES: readonly EstadoContenedor[] = ['pendiente_arcor', 'revisar_foto']
+// Estados que NO pueden pisar a un contenedor ya `encontrado`. Además de los obvios,
+// `descartado`: el sistema ARCOR lo manda al limpiar la galería de fotos dudosas, y esa
+// lectura puede coincidir con un contenedor que se cargó bien por otra foto (pasó el
+// 26/08/2026 con TXGU4517978 / TYGU4517978). Limpiar una foto nunca puede borrar del
+// tablero un certificado que ARCOR tiene cargado.
+const DEGRADANTES: readonly EstadoContenedor[] = ['pendiente_arcor', 'revisar_foto', 'descartado']
 
 interface ContenedorExistente {
   id: string
@@ -168,8 +173,9 @@ async function procesarContenedor(admin: Admin, it: Record<string, unknown>, ori
     // Un reporte posterior con MENOS datos no puede borrar lo que ya se sabía:
     //  - Trampa #17 del sistema ARCOR: observaciones vacías no pisan las existentes.
     //  - Booking/OE/hash: el productor los omite cuando no los tiene → se conservan.
-    //  - Un contenedor ya ENCONTRADO no vuelve a "pendiente" ni "revisar foto" por una
-    //    foto re-enviada o una fila vieja del NO ENCONTRADOS (backfill).
+    //  - Un contenedor ya ENCONTRADO no vuelve a "pendiente", "revisar foto" ni
+    //    "descartado" por una foto re-enviada, una fila vieja del NO ENCONTRADOS
+    //    (backfill) o una limpieza de la galería que apunta al mismo número.
     const degrada = existente.estado === 'encontrado' && DEGRADANTES.includes(estado)
     const { error } = await admin
       .from('arcor_contenedores')
