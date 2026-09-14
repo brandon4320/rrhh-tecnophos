@@ -53,8 +53,18 @@ export interface EstadoClaude {
   usd_por_certificado: number | null
   certificados_restantes_estimados: number | null
   modelo?: string
+  /** Señal REAL (11/09/2026): la API rechazó la última llamada por falta de crédito. Manda sobre el medidor. */
+  sin_credito?: boolean
+  sin_credito_desde?: string | null
 }
-export interface EstadoHeartbeat { ts: string; origen: string; items: number }
+export interface EstadoHeartbeat {
+  ts: string
+  origen: string
+  items: number
+  /** Desde el 11/09/2026: cuántos items entraron / fallaron en esa request. */
+  procesados?: number
+  errores?: number
+}
 export interface EstadoPublicaciones {
   pendientes: number
   vencidas: { contenedor: string; operacion: string; creado: string; estado: string }[]

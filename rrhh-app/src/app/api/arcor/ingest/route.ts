@@ -13,11 +13,13 @@
 //   kind 'evento'     -> fila en arcor_eventos; con clave_alerta gestiona el
 //                        ciclo abierta/resuelta (una abierta por clave)
 //   kind 'estado'     -> upsert en arcor_estado
-// Toda request aceptada actualiza arcor_estado.heartbeat.
-// Idempotente: reintentar el mismo payload no duplica contenedores ni alertas.
+// El heartbeat (arcor_estado.heartbeat) se toca solo si se procesó al menos un
+// item: una request que falla entera NO cuenta como "el sistema está vivo".
+// Idempotente: reintentar el mismo payload no duplica contenedores ni alertas
+// (los "(ilegible)" sin hash se clavean por fecha+lugar+observaciones).
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server'
-import { createHash, timingSafeEqual, randomUUID } from 'node:crypto'
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { adbAdmin } from '@/modules/arcor/db'
 import {
   ESTADOS_CONTENEDOR, ORIGENES, SEVERIDADES, esMesValido, mesDeFecha,
@@ -47,18 +49,28 @@ class ItemError extends Error {}
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Admin = any
 
+/**
+ * supabase-js no lanza: devuelve { data, error }. Un error de DB (caída, service
+ * key mal, migración sin aplicar) NO es "token inválido": se propaga para
+ * responder 503 y que el operador no rote el token persiguiendo un fantasma.
+ */
 async function tokenValido(admin: Admin, token: string): Promise<boolean> {
-  const { data } = await admin
+  const { data, error } = await admin
     .from('arcor_config')
     .select('valor')
     .eq('clave', 'ingest_token_hash')
     .maybeSingle()
+  if (error) throw new Error(`arcor_config: ${error.message}`)
   const esperado = data?.valor as string | undefined
-  if (!esperado) return false
+  if (!esperado) throw new Error('arcor_config sin ingest_token_hash')
   const hash = createHash('sha256').update(token).digest('hex')
   const a = Buffer.from(hash, 'utf8')
   const b = Buffer.from(esperado, 'utf8')
   return a.length === b.length && timingSafeEqual(a, b)
+}
+
+function esUniqueViolation(error: { code?: string; message?: string } | null | undefined): boolean {
+  return !!error && (error.code === '23505' || String(error.message ?? '').includes('duplicate key'))
 }
 
 function tituloContenedor(c: { contenedor: string; lugar: string; estado: EstadoContenedor; publicado: boolean }) {
@@ -75,17 +87,32 @@ function tituloContenedor(c: { contenedor: string; lugar: string; estado: Estado
   }
 }
 
+const DEGRADANTES: readonly EstadoContenedor[] = ['pendiente_arcor', 'revisar_foto']
+
+interface ContenedorExistente {
+  id: string
+  publicado: boolean | null
+  observaciones: string | null
+  estado: EstadoContenedor
+  booking: string | null
+  oe: string | null
+  hash_imagen: string | null
+}
+
+async function buscarContenedor(admin: Admin, contenedor: string, mes: string): Promise<ContenedorExistente | null> {
+  const { data, error } = await admin
+    .from('arcor_contenedores')
+    .select('id, publicado, observaciones, estado, booking, oe, hash_imagen')
+    .eq('contenedor', contenedor)
+    .eq('mes', mes)
+    .maybeSingle()
+  if (error) throw new ItemError(`lookup: ${error.message}`)
+  return (data as ContenedorExistente | null) ?? null
+}
+
 async function procesarContenedor(admin: Admin, it: Record<string, unknown>, origenReq: string | null, ahora: string) {
   const fecha = parseFechaFlexible(it.fecha)
   if (!fecha) throw new ItemError('fecha inválida (esperado YYYY-MM-DD o DD/MM/YYYY)')
-
-  const hash = str(it.hash_imagen, 40)
-  let contenedor = String(it.contenedor ?? '').replace(/\s+/g, '')
-  if (!contenedor || /ilegible/i.test(contenedor)) {
-    contenedor = `(ilegible)-${hash ?? randomUUID().slice(0, 8)}`
-  } else {
-    contenedor = contenedor.toUpperCase().slice(0, 40)
-  }
 
   const estado = String(it.estado ?? 'encontrado') as EstadoContenedor
   if (!ESTADOS_CONTENEDOR.includes(estado)) throw new ItemError(`estado inválido: ${estado}`)
@@ -98,15 +125,18 @@ async function procesarContenedor(admin: Admin, it: Record<string, unknown>, ori
   const publicado = it.publicado === true
   const observaciones = str(it.observaciones, 500)
 
-  const { data: existente, error: e1 } = await admin
-    .from('arcor_contenedores')
-    .select('id, publicado, observaciones')
-    .eq('contenedor', contenedor)
-    .eq('mes', mes)
-    .maybeSingle()
-  if (e1) throw new ItemError(`lookup: ${e1.message}`)
+  const hash = str(it.hash_imagen, 40)
+  let contenedor = String(it.contenedor ?? '').replace(/\s+/g, '')
+  if (!contenedor || /ilegible/i.test(contenedor)) {
+    // Sin hash (backfill del NO ENCONTRADOS): clave determinística por fila, así
+    // re-correr el backfill no duplica "(ilegible)-xxxx".
+    const clave = hash ?? createHash('sha1').update(`${fecha}|${lugar}|${observaciones ?? ''}`).digest('hex').slice(0, 8)
+    contenedor = `(ilegible)-${clave}`
+  } else {
+    contenedor = contenedor.toUpperCase().slice(0, 40)
+  }
 
-  const base = {
+  const entrante = {
     fecha,
     booking: str(it.booking, 60),
     oe: str(it.oe, 60),
@@ -117,28 +147,47 @@ async function procesarContenedor(admin: Admin, it: Record<string, unknown>, ori
     updated_at: ahora,
   }
 
-  let accion: 'creado' | 'actualizado'
+  let accion: 'creado' | 'actualizado' | 'sin_cambios' = 'creado'
+  let existente = await buscarContenedor(admin, contenedor, mes)
+  if (!existente) {
+    const { error } = await admin
+      .from('arcor_contenedores')
+      .insert({ ...entrante, contenedor, mes, observaciones, publicado, created_at: ahora })
+    if (error && esUniqueViolation(error)) {
+      // Carrera: otro worker (o request) lo insertó entre el lookup y el insert. Se sigue por el update.
+      existente = await buscarContenedor(admin, contenedor, mes)
+      if (!existente) throw new ItemError(`insert: ${error.message}`)
+    } else if (error) {
+      throw new ItemError(`insert: ${error.message}`)
+    } else {
+      accion = 'creado'
+    }
+  }
+
   if (existente) {
+    // Un reporte posterior con MENOS datos no puede borrar lo que ya se sabía:
+    //  - Trampa #17 del sistema ARCOR: observaciones vacías no pisan las existentes.
+    //  - Booking/OE/hash: el productor los omite cuando no los tiene → se conservan.
+    //  - Un contenedor ya ENCONTRADO no vuelve a "pendiente" ni "revisar foto" por una
+    //    foto re-enviada o una fila vieja del NO ENCONTRADOS (backfill).
+    const degrada = existente.estado === 'encontrado' && DEGRADANTES.includes(estado)
     const { error } = await admin
       .from('arcor_contenedores')
       .update({
-        ...base,
-        // Trampa #17 del sistema ARCOR: una carga repetida sin observaciones no debe pisar las que ya hay.
+        ...(degrada ? { updated_at: ahora } : entrante),
+        booking: entrante.booking ?? existente.booking ?? null,
+        oe: entrante.oe ?? existente.oe ?? null,
+        hash_imagen: entrante.hash_imagen ?? existente.hash_imagen ?? null,
         observaciones: observaciones ?? existente.observaciones ?? null,
         publicado: Boolean(existente.publicado) || publicado,
       })
       .eq('id', existente.id)
     if (error) throw new ItemError(`update: ${error.message}`)
-    accion = 'actualizado'
-  } else {
-    const { error } = await admin
-      .from('arcor_contenedores')
-      .insert({ ...base, contenedor, mes, observaciones, publicado, created_at: ahora })
-    if (error) throw new ItemError(`insert: ${error.message}`)
-    accion = 'creado'
+    accion = degrada ? 'sin_cambios' : 'actualizado'
   }
 
-  if (it.sin_evento !== true) {
+  // Sin evento para el backfill (sin_evento) ni para un reporte que no cambió nada.
+  if (it.sin_evento !== true && accion !== 'sin_cambios') {
     const tipo =
       estado === 'encontrado' ? 'contenedor_cargado'
       : estado === 'pendiente_arcor' ? 'contenedor_pendiente'
@@ -150,7 +199,7 @@ async function procesarContenedor(admin: Admin, it: Record<string, unknown>, ori
       tipo,
       severidad,
       titulo: tituloContenedor({ contenedor, lugar, estado, publicado }),
-      detalle: { contenedor, lugar, fecha, mes, booking: base.booking, oe: base.oe, origen, publicado, accion },
+      detalle: { contenedor, lugar, fecha, mes, booking: entrante.booking, oe: entrante.oe, origen, publicado, accion },
       origen: origenReq,
     })
     if (error) throw new ItemError(`evento: ${error.message}`)
@@ -194,24 +243,37 @@ async function procesarEvento(admin: Admin, it: Record<string, unknown>, origenR
   }
 
   // Alerta con estado: una sola abierta por clave. Si ya hay una, se refresca
-  // el detalle (última verificación) y no se duplica.
+  // (detalle, y también severidad/título: un warning que escala a critical tiene
+  // que verse como critical) y no se duplica.
   if (clave && severidad !== 'info') {
-    const { data: abierta } = await admin
+    const { data: abierta, error: eAb } = await admin
       .from('arcor_eventos')
-      .select('id, detalle')
+      .select('id, detalle, severidad, titulo')
       .eq('clave_alerta', clave)
       .is('resuelto_en', null)
       .in('severidad', ['warning', 'critical'])
       .order('ts', { ascending: false })
       .limit(1)
       .maybeSingle()
+    if (eAb) throw new ItemError(`buscar alerta: ${eAb.message}`)
     if (abierta) {
+      const escalo = abierta.severidad !== severidad
       const { error } = await admin
         .from('arcor_eventos')
-        .update({ detalle: { ...(abierta.detalle ?? {}), ...(detalle ?? {}), ultima_verificacion: ts, verificaciones: Number(abierta.detalle?.verificaciones ?? 1) + 1 } })
+        .update({
+          severidad,
+          titulo,
+          detalle: {
+            ...(abierta.detalle ?? {}),
+            ...(detalle ?? {}),
+            ultima_verificacion: ts,
+            verificaciones: Number(abierta.detalle?.verificaciones ?? 1) + 1,
+            ...(escalo ? { severidad_anterior: abierta.severidad, cambio_severidad_en: ts } : {}),
+          },
+        })
         .eq('id', abierta.id)
       if (error) throw new ItemError(`refrescar alerta: ${error.message}`)
-      return { kind: 'evento', accion: 'alerta_ya_abierta', clave }
+      return { kind: 'evento', accion: escalo ? 'alerta_actualizada' : 'alerta_ya_abierta', clave }
     }
   }
 
@@ -240,12 +302,14 @@ export async function POST(request: NextRequest) {
   const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
   if (!token) return NextResponse.json({ error: 'Falta el token' }, { status: 401 })
 
-  const admin = adbAdmin()
+  let admin: Admin
   let ok: boolean
   try {
+    admin = adbAdmin() // lanza si falta SUPABASE_SERVICE_ROLE_KEY
     ok = await tokenValido(admin, token)
-  } catch {
-    return NextResponse.json({ error: 'Ingest no configurado (arcor_config)' }, { status: 503 })
+  } catch (e) {
+    console.error('[arcor/ingest] no se pudo validar el token:', e instanceof Error ? e.message : e)
+    return NextResponse.json({ error: 'Ingest no disponible (configuración o base de datos)' }, { status: 503 })
   }
   if (!ok) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
@@ -282,10 +346,17 @@ export async function POST(request: NextRequest) {
   await Promise.all(Array.from({ length: Math.min(CONCURRENCIA, items.length) }, worker))
   const procesados = resultados.filter((r) => r !== undefined)
 
-  // Latido: cualquier request válida prueba que el sistema ARCOR está vivo.
-  await admin
-    .from('arcor_estado')
-    .upsert({ clave: 'heartbeat', valor: { ts: ahora, origen: origenReq, items: items.length }, updated_at: ahora }, { onConflict: 'clave' })
+  // Latido: solo si entró al menos un item. Una request que falla entera (p. ej.
+  // el productor cambió el formato) NO debe mantener el tablero en "Reportando".
+  if (procesados.length > 0) {
+    const { error } = await admin
+      .from('arcor_estado')
+      .upsert(
+        { clave: 'heartbeat', valor: { ts: ahora, origen: origenReq, items: items.length, procesados: procesados.length, errores: errores.length }, updated_at: ahora },
+        { onConflict: 'clave' }
+      )
+    if (error) console.error('[arcor/ingest] heartbeat:', error.message)
+  }
 
   const status = procesados.length > 0 ? 200 : 400
   return NextResponse.json({ ok: errores.length === 0, procesados: procesados.length, resultados: procesados, errores }, { status })

@@ -4,6 +4,7 @@
 // valorizan con precio × cantidad cuando hay precio.
 // ============================================================
 import type { EstadoVencimiento } from '@/types'
+import { diaClaveAR } from '@/lib/fechas-ar'
 
 export const TIPOS_MOVIMIENTO = ['compra', 'consumo', 'ajuste'] as const
 export type TipoMovimiento = (typeof TIPOS_MOVIMIENTO)[number]
@@ -31,6 +32,14 @@ export interface MovimientoBase {
   fecha: string
   precio_unitario?: number | null
   proveedor?: string | null
+  /** Desempata compras del mismo día (la más reciente manda). */
+  created_at?: string | null
+}
+
+/** ¿`a` es una compra más reciente que `b`? Por fecha y, a igual fecha, por created_at. */
+function esMasReciente(a: { fecha: string; created_at?: string | null }, b: { fecha: string; created_at?: string | null }): boolean {
+  if (a.fecha !== b.fecha) return a.fecha > b.fecha
+  return (a.created_at ?? '') > (b.created_at ?? '')
 }
 
 /** '1.234,5' · '12,5' · '12.5' · '7' → número. null si no parsea. */
@@ -57,7 +66,7 @@ export function deltaDe(m: { tipo: string; cantidad: number }): number {
 export interface StockCalculado {
   stock: number
   movimientos: number
-  ultimaCompra: { fecha: string; precio_unitario: number | null; proveedor: string | null } | null
+  ultimaCompra: { fecha: string; precio_unitario: number | null; proveedor: string | null; created_at?: string | null } | null
   /** stock × último precio de compra (si hay). */
   valorizado: number | null
 }
@@ -70,8 +79,8 @@ export function calcularStock(items: ItemBase[], movimientos: MovimientoBase[]):
     if (!s) continue
     s.stock = Math.round((s.stock + deltaDe(m)) * 100) / 100
     s.movimientos++
-    if (m.tipo === 'compra' && (!s.ultimaCompra || m.fecha >= s.ultimaCompra.fecha)) {
-      s.ultimaCompra = { fecha: m.fecha, precio_unitario: m.precio_unitario ?? null, proveedor: m.proveedor ?? null }
+    if (m.tipo === 'compra' && (!s.ultimaCompra || esMasReciente(m, s.ultimaCompra))) {
+      s.ultimaCompra = { fecha: m.fecha, precio_unitario: m.precio_unitario ?? null, proveedor: m.proveedor ?? null, created_at: m.created_at ?? null }
     }
   }
   for (const s of out.values()) {
@@ -113,8 +122,19 @@ export function comprasDelMes(movimientos: MovimientoBase[], mes: string): { com
   return { compras, total: Math.round(total * 100) / 100, sinPrecio }
 }
 
+/** Mes en curso 'YYYY-MM' en hora Argentina (Vercel corre en UTC). */
 export function mesClave(d: Date = new Date()): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  return diaClaveAR(d).slice(0, 7)
+}
+
+/** Hoy 'YYYY-MM-DD' en hora Argentina: fecha por defecto y tope de los movimientos. */
+export function hoyClave(d: Date = new Date()): string {
+  return diaClaveAR(d)
+}
+
+/** Stock actual a partir de una lista de movimientos de UN ítem (para recalcular con datos frescos antes de un ajuste). */
+export function sumarStock(movimientos: { tipo: string; cantidad: number }[]): number {
+  return Math.round(movimientos.reduce((acc, m) => acc + deltaDe(m), 0) * 100) / 100
 }
 
 export function fmtCantidad(n: number, unidad?: string | null): string {

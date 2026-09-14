@@ -1,18 +1,9 @@
 import { IconoEvento } from './IconoEvento'
 import { EstadoPill } from '@/components/ui/estado-pill'
 import type { EventoRow } from '@/modules/arcor/tipos'
-import { severidadAEstado } from '@/modules/arcor/reglas'
+import { labelOrigen, severidadAEstado } from '@/modules/arcor/reglas'
 import { diaClaveAR, etiquetaDiaAR, fmtHoraAR } from '@/lib/fechas-ar'
 import { cn } from '@/lib/utils'
-
-const ORIGEN_LABEL: Record<string, string> = {
-  servicio: 'servicio',
-  wf0: 'n8n · errores',
-  wf10: 'n8n · crédito',
-  wf12: 'n8n · WhatsApp',
-  wf13: 'n8n · conciliación',
-  backfill: 'carga inicial',
-}
 
 function subtitulo(e: EventoRow): string | null {
   const d = e.detalle ?? {}
@@ -49,7 +40,7 @@ function Fila({ e }: { e: EventoRow }) {
         {grave && <EstadoPill estado={severidadAEstado(e.severidad)} label={e.severidad === 'critical' ? 'Crítico' : 'Atención'} />}
         {e.origen && (
           <span className="hidden rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground sm:inline">
-            {ORIGEN_LABEL[e.origen] ?? e.origen}
+            {labelOrigen(e.origen)}
           </span>
         )}
       </div>

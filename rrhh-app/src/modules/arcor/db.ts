@@ -17,6 +17,12 @@ export function adbAdmin(): any {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-export function rows<T>(x: unknown): T[] {
-  return (x as T[] | null) ?? []
+/**
+ * Filas de una consulta, o excepción si falló. En un módulo de OBSERVABILIDAD
+ * un error de lectura no puede parecer "todo en cero, todo tranquilo": el
+ * error.tsx de /arcor lo muestra como tal (AGENTS.md §10).
+ */
+export function rows<T>(res: { data: unknown; error: { message: string } | null }): T[] {
+  if (res.error) throw new Error(`No se pudo leer el módulo ARCOR: ${res.error.message}`)
+  return (res.data as T[] | null) ?? []
 }

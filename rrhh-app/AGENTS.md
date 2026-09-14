@@ -169,9 +169,14 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
 - **Stock** (migración 16): `stock_items` (catálogo por empresa, unique empresa+nombre, `activo`
   = archivado conserva historial) + `stock_movimientos` (tipo compra/consumo/ajuste; `empresa_id`
   denormalizado para que la RLS sea la misma de RRHH). **El stock actual nunca se guarda**: es la
-  suma de movimientos (`modules/stock/reglas.ts::calcularStock`, en JS — volúmenes chicos). El
-  ajuste guarda la DIFERENCIA contra el stock contado, con signo. Mutaciones directas con el
-  cliente de Supabase desde `StockClient` (RLS decide) + estado local + `router.refresh()`.
+  suma de movimientos (`modules/stock/reglas.ts::calcularStock`, en JS — volúmenes chicos; la
+  página pagina el libro de a 1000 porque PostgREST corta ahí). El ajuste guarda la DIFERENCIA
+  contra el stock contado, con signo, **calculada con una lectura fresca de los movimientos del
+  ítem** (no con el estado de la pestaña: otro usuario pudo mover stock) y deja `Conteo: X` en
+  notas. Mutaciones directas con el cliente de Supabase desde `StockClient` (RLS decide) + estado
+  local + `router.refresh()`; `stock/page.tsx` remonta el client con `key={empresa.id}`.
+  Migración 18: FK compuesta `(item_id, empresa_id) → stock_items` (el `empresa_id` denormalizado
+  no puede apuntar a un ítem de otra empresa).
 - **Documentación mensual** (migración 17): `documentos_mensuales` colgada de `empresas`
   (`periodo` = primer día del mes, `carpeta` texto con `''` = archivos sueltos del mes, archivo en
   R2, `origen` manual|automatico, `clave_externa` única por empresa para que un proceso automático
@@ -256,7 +261,9 @@ solo muestra lo que ese sistema le reporta.
 - **Auth del ingest:** `Authorization: Bearer <token>`; sha256 del token en
   `arcor_config.ingest_token_hash` (el route handler usa service role). El token en claro vive
   en el `.env` del droplet y en Bitwarden. **No hay env var nueva en Vercel** a propósito.
-  La ruta está en `PUBLIC_PATHS` del proxy.
+  La ruta está en `PUBLIC_PATHS` del proxy. **El hash NO se commitea** (el repo es público):
+  la migración 14 lleva un placeholder y el INSERT real se corre solo en el SQL editor. Si la DB
+  falla o falta el hash el ingest responde **503**, no 401: un 401 es token equivocado de verdad.
 - **Tablas `arcor_*`** (migración 14): `arcor_contenedores` (unique `(contenedor, mes)`, misma
   clave que el appendOrUpdate del Sheets), `arcor_eventos` (log; las alertas con estado usan
   `clave_alerta` + `resuelto_en`: una abierta por clave), `arcor_estado` (clave → último valor:
@@ -264,7 +271,24 @@ solo muestra lo que ese sistema le reporta.
   `app_es_rrhh() and app_ve_todas_empresas()` = `puedeVerArcor()`; **sin policies de
   escritura** para authenticated. No están en `database.ts`: `modules/arcor/db.ts` castea.
 - **Silencio del sistema** no vive en la DB: `evaluarSilencio()` compara el heartbeat con
-  la hora AR al renderizar (3 h de día, 11 h de noche). Cualquier request al ingest toca el heartbeat.
+  la hora AR al renderizar (3 h de día, 11 h de noche, y hasta las 08:30 sigue valiendo el umbral
+  nocturno porque la guardia de las 08:00 puede demorar). El heartbeat se toca **solo si la request
+  procesó al menos un item** (una request que falla entera no es "el sistema está vivo") y guarda
+  `procesados`/`errores`.
+- **Reglas del ingest para contenedores:** un reporte posterior con MENOS datos no borra lo que
+  ya se sabía (booking/OE/hash se conservan si vienen vacíos; observaciones ídem — trampa #17) y
+  un contenedor `encontrado` **no vuelve** a `pendiente_arcor`/`revisar_foto` por una foto
+  re-enviada o una fila vieja del NO ENCONTRADOS. Los `(ilegible)` sin hash se clavean por
+  `fecha|lugar|observaciones` (backfill idempotente). Las alertas abiertas se refrescan también en
+  `severidad`/`titulo` (warning → critical se ve). Las lecturas (`queries.ts`) **lanzan** si
+  Supabase falla y `arcor/error.tsx` lo muestra: en observabilidad, "no pude leer" nunca puede
+  parecer "todo en cero".
+- **Acceso:** `puedeVerArcor(sesion)` (rol RRHH + `empresaAcceso == null`) es el ÚNICO guard
+  válido; `puedeAccederModulo(rol, 'arcor')` es más laxo (solo rol) y no alcanza. El hub filtra
+  ARCOR con `puedeVerArcor` antes de decidir la redirección directa.
+- **Pendiente del lado ARCOR (repo `C:\Dev\Arcor`):** el productor nunca cierra un
+  `pendiente_arcor`/`revisar_foto` (WF8, WF11 y la galería no reportan a Gestión), y WF10 ignora
+  `sin_credito`. Gestión ya muestra `sin_credito` como crítico; falta que el productor lo alerte.
 - Las reglas de negocio espejadas (4 lugares, `mesDeFecha` = pestaña del Sheets, fallback
   BUENOS AIRES) están en `modules/arcor/reglas.ts` **con tests**. Si cambian en el servicio Python,
   cambian acá.
@@ -347,3 +371,9 @@ Argentina. Patrones obligatorios:
   `-blanco` para fondos oscuros. El logo de ADC es el PNG oficial (no recrear en SVG).
 - Usuarios reales: Administrador (Brandon), Nicole, Aylen, Mariano (rol `usuario`,
   ven todo), Soledad (`usuario` scoped a Tecnophos Rosario).
+- **"Hoy" siempre en hora AR**: `diaClaveAR(new Date())` / `anioMesAR()` / `hoyClave()` /
+  `mesActualInput()`. NUNCA `new Date().toISOString().slice(0,10)` ni `getMonth()` a secas
+  para decidir un mes o una fecha por defecto (a las 21:00 AR ya es "mañana" en UTC).
+- Slugs de empresa reservados: `recibos`, `documentos`, `docs` (migración 18 lo impone).
+- `AppShell` recuerda la "empresa activa" solo entre EMPRESAS; el portal ARCOR nunca queda
+  como preferido (si no, /dashboard mostraba la sidebar de ARCOR).

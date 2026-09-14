@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSesion } from '@/lib/auth/session'
 import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import StockClient from './StockClient'
+import type { StockMovimiento } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,21 +46,54 @@ export default async function StockPage({
     )
   }
 
-  const [{ data: items }, { data: movimientos }] = await Promise.all([
+  // El libro de movimientos se trae entero (el stock es su suma). PostgREST corta
+  // en 1000 filas por request: se pagina para que un ítem viejo no "pierda" su
+  // stock inicial cuando el libro crezca. Cuando esto pese, el camino es una vista
+  // `stock_actual` en la DB + historial por ítem bajo demanda (AGENTS.md §11).
+  const PAGINA = 1000
+  async function todosLosMovimientos() {
+    const out: StockMovimiento[] = []
+    for (let desde = 0; ; desde += PAGINA) {
+      const { data, error } = await supabase
+        .from('stock_movimientos')
+        .select('*')
+        .eq('empresa_id', empresaSel!.id)
+        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(desde, desde + PAGINA - 1)
+      if (error) return { data: null, error }
+      out.push(...(data ?? []))
+      if (!data || data.length < PAGINA) return { data: out, error: null }
+    }
+  }
+
+  const [itemsRes, movsRes] = await Promise.all([
     supabase.from('stock_items').select('*').eq('empresa_id', empresaSel.id).order('nombre'),
-    supabase
-      .from('stock_movimientos')
-      .select('*')
-      .eq('empresa_id', empresaSel.id)
-      .order('fecha', { ascending: false })
-      .order('created_at', { ascending: false }),
+    todosLosMovimientos(),
   ])
+
+  // Nunca tragarse un error de Supabase (AGENTS.md §10): un inventario "vacío" por
+  // un error de lectura no puede parecer un inventario vacío de verdad.
+  const errorCarga = itemsRes.error ?? movsRes.error
+  if (errorCarga) {
+    return (
+      <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
+        <h1 className="text-2xl font-semibold tracking-tight">Stock</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">{empresaSel.nombre}</p>
+        <div className="mt-6 rounded-2xl border border-danger/30 bg-danger-subtle px-5 py-4 text-sm text-danger">
+          No se pudo cargar el stock. Detalle técnico: {errorCarga.message}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <StockClient
+      // Remonta al cambiar de empresa por ?empresa= (el estado local no se mezcla entre empresas).
+      key={empresaSel.id}
       empresa={empresaSel}
-      items={items ?? []}
-      movimientos={movimientos ?? []}
+      items={itemsRes.data ?? []}
+      movimientos={movsRes.data ?? []}
       canEdit={tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)}
     />
   )

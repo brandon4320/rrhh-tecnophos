@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import { getSesion } from '@/lib/auth/session'
+import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import LegajoClient from './LegajoClient'
 
 export default async function LegajoPage({ params }: { params: Promise<{ id: string }> }) {
@@ -14,7 +16,7 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
 
   if (!empleado) notFound()
 
-  const [{ data: certificados }, { data: tiposCert }, { data: empresas }, { data: { user } }, { data: recibos }] = await Promise.all([
+  const [{ data: certificados }, { data: tiposCert }, { data: empresas }, sesion, { data: recibos }] = await Promise.all([
     supabase
       .from('certificados')
       .select('*, tipo:tipos_certificado(nombre, orden), archivos(*)')
@@ -29,19 +31,13 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
       .from('empresas')
       .select('*')
       .order('nombre'),
-    supabase.auth.getUser(),
+    getSesion(), // cacheada por request: el layout ya la resolvió
     supabase
       .from('recibos_sueldo')
       .select('*')
       .eq('empleado_id', id)
       .order('periodo', { ascending: false }),
   ])
-
-  const { data: perfil } = await supabase
-    .from('perfiles')
-    .select('rol')
-    .eq('id', user?.id ?? '')
-    .single()
 
   return (
     <LegajoClient
@@ -50,8 +46,8 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
       tiposCertificado={tiposCert ?? []}
       empresas={empresas ?? []}
       recibos={recibos ?? []}
-      isAdmin={perfil?.rol === 'admin'}
-      canEdit={perfil?.rol === 'admin' || perfil?.rol === 'usuario'}
+      isAdmin={sesion?.rol === 'admin'}
+      canEdit={tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)}
     />
   )
 }

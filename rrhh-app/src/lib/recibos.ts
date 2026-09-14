@@ -1,6 +1,8 @@
 // ============================================================
 // Reglas puras de los comprobantes de sueldo (sin I/O).
+// Los períodos se resuelven en HORA ARGENTINA (Vercel corre en UTC).
 // ============================================================
+import { diaClaveAR } from '@/lib/fechas-ar'
 
 export const TIPOS_RECIBO = ['mensual', 'sac', 'liquidacion_final', 'otro'] as const
 export type TipoRecibo = (typeof TIPOS_RECIBO)[number]
@@ -27,11 +29,6 @@ export function periodoDesdeMes(v: unknown): string | null {
   return `${m[1]}-${m[2]}-01`
 }
 
-/** '2026-08-01' → '2026-08' para precargar el input type="month". */
-export function mesDesdePeriodo(periodo: string): string {
-  return periodo.slice(0, 7)
-}
-
 /** '2026-08-01' → 'Agosto 2026'. */
 export function labelPeriodo(periodo: string): string {
   const d = new Date(periodo.slice(0, 10) + 'T12:00:00')
@@ -40,10 +37,20 @@ export function labelPeriodo(periodo: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1).replace(' de ', ' ')
 }
 
-/** Mes anterior al actual en formato 'YYYY-MM' (lo habitual es cargar el sueldo del mes que cerró). */
+/** Mes en curso en hora AR, formato 'YYYY-MM' (tope del input type="month"). */
+export function mesActualInput(now: Date = new Date()): string {
+  return diaClaveAR(now).slice(0, 7)
+}
+
+/** Mes anterior al actual (hora AR) en formato 'YYYY-MM' (lo habitual es cargar el sueldo del mes que cerró). */
 export function mesAnteriorInput(now: Date = new Date()): string {
-  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  const [y, m] = mesActualInput(now).split('-').map(Number)
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
+}
+
+/** Un período 'YYYY-MM-01' posterior al mes en curso (hora AR) no tiene comprobante posible. */
+export function esPeriodoFuturo(periodo: string, now: Date = new Date()): boolean {
+  return periodo.slice(0, 7) > mesActualInput(now)
 }
 
 /** Agrupa por año, del más reciente al más viejo; adentro, por período desc. */

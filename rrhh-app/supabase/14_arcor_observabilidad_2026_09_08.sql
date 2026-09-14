@@ -96,8 +96,10 @@ create policy "arcor_estado_select" on arcor_estado for select to authenticated
 -- ── Token del ingest ──────────────────────────────────────────────────────
 -- sha256 (hex) del token que vive en GESTION_INGEST_TOKEN del .env del droplet
 -- (/opt/arcor/vps/.env). El token en claro está en Bitwarden.
--- Rotar: generar token nuevo -> insertar acá su sha256 -> actualizar el .env
--- del droplet -> `docker compose up -d servicio`.
+-- Rotar: generar token nuevo (openssl rand -hex 32) -> correr este INSERT en el
+-- SQL editor con su sha256 -> actualizar el .env del droplet -> `docker compose
+-- up -d servicio`. El repo es PÚBLICO: el hash real NO se commitea (2026-09-11:
+-- el hash anterior quedó publicado en el historial de git; se rota).
 insert into arcor_config (clave, valor)
-values ('ingest_token_hash', 'ad23e2808bf25fad60b4b0f80b223e0ab36521dc4410146ab719debacca02007')
+values ('ingest_token_hash', '<PEGAR-ACA-EL-SHA256-DEL-TOKEN-SOLO-EN-EL-SQL-EDITOR>')
 on conflict (clave) do update set valor = excluded.valor, updated_at = now();

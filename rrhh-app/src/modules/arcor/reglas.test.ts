@@ -23,8 +23,15 @@ describe('normalizarLugar', () => {
     expect(normalizarLugar('Mendoza')).toBe('MENDOZA')
     expect(normalizarLugar('TPR Rosario')).toBe('ROSARIO')
   })
+  it('localidades y terminales → provincia (espejo de core.ALIAS_LUGAR)', () => {
+    expect(normalizarLugar('Rodríguez Peña')).toBe('MENDOZA')
+    expect(normalizarLugar('Zárate')).toBe('BUENOS AIRES')
+    expect(normalizarLugar('Terminal 4')).toBe('BUENOS AIRES')
+    expect(normalizarLugar('San Lorenzo')).toBe('ROSARIO')
+    expect(normalizarLugar('Villa María')).toBe('CORDOBA')
+  })
   it('devuelve null si no reconoce nada (no inventa)', () => {
-    expect(normalizarLugar('Rodríguez Peña')).toBeNull()
+    expect(normalizarLugar('Marte')).toBeNull()
     expect(normalizarLugar('')).toBeNull()
     expect(normalizarLugar(null)).toBeNull()
     expect(normalizarLugar(42)).toBeNull()
@@ -71,6 +78,14 @@ describe('evaluarSilencio', () => {
   const dia = new Date('2026-09-08T18:00:00Z')
   // 03:00 AR = 06:00Z → umbral nocturno (11 h)
   const noche = new Date('2026-09-08T06:00:00Z')
+
+  it('a las 08:00 AR todavía no alarma por el silencio de la noche (la guardia de las 08 puede demorar)', () => {
+    const ultimaGuardia = '2026-09-08T01:00:10Z' // 22:00:10 AR del día anterior
+    const ochoYMedio = new Date('2026-09-08T11:00:30Z') // 08:00:30 AR
+    expect(evaluarSilencio(ultimaGuardia, ochoYMedio)).toMatchObject({ silencio: false, umbralMin: 660 })
+    const ochoTreintaYUno = new Date('2026-09-08T11:31:00Z') // 08:31 AR: ya rige el umbral diurno
+    expect(evaluarSilencio(ultimaGuardia, ochoTreintaYUno)).toMatchObject({ silencio: true, umbralMin: 180 })
+  })
 
   it('sin heartbeat es silencio', () => {
     expect(evaluarSilencio(null, dia).silencio).toBe(true)

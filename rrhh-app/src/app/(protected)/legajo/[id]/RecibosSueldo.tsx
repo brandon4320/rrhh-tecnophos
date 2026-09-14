@@ -7,8 +7,8 @@ import { FileText, Plus, Trash2, ExternalLink, Upload } from 'lucide-react'
 import type { Recibo } from '@/types'
 import { subirRecibo } from '@/lib/upload-client'
 import {
-  TIPOS_RECIBO, TIPO_RECIBO_LABEL, agruparPorAnio, labelPeriodo, mesAnteriorInput,
-  validarArchivoRecibo, type TipoRecibo,
+  TIPOS_RECIBO, TIPO_RECIBO_LABEL, agruparPorAnio, esPeriodoFuturo, labelPeriodo, mesActualInput, mesAnteriorInput,
+  periodoDesdeMes, validarArchivoRecibo, type TipoRecibo,
 } from '@/lib/recibos'
 import { fmtFechaAR } from '@/lib/fechas-ar'
 
@@ -56,6 +56,16 @@ export default function RecibosSueldo({ empleadoId, empresaSlug, recibos, canEdi
     const invalido = validarArchivoRecibo(file)
     if (invalido) {
       toast.error(invalido)
+      return
+    }
+    // Firefox no soporta type="month": el campo queda de texto libre. Se valida acá antes de subir.
+    const periodoISO = periodoDesdeMes(periodo)
+    if (!periodoISO) {
+      toast.error('Período inválido: usá el formato AAAA-MM (ej. 2026-08).')
+      return
+    }
+    if (esPeriodoFuturo(periodoISO)) {
+      toast.error('El período no puede ser un mes futuro.')
       return
     }
     setSaving(true)
@@ -123,7 +133,16 @@ export default function RecibosSueldo({ empleadoId, empresaSlug, recibos, canEdi
           <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-foreground">Período *</label>
-              <input type="month" value={periodo} onChange={(e) => setPeriodo(e.target.value)} className={inputCls} max={new Date().toISOString().slice(0, 7)} />
+              <input
+                type="month"
+                value={periodo}
+                onChange={(e) => setPeriodo(e.target.value)}
+                className={inputCls}
+                max={mesActualInput()}
+                pattern="\d{4}-\d{2}"
+                placeholder="AAAA-MM"
+                title="Formato AAAA-MM (ej. 2026-08)"
+              />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-foreground">Tipo</label>

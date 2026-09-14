@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseCantidad, deltaDe, calcularStock, estadoStock, comprasDelMes, categoriasDe, normalizarNombre } from './reglas'
+import { parseCantidad, deltaDe, calcularStock, estadoStock, comprasDelMes, categoriasDe, normalizarNombre, sumarStock, mesClave, hoyClave } from './reglas'
 
 describe('parseCantidad', () => {
   it('acepta formatos AR y punto decimal', () => {
@@ -39,9 +39,19 @@ describe('calcularStock', () => {
   })
   it('última compra por fecha y valorizado con su precio', () => {
     const a = calcularStock(items, movs).get('a')!
-    expect(a.ultimaCompra).toEqual({ fecha: '2026-09-02', precio_unitario: 1800, proveedor: 'Y' })
+    expect(a.ultimaCompra).toMatchObject({ fecha: '2026-09-02', precio_unitario: 1800, proveedor: 'Y' })
     expect(a.valorizado).toBe(12 * 1800)
     expect(calcularStock(items, movs).get('b')!.valorizado).toBeNull()
+  })
+  it('dos compras el mismo día: manda la más reciente (created_at), no el orden de entrada', () => {
+    const its = [{ id: 'a', nombre: 'X', stock_minimo: 0, activo: true }]
+    const hoy = [
+      { item_id: 'a', tipo: 'compra', cantidad: 1, fecha: '2026-09-10', precio_unitario: 2000, proveedor: 'Nuevo', created_at: '2026-09-10T18:00:00Z' },
+      { item_id: 'a', tipo: 'compra', cantidad: 1, fecha: '2026-09-10', precio_unitario: 1500, proveedor: 'Viejo', created_at: '2026-09-10T12:00:00Z' },
+    ]
+    expect(calcularStock(its, hoy).get('a')!.ultimaCompra).toMatchObject({ precio_unitario: 2000, proveedor: 'Nuevo' })
+    expect(calcularStock(its, [...hoy].reverse()).get('a')!.ultimaCompra).toMatchObject({ precio_unitario: 2000, proveedor: 'Nuevo' })
+    expect(sumarStock(hoy)).toBe(2)
   })
   it('deltaDe', () => {
     expect(deltaDe({ tipo: 'compra', cantidad: 5 })).toBe(5)
@@ -76,6 +86,14 @@ describe('comprasDelMes', () => {
       { item_id: 'a', tipo: 'compra', cantidad: 9, fecha: '2026-08-30', precio_unitario: 1 },
     ], '2026-09')
     expect(r).toEqual({ compras: 2, total: 200, sinPrecio: 1 })
+  })
+})
+
+describe('fechas en hora Argentina', () => {
+  it('a las 22:00 AR del 30/09 todavía es septiembre aunque en UTC ya sea octubre', () => {
+    const finDeMes = new Date('2026-10-01T01:00:00Z')
+    expect(hoyClave(finDeMes)).toBe('2026-09-30')
+    expect(mesClave(finDeMes)).toBe('2026-09')
   })
 })
 

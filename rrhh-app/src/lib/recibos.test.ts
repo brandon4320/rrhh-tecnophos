@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
   periodoDesdeMes,
-  mesDesdePeriodo,
   labelPeriodo,
   mesAnteriorInput,
   agruparPorAnio,
@@ -22,8 +21,7 @@ describe('periodoDesdeMes', () => {
 })
 
 describe('labels', () => {
-  it('mesDesdePeriodo y labelPeriodo', () => {
-    expect(mesDesdePeriodo('2026-08-01')).toBe('2026-08')
+  it('labelPeriodo', () => {
     expect(labelPeriodo('2026-08-01')).toBe('Agosto 2026')
     expect(labelPeriodo('2025-12-01')).toBe('Diciembre 2025')
   })
