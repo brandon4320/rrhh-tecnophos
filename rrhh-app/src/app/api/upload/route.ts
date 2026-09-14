@@ -31,6 +31,13 @@ export async function POST(request: NextRequest) {
     if (!certId || !path || !nombre) {
       return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
     }
+    // El path tiene que ser el que firmó /api/upload-url para ESTE certificado
+    // (`<empresaSlug>/<empleadoId|general>/<certId>/<ms>.ext`). Sin esto se podía
+    // registrar como propio un objeto ajeno del bucket y hacer que /api/archivo lo
+    // firmara. Las rutas de recibos y documentación mensual ya validaban igual.
+    if (!path.includes(`/${certId}/`) || path.startsWith('recibos/') || path.startsWith('documentos/')) {
+      return NextResponse.json({ error: 'Path inválido' }, { status: 400 })
+    }
 
     const { data: archivo, error } = await supabase
       .from('archivos')
