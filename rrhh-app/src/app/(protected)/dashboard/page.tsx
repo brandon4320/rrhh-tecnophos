@@ -22,7 +22,7 @@ export default async function DashboardPage({
       .select(`
         id, fecha_vencimiento, alerta_dias, tipo_nombre_custom,
         tipo:tipos_certificado(nombre),
-        empleado:empleados(id, nombre, apellido, empresa_id, empresa:empresas(id, nombre, slug)),
+        empleado:empleados(id, nombre, apellido, activo, empresa_id, empresa:empresas(id, nombre, slug)),
         vehiculo:vehiculos(patente, empresa_id, empresa:empresas(id, nombre, slug)),
         equipo:equipos(nombre, empresa_id, empresa:empresas(id, nombre, slug)),
         empresa:empresas(id, nombre, slug)
@@ -35,10 +35,14 @@ export default async function DashboardPage({
 
   const hoy = new Date()
 
-  const conEstado = (certs ?? []).map((c) => ({
-    ...c,
-    estado: getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias),
-  }))
+  const conEstado = (certs ?? [])
+    // El borrado de empleados es lógico (activo=false): sus certificados
+    // quedan en la base pero no deben contar ni listarse acá.
+    .filter((c) => !c.empleado || c.empleado.activo !== false)
+    .map((c) => ({
+      ...c,
+      estado: getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias),
+    }))
   const vencidos = conEstado.filter((c) => c.estado === 'vencido')
   const proximos = conEstado.filter((c) => c.estado === 'proximo')
   const alDia = conEstado.length - vencidos.length - proximos.length

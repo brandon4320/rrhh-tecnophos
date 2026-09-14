@@ -20,7 +20,7 @@ export default async function VencimientosPage({
       .select(`
         *,
         tipo:tipos_certificado(id, nombre),
-        empleado:empleados(id, nombre, apellido, empresa_id, empresa:empresas(nombre, slug)),
+        empleado:empleados(id, nombre, apellido, activo, empresa_id, empresa:empresas(nombre, slug)),
         vehiculo:vehiculos(id, patente, empresa_id, empresa:empresas(nombre, slug)),
         equipo:equipos(id, nombre, empresa_id, empresa:empresas(nombre, slug)),
         empresa:empresas(nombre, slug)
@@ -32,6 +32,9 @@ export default async function VencimientosPage({
   ])
 
   const filtered = (certs ?? []).filter((c) => {
+    // Borrado lógico: certificados de empleados dados de baja no se listan
+    if (c.empleado && c.empleado.activo === false) return false
+
     const entitySlug = c.empleado?.empresa?.slug ?? c.vehiculo?.empresa?.slug ?? c.equipo?.empresa?.slug ?? c.empresa?.slug ?? ''
     const tipoId = c.tipo?.id ?? ''
     const est = getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias)
