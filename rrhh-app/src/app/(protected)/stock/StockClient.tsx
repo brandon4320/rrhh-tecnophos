@@ -496,10 +496,22 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
                         <p className="truncate text-xs text-muted-foreground">{[it.categoria, it.notas].filter(Boolean).join(' · ') || '—'}</p>
                       </div>
                     </div>
-                    <p className={clsx('text-sm font-semibold tabular-nums md:text-right', estado === 'vencido' && 'text-danger', estado === 'proximo' && 'text-warning')}>
-                      {fmtCantidad(s.stock, it.unidad)}
+                    {/* La unidad va más chica y en gris: pegada al número y del mismo tamaño,
+                        "47 unidad" se leía como un solo bloque y costaba distinguir una de otro. */}
+                    <p className={clsx('truncate tabular-nums md:text-right', estado === 'vencido' && 'text-danger', estado === 'proximo' && 'text-warning')}>
+                      <span className="text-sm font-semibold">{fmtCantidad(s.stock)}</span>
+                      {it.unidad && <span className="ml-1 text-xs font-normal opacity-70">{it.unidad}</span>}
                     </p>
-                    <p className="text-sm tabular-nums text-muted-foreground md:text-right">{it.stock_minimo ? fmtCantidad(it.stock_minimo, it.unidad) : '—'}</p>
+                    <p className="truncate tabular-nums text-muted-foreground md:text-right">
+                      {it.stock_minimo ? (
+                        <>
+                          <span className="text-sm">{fmtCantidad(it.stock_minimo)}</span>
+                          {it.unidad && <span className="ml-1 text-xs opacity-70">{it.unidad}</span>}
+                        </>
+                      ) : (
+                        <span className="text-sm">—</span>
+                      )}
+                    </p>
                     <div><EstadoPill estado={estado} label={ESTADO_STOCK_LABEL[estado]} /></div>
                     <p className="truncate text-xs text-muted-foreground">
                       {s.ultimaCompra
