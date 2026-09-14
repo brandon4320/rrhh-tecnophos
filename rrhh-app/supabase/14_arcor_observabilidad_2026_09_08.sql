@@ -96,10 +96,25 @@ create policy "arcor_estado_select" on arcor_estado for select to authenticated
 -- ── Token del ingest ──────────────────────────────────────────────────────
 -- sha256 (hex) del token que vive en GESTION_INGEST_TOKEN del .env del droplet
 -- (/opt/arcor/vps/.env). El token en claro está en Bitwarden.
--- Rotar: generar token nuevo (openssl rand -hex 32) -> correr este INSERT en el
--- SQL editor con su sha256 -> actualizar el .env del droplet -> `docker compose
--- up -d servicio`. El repo es PÚBLICO: el hash real NO se commitea (2026-09-11:
--- el hash anterior quedó publicado en el historial de git; se rota).
+--
+-- El repo es PÚBLICO: el hash real NO se commitea. Por eso el INSERT de abajo es
+-- un NO-OP tal como está acá: solo escribe si antes se reemplaza el placeholder
+-- por un sha256 de verdad. Así, re-correr esta migración entera nunca pisa el
+-- hash bueno que ya está en producción — si lo pisara, el droplet empezaría a
+-- comerse 401 en silencio y nadie se enteraría hasta ver el tile "Sin señal".
+--
+-- Rotar: generar token nuevo (openssl rand -hex 32) -> pegar su sha256 acá EN EL
+-- SQL EDITOR y correr -> actualizar GESTION_INGEST_TOKEN en el .env del droplet
+-- -> `docker compose up -d servicio`. Los dos últimos pasos van enseguida: entre
+-- medio el ingest rechaza todo lo que manda el sistema ARCOR.
+--
+-- Historial: el 2026-09-11 el hash quedó publicado en el historial de git al
+-- commitear esta migración. El 2026-09-14 se verificó que el token es aleatorio
+-- de ~32 caracteres y reciente, así que fuerza bruta sobre ese sha256 no es
+-- viable: se decidió NO rotar. NO hay rotación pendiente.
+with nuevo as (
+  select '<PEGAR-ACA-EL-SHA256-DEL-TOKEN-SOLO-EN-EL-SQL-EDITOR>'::text as hash
+)
 insert into arcor_config (clave, valor)
-values ('ingest_token_hash', '<PEGAR-ACA-EL-SHA256-DEL-TOKEN-SOLO-EN-EL-SQL-EDITOR>')
+select 'ingest_token_hash', hash from nuevo where hash ~ '^[0-9a-f]{64}$'
 on conflict (clave) do update set valor = excluded.valor, updated_at = now();

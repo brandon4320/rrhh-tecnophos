@@ -262,8 +262,11 @@ solo muestra lo que ese sistema le reporta.
   `arcor_config.ingest_token_hash` (el route handler usa service role). El token en claro vive
   en el `.env` del droplet y en Bitwarden. **No hay env var nueva en Vercel** a propósito.
   La ruta está en `PUBLIC_PATHS` del proxy. **El hash NO se commitea** (el repo es público):
-  la migración 14 lleva un placeholder y el INSERT real se corre solo en el SQL editor. Si la DB
-  falla o falta el hash el ingest responde **503**, no 401: un 401 es token equivocado de verdad.
+  la migración 14 lleva un placeholder y el INSERT real se corre solo en el SQL editor. Ese INSERT
+  es **no-op** mientras el placeholder no sea un sha256 válido, así que re-correr la migración no
+  pisa el hash de producción. Si la DB falla o falta el hash el ingest responde **503**, no 401:
+  un 401 es token equivocado de verdad. No hay rotación pendiente (token aleatorio de ~32
+  caracteres, verificado el 2026-09-14).
 - **Tablas `arcor_*`** (migración 14): `arcor_contenedores` (unique `(contenedor, mes)`, misma
   clave que el appendOrUpdate del Sheets), `arcor_eventos` (log; las alertas con estado usan
   `clave_alerta` + `resuelto_en`: una abierta por clave), `arcor_estado` (clave → último valor:
