@@ -6,23 +6,23 @@ import AppShell, { type EmpresaNav } from '@/components/layout/AppShell'
 import { puedeVerArcor } from '@/modules/arcor/acceso'
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const sesion = await getSesion()
-  if (!sesion) redirect('/login')
-
-  // Acceso a RRHH solo para roles RRHH (admin/usuario). El resto (Operaciones/UNIPAR)
-  // va a su módulo — no puede entrar a las pantallas de RRHH.
-  if (!tieneRol(sesion.rol, RRHH_ROLES)) redirect('/')
-
   const supabase = await createClient()
 
-  // Si el perfil tiene empresa_acceso, solo muestra esa empresa
-  const empresasQuery = supabase.from('empresas').select('id, nombre, slug').order('nombre')
-  if (sesion.empresaAcceso) empresasQuery.eq('id', sesion.empresaAcceso)
-
-  const [{ data: empresas }, { data: empleados }] = await Promise.all([
-    empresasQuery,
+  // Las 3 lecturas en paralelo (1 solo round-trip serial). El scope por
+  // empresa_acceso lo aplica la RLS (empresas_rrhh_select / empleados_rrhh_all
+  // usan app_ve_empresa — migración 02), así que las queries no dependen de
+  // la sesión: sin sesión o rol no-RRHH devuelven vacío y se redirige igual.
+  const [sesion, { data: empresas }, { data: empleados }] = await Promise.all([
+    getSesion(),
+    supabase.from('empresas').select('id, nombre, slug').order('nombre'),
     supabase.from('empleados').select('empresa_id, sector').eq('activo', true),
   ])
+
+  if (!sesion) redirect('/login')
+
+  // Acceso a RRHH solo para roles RRHH (admin/usuario). El resto
+  // va a su módulo — no puede entrar a las pantallas de RRHH.
+  if (!tieneRol(sesion.rol, RRHH_ROLES)) redirect('/')
 
   // Conteos por empresa y por sector para el panel lateral
   const nav: EmpresaNav[] = (empresas ?? []).map((e) => {

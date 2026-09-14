@@ -15,31 +15,40 @@ export default async function EmpleadosPage({
   const { q, empresa } = await searchParams
   const supabase = await createClient()
 
-  const [{ data: empresas }, sesion] = await Promise.all([
-    supabase.from('empresas').select('id, nombre, slug').order('nombre'),
-    getSesion(),
-  ])
-
-  const empresaSel = empresa ? (empresas ?? []).find((e) => e.slug === empresa) : undefined
-
-  let query = supabase
-    .from('empleados')
-    .select(`
-      id, nombre, apellido, sector,
-      empresa:empresas(id, nombre, slug),
-      certificados(fecha_vencimiento, alerta_dias)
-    `)
-    .eq('activo', true)
-    .order('nombre')
+  // El filtro por empresa entra por el join (!inner sobre el slug), así la
+  // query de empleados no espera a resolver el id → un solo batch paralelo.
+  // Sin filtro se mantiene el left join (hay empleados con empresa_id null).
+  let query = empresa
+    ? supabase
+        .from('empleados')
+        .select(`
+          id, nombre, apellido, sector,
+          empresa:empresas!inner(id, nombre, slug),
+          certificados(fecha_vencimiento, alerta_dias)
+        `)
+        .eq('empresa.slug', empresa)
+    : supabase
+        .from('empleados')
+        .select(`
+          id, nombre, apellido, sector,
+          empresa:empresas(id, nombre, slug),
+          certificados(fecha_vencimiento, alerta_dias)
+        `)
+  query = query.eq('activo', true).order('nombre')
 
   if (q) {
     // buscar por nombre O apellido (sanitizar caracteres que rompen el .or de PostgREST)
     const term = q.replace(/[%,()]/g, ' ').trim()
     if (term) query = query.or(`nombre.ilike.%${term}%,apellido.ilike.%${term}%`)
   }
-  if (empresaSel) query = query.eq('empresa_id', empresaSel.id)
 
-  const { data: empleados } = await query
+  const [{ data: empresas }, sesion, { data: empleados }] = await Promise.all([
+    supabase.from('empresas').select('id, nombre, slug').order('nombre'),
+    getSesion(),
+    query,
+  ])
+
+  const empresaSel = empresa ? (empresas ?? []).find((e) => e.slug === empresa) : undefined
   const puedeCrear = tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)
 
   function peorEstado(certs: { fecha_vencimiento?: string | null; alerta_dias?: number | null }[]): EstadoVencimiento {

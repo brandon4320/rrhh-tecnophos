@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -91,6 +91,12 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
   const supabase = createClient()
   const [selectorOpen, setSelectorOpen] = useState(false)
   const [preferida, setPreferida] = useState<string | null>(null)
+  // Optimista: al elegir un portal la sidebar cambia YA, sin esperar la navegación.
+  // `desde` es el pathname al momento del click: cuando cambia (llegó la navegación,
+  // a destino o superada por otro click) se suelta el override — así ARCOR nunca
+  // queda pegado como activa fuera de /arcor.
+  const [pendiente, setPendiente] = useState<{ slug: string; desde: string } | null>(null)
+  const [, startTransition] = useTransition()
 
   const portales = useMemo<Portal[]>(
     () => [...empresas.map((e) => ({ ...e, tipo: 'empresa' as const })), ...(arcor ? [PORTAL_ARCOR] : [])],
@@ -118,7 +124,21 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
       ? pathname.split('/')[2]
       : null
 
+  // La navegación optimista llegó (el pathname cambió): soltar el override.
+  useEffect(() => {
+    if (pendiente && pathname !== pendiente.desde) setPendiente(null)
+  }, [pathname, pendiente])
+
+  // Prefetch del resto de los portales al abrir el dropdown (≤6 rutas, solo el
+  // shell hasta el loading boundary: barato y hace el cambio casi instantáneo).
+  useEffect(() => {
+    if (!selectorOpen) return
+    for (const p of portales) router.prefetch(p.tipo === 'extra' ? p.href : `/empresa/${p.slug}`)
+  }, [selectorOpen, portales, router])
+
   const activa = useMemo(() => {
+    const porPendiente = pendiente && portales.find((e) => e.slug === pendiente.slug)
+    if (porPendiente) return porPendiente
     const porPath = slugEnPath && portales.find((e) => e.slug === slugEnPath)
     if (porPath) return porPath
     // "Último usado" solo entre EMPRESAS: un portal virtual (ARCOR) recordado no puede
@@ -126,7 +146,7 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
     const porPref = preferida && portales.find((e) => e.slug === preferida && e.tipo === 'empresa')
     if (porPref) return porPref
     return portales.find((e) => e.tipo === 'empresa') ?? portales[0] ?? null
-  }, [slugEnPath, preferida, portales])
+  }, [pendiente, slugEnPath, preferida, portales])
 
   useEffect(() => {
     const p = slugEnPath && portales.find((e) => e.slug === slugEnPath)
@@ -146,8 +166,9 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
       try { localStorage.setItem(STORAGE_KEY, p.slug) } catch { /* no-op */ }
       setPreferida(p.slug)
     }
+    setPendiente({ slug: p.slug, desde: pathname })
     setSelectorOpen(false)
-    router.push(p.tipo === 'extra' ? p.href : `/empresa/${p.slug}`)
+    startTransition(() => router.push(p.tipo === 'extra' ? p.href : `/empresa/${p.slug}`))
   }
 
   const esAdmin = sesion.rol === 'admin'

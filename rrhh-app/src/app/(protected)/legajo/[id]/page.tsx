@@ -8,15 +8,14 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: empleado } = await supabase
-    .from('empleados')
-    .select('*, empresa:empresas(*)')
-    .eq('id', id)
-    .single()
-
-  if (!empleado) notFound()
-
-  const [{ data: certificados }, { data: tiposCert }, { data: empresas }, sesion, { data: recibos }] = await Promise.all([
+  // Todo en UN solo batch: ninguna query depende del fetch del empleado
+  // (certificados filtra por empleado_id directo). notFound() se decide después.
+  const [{ data: empleado }, { data: certificados }, { data: tiposCert }, { data: empresas }, sesion, { data: recibos }] = await Promise.all([
+    supabase
+      .from('empleados')
+      .select('*, empresa:empresas(*)')
+      .eq('id', id)
+      .single(),
     supabase
       .from('certificados')
       .select('*, tipo:tipos_certificado(nombre, orden), archivos(*)')
@@ -38,6 +37,8 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
       .eq('empleado_id', id)
       .order('periodo', { ascending: false }),
   ])
+
+  if (!empleado) notFound()
 
   return (
     <LegajoClient
