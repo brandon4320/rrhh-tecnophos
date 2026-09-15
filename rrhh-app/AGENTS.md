@@ -177,6 +177,16 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   local + `router.refresh()`; `stock/page.tsx` remonta el client con `key={empresa.id}`.
   Migración 18: FK compuesta `(item_id, empresa_id) → stock_items` (el `empresa_id` denormalizado
   no puede apuntar a un ítem de otra empresa).
+  **Organización de la vista (2026-09-15)**: la mitad del catálogo son talles de una misma prenda
+  ("Camisa ADC T 36"… "T 54"), así que la lista se agrupa **categoría → familia → ítem**
+  (`agruparCatalogo`/`partirVariante`, con tests). Las familias se **rotulan, nunca se fusionan**:
+  cada fila sigue siendo un ítem con su id, porque el ajuste por conteo escribe la diferencia
+  contra el stock de UN ítem — una fila-familia con stock sumado escribiría basura. Regla dura:
+  `abrirMovimiento` solo con un id real. Ojo: `calcularStock` recibe SIEMPRE el catálogo completo
+  (si se alimenta con la lista filtrada, los ítems ocultos pierden su stock).
+  El estado `sin_fecha` se rotula **"En cero"**, no "Sin alerta": solo ocurre con stock ≤ 0 y sin
+  mínimo, o sea que la fila está vacía aunque nadie pidió que avise (y no entra en "hay que
+  comprar", por eso se cuenta aparte en el KPI "Sin stock").
 - **Documentación mensual** (migración 17): `documentos_mensuales` colgada de `empresas`
   (`periodo` = primer día del mes, `carpeta` texto con `''` = archivos sueltos del mes, archivo en
   R2, `origen` manual|automatico, `clave_externa` única por empresa para que un proceso automático
