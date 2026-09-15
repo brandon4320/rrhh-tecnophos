@@ -341,9 +341,16 @@ Argentina. Patrones obligatorios:
 **Pendientes conocidos (prioridad aproximada):**
 1. **CORS del bucket R2** (§8) — bloquea subidas > 4MB. Config manual en Cloudflare.
 2. **F5 diseño**: llevar tokens/EstadoPill a Comercial y Operaciones.
-3. **Performance RRHH**: `/vencimientos` y `/dashboard` traen TODA la tabla
-   `certificados` y filtran en JS — empujar filtros a la DB cuando crezca
-   (hay plan detallado: filtro grueso por rango de fecha + refinado en JS).
+3. **Performance RRHH — HECHO (2026-09)**, mantener el patrón: funciones Vercel en
+   `gru1` (vercel.json, colocadas con la DB São Paulo); `loading.tsx` por segmento
+   (sin uno, la navegación queda congelada hasta el payload completo — no borrarlos);
+   un solo `Promise.all` por página (nada de lookups seriales: filtrar por
+   `empresas!inner(slug)`); filtros gruesos por fecha en la DB con holgura ±1 día y
+   refinado exacto en JS (`/vencimientos`, `/dashboard`); tabs con `SegmentedLocal`
+   (contenido en el payload, sin round-trip; `Segmented` con Links queda para tabs
+   que sí cambian los datos); `staleTimes.dynamic=30` en next.config; auth por
+   `getClaims()` (con signing keys asimétricas en Supabase verifica local; NO volver
+   a `getUser()` en el camino caliente).
 4. RRHH: botón **"Renovar"** certificado en el legajo (copiar cert con fecha +1 año).
 5. Comercial: **TagPicker UI** (la DB `comercial_tags` + `etiquetas[]` ya existe),
    posponer/snooze de tareas (el PATCH ya acepta `fecha_vencimiento`), marcar
