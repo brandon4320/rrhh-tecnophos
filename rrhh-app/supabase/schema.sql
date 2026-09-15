@@ -163,13 +163,23 @@ alter table archivos enable row level security;
 alter table perfiles enable row level security;
 alter table tipos_certificado enable row level security;
 
--- Todos los usuarios autenticados pueden leer
-create policy "Lectura autenticada" on empresas for select to authenticated using (true);
-create policy "Lectura autenticada" on tipos_certificado for select to authenticated using (true);
-create policy "Lectura autenticada" on empleados for select to authenticated using (true);
-create policy "Lectura autenticada" on vehiculos for select to authenticated using (true);
-create policy "Lectura autenticada" on certificados for select to authenticated using (true);
-create policy "Lectura autenticada" on archivos for select to authenticated using (true);
+-- ⚠️ ACÁ IBAN LAS POLICIES PERMISIVAS DEL DÍA UNO — SE QUITARON EL 14/09/2026.
+--
+-- Eran seis `for select to authenticated using (true)` sobre empresas,
+-- tipos_certificado, empleados, vehiculos, certificados y archivos, más una de
+-- escritura libre sobre archivos. En Postgres las policies se combinan con OR:
+-- si esas hubieran convivido con las de la migración 02, cualquier usuario con
+-- sesión —incluidos los roles del módulo comercial— habría podido leer TODOS los
+-- legajos y certificados de TODAS las empresas, exámenes médicos incluidos.
+--
+-- En producción NUNCA existieron: se verificó el 14/09/2026 contra pg_policies y
+-- solo están las de la migración 02 (empleados_rrhh_all, certificados_rrhh_all,
+-- archivos_rrhh_all, vehiculos_rrhh_all, empresas_rrhh_select). El riesgo era que
+-- alguien levantara una base NUEVA siguiendo este archivo y naciera abierta.
+--
+-- Ahora las tablas quedan con RLS activa y sin policy: fallan CERRADAS. Eso es a
+-- propósito. Este archivo NO alcanza para tener un entorno funcionando: hay que
+-- aplicar las migraciones numeradas desde la 02 en adelante (ver AGENTS.md §6).
 
 -- Solo admin puede escribir
 create policy "Escritura admin" on empleados for all to authenticated
@@ -179,10 +189,6 @@ create policy "Escritura admin" on empleados for all to authenticated
 create policy "Escritura admin" on certificados for all to authenticated
   using (exists (select 1 from perfiles where id = auth.uid() and rol = 'admin'))
   with check (exists (select 1 from perfiles where id = auth.uid() and rol = 'admin'));
-
-create policy "Escritura autenticada" on archivos for all to authenticated
-  using (true)
-  with check (true);
 
 create policy "Escritura admin" on vehiculos for all to authenticated
   using (exists (select 1 from perfiles where id = auth.uid() and rol = 'admin'))
