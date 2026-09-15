@@ -469,7 +469,11 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          <div className="hidden grid-cols-[1fr_140px_120px_130px_1fr_auto] gap-4 border-b border-border px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground md:grid">
+          {/* ⚠️ Estas columnas van escritas a mano y deben coincidir con las de la fila,
+              unas líneas más abajo. No se pueden sacar a una constante: Tailwind busca la
+              clase LITERAL en el archivo y con `${...}` no la genera. El ítem se lleva el
+              ancho porque es lo que la oficinista busca primero. */}
+          <div className="hidden grid-cols-[minmax(0,2.2fr)_104px_96px_108px_minmax(0,1fr)_auto] gap-3 border-b border-border px-5 py-3 text-[10px] font-medium uppercase tracking-wider text-muted-foreground md:grid">
             <span>Ítem</span><span className="text-right">Stock</span><span className="text-right">Mínimo</span><span>Estado</span><span>Última compra</span><span className="w-[168px]" />
           </div>
           <ul className="divide-y divide-border">
@@ -481,7 +485,8 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
               return (
                 <li key={it.id} className={clsx(it.activo === false && 'opacity-60')}>
                   <div
-                    className="grid cursor-pointer grid-cols-1 gap-2 px-5 py-3.5 transition-colors hover:bg-accent md:grid-cols-[1fr_140px_120px_130px_1fr_auto] md:items-center md:gap-4"
+                    // Las columnas tienen que coincidir con las del encabezado (ver aviso arriba).
+                    className="grid cursor-pointer grid-cols-1 gap-2 px-5 py-3.5 transition-colors hover:bg-accent md:grid-cols-[minmax(0,2.2fr)_104px_96px_108px_minmax(0,1fr)_auto] md:items-center md:gap-3"
                     onClick={() => setAbierto(isOpen ? null : it.id)}
                   >
                     <div className="flex min-w-0 items-center gap-3">
@@ -489,19 +494,31 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
                         <Package className="size-4" strokeWidth={1.75} />
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">
+                        <p className="break-words text-xs font-medium text-foreground">
                           {it.nombre}
-                          {it.activo === false && <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">archivado</span>}
+                          {it.activo === false && <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">archivado</span>}
                         </p>
-                        <p className="truncate text-xs text-muted-foreground">{[it.categoria, it.notas].filter(Boolean).join(' · ') || '—'}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">{[it.categoria, it.notas].filter(Boolean).join(' · ') || '—'}</p>
                       </div>
                     </div>
-                    <p className={clsx('text-sm font-semibold tabular-nums md:text-right', estado === 'vencido' && 'text-danger', estado === 'proximo' && 'text-warning')}>
-                      {fmtCantidad(s.stock, it.unidad)}
+                    {/* La unidad va más chica y en gris: pegada al número y del mismo tamaño,
+                        "47 unidad" se leía como un solo bloque y costaba distinguir una de otro. */}
+                    <p className={clsx('truncate tabular-nums md:text-right', estado === 'vencido' && 'text-danger', estado === 'proximo' && 'text-warning')}>
+                      <span className="text-[13px] font-semibold">{fmtCantidad(s.stock)}</span>
+                      {it.unidad && <span className="ml-1 text-[10px] font-normal opacity-70">{it.unidad}</span>}
                     </p>
-                    <p className="text-sm tabular-nums text-muted-foreground md:text-right">{it.stock_minimo ? fmtCantidad(it.stock_minimo, it.unidad) : '—'}</p>
+                    <p className="truncate tabular-nums text-muted-foreground md:text-right">
+                      {it.stock_minimo ? (
+                        <>
+                          <span className="text-[13px]">{fmtCantidad(it.stock_minimo)}</span>
+                          {it.unidad && <span className="ml-1 text-[10px] opacity-70">{it.unidad}</span>}
+                        </>
+                      ) : (
+                        <span className="text-[13px]">—</span>
+                      )}
+                    </p>
                     <div><EstadoPill estado={estado} label={ESTADO_STOCK_LABEL[estado]} /></div>
-                    <p className="truncate text-xs text-muted-foreground">
+                    <p className="truncate text-[11px] text-muted-foreground">
                       {s.ultimaCompra
                         ? `${fmtFechaAR(s.ultimaCompra.fecha)}${s.ultimaCompra.precio_unitario != null ? ` · ${fmtMoneda(s.ultimaCompra.precio_unitario)}/${it.unidad}` : ''}${s.ultimaCompra.proveedor ? ` · ${s.ultimaCompra.proveedor}` : ''}`
                         : 'Sin compras registradas'}
