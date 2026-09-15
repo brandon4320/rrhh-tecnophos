@@ -6,16 +6,16 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import clsx from 'clsx'
 import {
-  ChevronLeft, ChevronRight, ExternalLink, FileText, Folder, FolderOpen, Plus, Trash2, Upload, Users, X,
+  ChevronDown, ChevronLeft, ChevronRight, ExternalLink, FileText, Folder, FolderOpen, Plus, Trash2, Upload, Users, X,
 } from 'lucide-react'
 import { EstadoPill } from '@/components/ui/estado-pill'
 import type { DocumentoMensual } from '@/types'
 import { subirDocumento } from '@/lib/upload-client'
 import { labelPeriodo } from '@/lib/recibos'
 import {
-  CARPETAS_FIJAS, CARPETA_RAIZ, CARPETA_RECIBOS, ESTADO_MES_LABEL, LABEL_RAIZ, MESES_CORTOS, agruparPorCarpeta, anioMesAR,
-  carpetasDelMes, carpetasExtra, completitudMes, esCarpetaFija, estadoMes, fmtBytes, normalizarCarpeta, periodoActual,
-  periodoAnterior, periodoDe, validarArchivoDocumento,
+  CARPETAS_FIJAS, CARPETA_RAIZ, CARPETA_RECIBOS, ESTADO_MES_LABEL, LABEL_RAIZ, MESES_CORTOS, anioMesAR, arbolCarpetas,
+  carpetasDelMes, completitudMes, estadoMes, excedeNiveles, fmtBytes, MAX_NIVELES_CARPETA, normalizarCarpeta,
+  periodoActual, periodoAnterior, periodoDe, rutasConArchivos, validarArchivoDocumento, type NodoCarpeta,
 } from '@/modules/documentos/reglas'
 import { fmtFechaAR } from '@/lib/fechas-ar'
 
@@ -95,10 +95,12 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
   }, [docs, anio, recibosPorPeriodo, empleadosActivos, hoy])
 
   const actual = meses[mesSel - 1]
-  const porCarpeta = useMemo(() => agruparPorCarpeta(actual.docs), [actual])
+  const arbol = useMemo(() => arbolCarpetas(actual.docs), [actual])
   const carpetas = useMemo(() => carpetasDelMes(actual.docs), [actual])
-  // Carpetas extra de TODO el año, para ofrecerlas en el selector del formulario.
-  const extrasDelAnio = useMemo(() => carpetasExtra(docs), [docs])
+  const sueltos = useMemo(() => actual.docs.filter((d) => !normalizarCarpeta(d.carpeta)), [actual])
+  // Rutas de TODO el año, para ofrecerlas en el selector del formulario: así mandar
+  // algo a "Recibos de sueldos/Limpieza" no obliga a escribir la ruta a mano.
+  const rutasDelAnio = useMemo(() => rutasConArchivos(docs), [docs])
 
   // "X de Y meses completos" se mide sobre los meses ya transcurridos, para que
   // completar el mes en curso no dé "9 de 8".
@@ -111,7 +113,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
       toast.error('Esperá a que termine la carga en curso.')
       return
     }
-    const conocida = esCarpetaFija(carpeta) || extrasDelAnio.includes(carpeta) || carpeta === CARPETA_RAIZ
+    const conocida = opcionesCarpeta.includes(carpeta) || carpeta === CARPETA_RAIZ
     setForm({ abierto: true, mes: mesSel, carpeta: conocida ? carpeta : OTRA, otra: conocida ? '' : carpeta, notas: '', archivos })
   }
   function cerrarCarga() {
@@ -134,6 +136,11 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
     if (subiendo) return
     if (form.archivos.length === 0) return toast.error('Elegí al menos un archivo.')
     const carpeta = form.carpeta === OTRA ? normalizarCarpeta(form.otra) : form.carpeta
+    // normalizarCarpeta recorta de más; si guardáramos igual, el archivo terminaría en
+    // otra carpeta que la escrita y el toast de éxito diría que salió bien.
+    if (form.carpeta === OTRA && excedeNiveles(form.otra)) {
+      return toast.error(`La ruta tiene demasiadas carpetas anidadas (el máximo es ${MAX_NIVELES_CARPETA}).`)
+    }
     if (form.carpeta === OTRA && !carpeta) return toast.error('Escribí el nombre de la carpeta.')
     for (const a of form.archivos) {
       const invalido = validarArchivoDocumento(a)
@@ -213,7 +220,9 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
     abrirCarga(carpeta, archivos)
   }
 
-  const opcionesCarpeta = [...CARPETAS_FIJAS, ...extrasDelAnio]
+  // Las fijas primero y después todo lo que ya existe en el año (incluidas las
+  // subcarpetas, con su ruta completa), sin repetir.
+  const opcionesCarpeta = [...new Set<string>([...CARPETAS_FIJAS, ...rutasDelAnio])]
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
@@ -303,9 +312,20 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
             <div>
               <label className={labelCls}>Carpeta *</label>
               <select value={form.carpeta} onChange={(e) => setForm((f) => ({ ...f, carpeta: e.target.value }))} className={inputCls}>
-                {opcionesCarpeta.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
+                {opcionesCarpeta.map((c) => {
+                  const niveles = c.split('/')
+                  // Sangría con espacios finos: un <optgroup> no se puede elegir y acá
+                  // la subcarpeta ES una opción válida.
+                  // Con solo la hoja, los cinco "Aguinaldo" de Limpieza, Sal, Palas,
+                  // Oficina y Bahía Blanca quedaban escritos igual y no había forma de
+                  // saber cuál se estaba eligiendo: va la RUTA ENTERA.
+                  return (
+                    <option key={c} value={c}>
+                      {' '.repeat((niveles.length - 1) * 2)}
+                      {niveles.length > 1 ? `└ ${c}` : c}
+                    </option>
+                  )
+                })}
                 <option value={CARPETA_RAIZ}>{LABEL_RAIZ}</option>
                 <option value={OTRA}>Otra carpeta…</option>
               </select>
@@ -381,26 +401,30 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {[...carpetas, CARPETA_RAIZ].map((c) => {
             const esRaiz = c === CARPETA_RAIZ
-            const docsCarpeta = porCarpeta.get(c) ?? []
+            // Una fija sin archivos no está en el árbol: se muestra igual, vacía.
+            const nodo: NodoCarpeta<DocumentoMensual> = esRaiz
+              ? { nombre: LABEL_RAIZ, ruta: CARPETA_RAIZ, docs: sueltos, hijas: [], total: sueltos.length }
+              : arbol.find((n) => n.nombre === c) ?? { nombre: c, ruta: c, docs: [], hijas: [], total: 0 }
             return (
               <CarpetaCard
                 key={c || '__raiz__'}
-                nombre={esRaiz ? LABEL_RAIZ : c}
-                docs={docsCarpeta}
+                nodo={nodo}
                 canEdit={canEdit}
                 subiendo={subiendo}
                 // Con contenido se pinta con el acento; la de recibos también si el legajo ya la cubre.
-                cubierta={docsCarpeta.length > 0 || (c === CARPETA_RECIBOS && actual.recibosCompletos)}
+                cubierta={nodo.total > 0 || (c === CARPETA_RECIBOS && actual.recibosCompletos)}
                 suelta={esRaiz}
-                dragOver={dragOver === c}
+                dragOver={dragOver}
                 borrando={borrando}
                 className={esRaiz ? 'sm:col-span-2 xl:col-span-3' : undefined}
-                onAgregar={() => abrirCarga(c)}
+                onAgregar={abrirCarga}
                 onVer={ver}
                 onEliminar={eliminar}
                 onDragOver={(e) => onDragOver(e, c)}
                 onDragLeave={() => setDragOver(null)}
                 onDrop={(e) => onDrop(e, c)}
+                onDragOverRuta={onDragOver}
+                onDropRuta={onDrop}
                 extra={
                   c === CARPETA_RECIBOS ? (
                     <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs">
@@ -428,27 +452,30 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
 // ── Carpeta ─────────────────────────────────────────────────────────────────
 
 function CarpetaCard({
-  nombre, docs, canEdit, subiendo, cubierta, suelta, dragOver, borrando, extra, className,
-  onAgregar, onVer, onEliminar, onDragOver, onDragLeave, onDrop,
+  nodo, canEdit, subiendo, cubierta, suelta, dragOver, borrando, extra, className,
+  onAgregar, onVer, onEliminar, onDragOver, onDragLeave, onDrop, onDragOverRuta, onDropRuta,
 }: {
-  nombre: string
-  docs: DocumentoMensual[]
+  nodo: NodoCarpeta<DocumentoMensual>
   canEdit: boolean
   subiendo: boolean
   cubierta: boolean
   suelta?: boolean
-  dragOver: boolean
+  /** Ruta con el archivo encima: la tarjeta se pinta solo si es la SUYA. */
+  dragOver: string | null
   borrando: string | null
   extra?: React.ReactNode
   className?: string
-  onAgregar: () => void
+  onAgregar: (ruta: string) => void
   onVer: (d: DocumentoMensual) => void
   onEliminar: (d: DocumentoMensual) => void
   onDragOver: (e: DragEvent) => void
   onDragLeave: () => void
   onDrop: (e: DragEvent) => void
+  onDragOverRuta: (e: DragEvent, ruta: string) => void
+  onDropRuta: (e: DragEvent, ruta: string) => void
 }) {
-  const Icono = docs.length > 0 ? FolderOpen : Folder
+  const nombre = nodo.nombre
+  const Icono = nodo.total > 0 ? FolderOpen : Folder
   return (
     <div
       onDragOver={onDragOver}
@@ -456,7 +483,7 @@ function CarpetaCard({
       onDrop={onDrop}
       className={clsx(
         'flex flex-col rounded-2xl border bg-card transition-colors',
-        dragOver ? 'border-primary bg-primary/5' : 'border-border',
+        dragOver === nodo.ruta ? 'border-primary bg-primary/5' : 'border-border',
         className
       )}
     >
@@ -467,11 +494,12 @@ function CarpetaCard({
         <div className="min-w-0 flex-1">
           <p className={clsx('truncate text-sm font-medium', suelta ? 'text-muted-foreground' : 'text-foreground')}>{nombre}</p>
           <p className="text-[11px] text-muted-foreground">
-            {docs.length === 0 ? 'Vacía' : `${docs.length} ${docs.length === 1 ? 'archivo' : 'archivos'}`}
+            {nodo.total === 0 ? 'Vacía' : `${nodo.total} ${nodo.total === 1 ? 'archivo' : 'archivos'}`}
+            {nodo.hijas.length > 0 && ` · ${nodo.hijas.length} ${nodo.hijas.length === 1 ? 'subcarpeta' : 'subcarpetas'}`}
           </p>
         </div>
         {canEdit && (
-          <button onClick={onAgregar} disabled={subiendo} className={clsx(btnMini, 'bg-primary/10 text-primary hover:bg-primary/20')} title={`Agregar a ${nombre}`}>
+          <button onClick={() => onAgregar(nodo.ruta)} disabled={subiendo} className={clsx(btnMini, 'bg-primary/10 text-primary hover:bg-primary/20')} title={`Agregar a ${nombre}`}>
             <Plus className="size-3.5" strokeWidth={2.5} />
             Agregar
           </button>
@@ -480,35 +508,121 @@ function CarpetaCard({
 
       {extra && <div className="px-4 pb-3">{extra}</div>}
 
-      {docs.length > 0 && (
-        <ul className="divide-y divide-border border-t border-border">
-          {docs.map((d) => (
-            <li key={d.id} className="flex items-center gap-3 px-4 py-2.5">
-              <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-foreground" title={d.nombre_archivo}>{d.nombre_archivo}</p>
-                <p className="truncate text-[11px] text-muted-foreground">
-                  {[fmtBytes(d.size_bytes), d.created_at ? `cargado el ${fmtFechaAR(d.created_at)}` : '', d.origen === 'automatico' ? 'automático' : '', d.notas ?? '']
-                    .filter(Boolean).join(' · ')}
-                </p>
-              </div>
-              <button onClick={() => onVer(d)} className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline">
-                Ver <ExternalLink className="size-3" strokeWidth={2} />
-              </button>
-              {canEdit && (
-                <button
-                  onClick={() => onEliminar(d)}
-                  disabled={borrando === d.id}
-                  className="shrink-0 text-danger/70 hover:text-danger disabled:opacity-50"
-                  title="Eliminar archivo"
-                >
-                  <Trash2 className="size-3.5" strokeWidth={1.75} />
-                </button>
-              )}
-            </li>
+      {(nodo.docs.length > 0 || nodo.hijas.length > 0) && (
+        <div className="border-t border-border">
+          {/* Las subcarpetas van arriba de los archivos sueltos de este nivel:
+              es el orden del explorador de Windows, que es lo que ella conoce. */}
+          {nodo.hijas.map((h) => (
+            <SubCarpeta key={h.ruta} nodo={h} nivel={0} canEdit={canEdit} subiendo={subiendo} borrando={borrando}
+              dragOver={dragOver} onAgregar={onAgregar} onVer={onVer} onEliminar={onEliminar}
+              onDragOver={onDragOverRuta} onDragLeave={onDragLeave} onDrop={onDropRuta} />
           ))}
-        </ul>
+          <ListaArchivos docs={nodo.docs} canEdit={canEdit} borrando={borrando} onVer={onVer} onEliminar={onEliminar} sangria={0} />
+        </div>
       )}
     </div>
+  )
+}
+
+/** Un nivel de subcarpeta dentro de la tarjeta. Arranca cerrada; se abre al tocarla. */
+function SubCarpeta({
+  nodo, nivel, canEdit, subiendo, borrando, dragOver, onAgregar, onVer, onEliminar, onDragOver, onDragLeave, onDrop,
+}: {
+  nodo: NodoCarpeta<DocumentoMensual>
+  nivel: number
+  canEdit: boolean
+  subiendo: boolean
+  borrando: string | null
+  dragOver: string | null
+  onAgregar: (ruta: string) => void
+  onVer: (d: DocumentoMensual) => void
+  onEliminar: (d: DocumentoMensual) => void
+  onDragOver: (e: DragEvent, ruta: string) => void
+  onDragLeave: () => void
+  onDrop: (e: DragEvent, ruta: string) => void
+}) {
+  const [abierta, setAbierta] = useState(false)
+  const sangria = nivel + 1
+  return (
+    <div className="border-b border-border last:border-b-0">
+      {/* Los handlers van en la FILA de la subcarpeta y cortan la propagación: si no,
+          soltar sobre "Limpieza" disparaba el drop de la tarjeta y los archivos
+          terminaban en "Recibos de sueldos". */}
+      <div
+        onDragOver={(e) => { e.stopPropagation(); onDragOver(e, nodo.ruta) }}
+        onDragLeave={(e) => { e.stopPropagation(); onDragLeave() }}
+        onDrop={(e) => { e.stopPropagation(); onDrop(e, nodo.ruta) }}
+        className={clsx('flex items-center gap-2 py-2 pr-3', dragOver === nodo.ruta && 'bg-primary/10')}
+        style={{ paddingLeft: `${1 + sangria * 0.85}rem` }}
+      >
+        <button
+          onClick={() => setAbierta((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          aria-expanded={abierta}
+        >
+          <ChevronDown className={clsx('size-3.5 shrink-0 text-muted-foreground transition-transform', !abierta && '-rotate-90')} strokeWidth={2} />
+          {abierta ? <FolderOpen className="size-3.5 shrink-0 text-primary" strokeWidth={1.75} /> : <Folder className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.75} />}
+          <span className="truncate text-xs font-medium text-foreground">{nodo.nombre}</span>
+          <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{nodo.total}</span>
+        </button>
+        {canEdit && (
+          <button onClick={() => onAgregar(nodo.ruta)} disabled={subiendo} className="shrink-0 text-primary/70 hover:text-primary disabled:opacity-50" title={`Agregar a ${nodo.ruta}`}>
+            <Plus className="size-3.5" strokeWidth={2.5} />
+          </button>
+        )}
+      </div>
+      {abierta && (
+        <>
+          {nodo.hijas.map((h) => (
+            <SubCarpeta key={h.ruta} nodo={h} nivel={sangria} canEdit={canEdit} subiendo={subiendo} borrando={borrando}
+              dragOver={dragOver} onAgregar={onAgregar} onVer={onVer} onEliminar={onEliminar}
+              onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop} />
+          ))}
+          <ListaArchivos docs={nodo.docs} canEdit={canEdit} borrando={borrando} onVer={onVer} onEliminar={onEliminar} sangria={sangria} />
+        </>
+      )}
+    </div>
+  )
+}
+
+function ListaArchivos({
+  docs, canEdit, borrando, onVer, onEliminar, sangria,
+}: {
+  docs: DocumentoMensual[]
+  canEdit: boolean
+  borrando: string | null
+  onVer: (d: DocumentoMensual) => void
+  onEliminar: (d: DocumentoMensual) => void
+  sangria: number
+}) {
+  if (docs.length === 0) return null
+  return (
+    <ul className="divide-y divide-border">
+      {docs.map((d) => (
+        <li key={d.id} className="flex items-center gap-3 py-2.5 pr-4" style={{ paddingLeft: `${1 + sangria * 0.85}rem` }}>
+          <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm text-foreground" title={d.nombre_archivo}>{d.nombre_archivo}</p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {[fmtBytes(d.size_bytes), d.created_at ? `cargado el ${fmtFechaAR(d.created_at)}` : '', d.origen === 'automatico' ? 'automático' : '', d.notas ?? '']
+                .filter(Boolean).join(' · ')}
+            </p>
+          </div>
+          <button onClick={() => onVer(d)} className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary hover:underline">
+            Ver <ExternalLink className="size-3" strokeWidth={2} />
+          </button>
+          {canEdit && (
+            <button
+              onClick={() => onEliminar(d)}
+              disabled={borrando === d.id}
+              className="shrink-0 text-danger/70 hover:text-danger disabled:opacity-50"
+              title="Eliminar archivo"
+            >
+              <Trash2 className="size-3.5" strokeWidth={1.75} />
+            </button>
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }

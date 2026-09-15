@@ -16,6 +16,16 @@ export type CarpetaFija = (typeof CARPETAS_FIJAS)[number]
 export const CARPETA_RAIZ = ''
 export const LABEL_RAIZ = 'Archivos sueltos del mes'
 
+/**
+ * `carpeta` guarda la RUTA, no un solo nombre: 'Recibos de sueldos/Limpieza/Aguinaldo'.
+ * La oficinista abre subcarpetas por sector adentro de Recibos de sueldos (Limpieza,
+ * Sal, Palas, Bahía Blanca, Rosario…) y adentro de esas, conceptos sueltos como
+ * Aguinaldo o Premio anual. Guardar solo el primer tramo perdía esa división.
+ */
+export const SEP_CARPETA = '/'
+/** Tope de anidamiento. Lo más hondo que armó la oficinista son 3 niveles. */
+export const MAX_NIVELES_CARPETA = 4
+
 /** La carpeta cuyos "archivos" también pueden ser los recibos por empleado del legajo. */
 export const CARPETA_RECIBOS: CarpetaFija = 'Recibos de sueldos'
 
@@ -30,20 +40,46 @@ export function esCarpetaFija(c: string): c is CarpetaFija {
   return (CARPETAS_FIJAS as readonly string[]).includes(c)
 }
 
-/** Colapsa espacios y, si coincide (sin importar mayúsculas) con una fija, devuelve el nombre canónico. */
+/**
+ * Limpia la ruta tramo por tramo y canoniza el PRIMERO si es una carpeta fija
+ * ("RECIBOS DE SUELDOS" y "Recibos de sueldos" tienen que caer en la misma, o el
+ * mes se ve partido en dos). Acepta barra invertida porque el nombre puede venir
+ * copiado del explorador de Windows.
+ */
 export function normalizarCarpeta(v: unknown): string {
   if (typeof v !== 'string') return CARPETA_RAIZ
-  const limpio = v.replace(/\s+/g, ' ').trim()
-  if (!limpio) return CARPETA_RAIZ
-  const fija = CARPETAS_FIJAS.find((c) => c.toLowerCase() === limpio.toLowerCase())
-  return fija ?? limpio
+  const tramos = v
+    .split(/[/\\]+/)
+    .map((t) => t.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, MAX_NIVELES_CARPETA)
+  if (tramos.length === 0) return CARPETA_RAIZ
+  const fija = CARPETAS_FIJAS.find((c) => c.toLowerCase() === tramos[0].toLowerCase())
+  if (fija) tramos[0] = fija
+  return tramos.join(SEP_CARPETA)
 }
 
-/** Carpetas NO fijas con archivos, ordenadas (nunca la raíz). */
+/**
+ * `true` si la ruta escrita tiene más tramos de los que se guardan. `normalizarCarpeta`
+ * recorta en silencio (tiene que devolver un string siempre, y corre también en el
+ * servidor), así que el formulario usa esto para avisar en vez de guardar el archivo
+ * en una carpeta distinta de la que se pidió.
+ */
+export function excedeNiveles(v: unknown): boolean {
+  if (typeof v !== 'string') return false
+  return v.split(/[/\\]+/).filter((t) => t.trim()).length > MAX_NIVELES_CARPETA
+}
+
+/** Primer tramo de la ruta: la carpeta que se ve en la grilla del mes. */
+export function raizCarpeta(v: unknown): string {
+  return normalizarCarpeta(v).split(SEP_CARPETA)[0] ?? CARPETA_RAIZ
+}
+
+/** Carpetas NO fijas con archivos, ordenadas (nunca la raíz). Solo el primer nivel. */
 export function carpetasExtra(docs: DocMinimo[]): string[] {
   const extras = new Set<string>()
   for (const d of docs) {
-    const c = normalizarCarpeta(d.carpeta)
+    const c = raizCarpeta(d.carpeta)
     if (c && !esCarpetaFija(c)) extras.add(c)
   }
   return [...extras].sort((a, b) => a.localeCompare(b, 'es'))
@@ -54,7 +90,7 @@ export function carpetasDelMes(docs: DocMinimo[]): string[] {
   return [...CARPETAS_FIJAS, ...carpetasExtra(docs)]
 }
 
-/** Agrupa los documentos de un mes por carpeta ('' = raíz). */
+/** Agrupa los documentos de un mes por carpeta EXACTA ('' = raíz, la ruta entera si está anidada). */
 export function agruparPorCarpeta<T extends DocMinimo>(docs: T[]): Map<string, T[]> {
   const mapa = new Map<string, T[]>()
   for (const d of docs) {
@@ -63,6 +99,64 @@ export function agruparPorCarpeta<T extends DocMinimo>(docs: T[]): Map<string, T
     mapa.get(c)!.push(d)
   }
   return mapa
+}
+
+export interface NodoCarpeta<T extends DocMinimo = DocMinimo> {
+  /** Nombre del tramo, que es lo que se muestra: 'Limpieza'. */
+  nombre: string
+  /** Ruta completa desde la raíz del mes: 'Recibos de sueldos/Limpieza'. Es lo que va en `carpeta` al subir. */
+  ruta: string
+  /** Archivos que viven EN este nivel; los de las hijas no están acá. */
+  docs: T[]
+  hijas: NodoCarpeta<T>[]
+  /** Archivos de este nivel MÁS los de todo lo que cuelga (el contador de la tarjeta). */
+  total: number
+}
+
+/**
+ * Arma el árbol de carpetas de un mes a partir de las rutas. Los sueltos de la
+ * raíz quedan afuera: no son una carpeta y la pantalla los muestra aparte.
+ */
+export function arbolCarpetas<T extends DocMinimo>(docs: T[]): NodoCarpeta<T>[] {
+  const raices: NodoCarpeta<T>[] = []
+  for (const d of docs) {
+    const ruta = normalizarCarpeta(d.carpeta)
+    if (!ruta) continue
+    let hermanas = raices
+    let acumulada = ''
+    let nodo: NodoCarpeta<T> | undefined
+    for (const tramo of ruta.split(SEP_CARPETA)) {
+      acumulada = acumulada ? `${acumulada}${SEP_CARPETA}${tramo}` : tramo
+      nodo = hermanas.find((n) => n.nombre === tramo)
+      if (!nodo) {
+        nodo = { nombre: tramo, ruta: acumulada, docs: [], hijas: [], total: 0 }
+        hermanas.push(nodo)
+      }
+      nodo.total++
+      hermanas = nodo.hijas
+    }
+    nodo!.docs.push(d)
+  }
+  const ordenar = (ns: NodoCarpeta<T>[]): NodoCarpeta<T>[] => {
+    ns.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+    for (const n of ns) ordenar(n.hijas)
+    return ns
+  }
+  return ordenar(raices)
+}
+
+/**
+ * Todas las rutas con archivos, ordenadas, para ofrecerlas en el selector de
+ * carga: sin esto, mandar algo a "Recibos de sueldos/Limpieza" obliga a
+ * escribir la ruta a mano cada vez.
+ */
+export function rutasConArchivos(docs: DocMinimo[]): string[] {
+  const rutas = new Set<string>()
+  for (const d of docs) {
+    const c = normalizarCarpeta(d.carpeta)
+    if (c) rutas.add(c)
+  }
+  return [...rutas].sort((a, b) => a.localeCompare(b, 'es'))
 }
 
 export interface Completitud {
@@ -78,8 +172,9 @@ export interface Completitud {
  * los empleados activos tienen su recibo en el legajo).
  */
 export function completitudMes(docs: DocMinimo[], cubiertas: readonly string[] = []): Completitud {
+  // Por la RAÍZ: un archivo en 'Recibos de sueldos/Limpieza' cubre 'Recibos de sueldos'.
   const con = new Set<string>(cubiertas)
-  for (const d of docs) con.add(normalizarCarpeta(d.carpeta))
+  for (const d of docs) con.add(raizCarpeta(d.carpeta))
   const completas = CARPETAS_FIJAS.filter((c) => con.has(c))
   const faltantes = CARPETAS_FIJAS.filter((c) => !con.has(c))
   return { completas, faltantes, total: CARPETAS_FIJAS.length }
@@ -132,7 +227,12 @@ export function estadoMes(periodo: string, completitud: Completitud, cantidadArc
   return periodo < periodoActual(now) ? 'vencido' : 'sin_fecha'
 }
 
-/** Nombre de carpeta → segmento seguro para la clave en R2. */
+/**
+ * Ruta de carpeta → UN solo segmento seguro para la clave en R2: las barras caen
+ * en el mismo reemplazo que el resto, así 'Recibos de sueldos/Limpieza' queda
+ * 'recibos-de-sueldos-limpieza' y no abre un nivel más en el bucket (ni permite
+ * salirse de él escribiendo '..' en el nombre de una carpeta).
+ */
 export function slugCarpeta(carpeta: string): string {
   const c = normalizarCarpeta(carpeta)
   if (!c) return '_raiz'
