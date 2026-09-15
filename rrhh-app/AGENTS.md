@@ -180,7 +180,12 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
 - **Documentación mensual** (migración 17): `documentos_mensuales` colgada de `empresas`
   (`periodo` = primer día del mes, `carpeta` texto con `''` = archivos sueltos del mes, archivo en
   R2, `origen` manual|automatico, `clave_externa` única por empresa para que un proceso automático
-  pueda re-correr sin duplicar). Réplica de las carpetas en disco de la oficinista: las **6 carpetas
+  pueda re-correr sin duplicar). **`carpeta` guarda la RUTA, no un solo nombre**
+  (`Recibos de sueldos/Limpieza/Aguinaldo`, separador `/`, hasta `MAX_NIVELES_CARPETA` tramos):
+  la oficinista divide Recibos de sueldos por sector/planta y adentro por concepto. Solo el PRIMER
+  tramo se canoniza contra `CARPETAS_FIJAS`, y todo lo que mira carpetas de primer nivel
+  (`carpetasExtra`, `completitudMes`) usa `raizCarpeta()`; la pantalla arma el árbol con
+  `arbolCarpetas()`. En la clave de R2 la ruta se aplasta a UN segmento (`slugCarpeta`). Réplica de las carpetas en disco de la oficinista: las **6 carpetas
   fijas** (Aportes sindicales, ART, F931, Pagos, Recibos de sueldos, SVO) viven en código
   (`modules/documentos/reglas.ts::CARPETAS_FIJAS`) y se muestran siempre; se admiten carpetas
   extra escritas a mano. Son documentos de la EMPRESA: lo de cada persona sigue en `recibos_sueldo`

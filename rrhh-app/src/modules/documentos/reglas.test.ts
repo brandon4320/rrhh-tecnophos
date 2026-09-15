@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   CARPETAS_FIJAS, agruparPorCarpeta, anioMesAR, carpetasDelMes, carpetasExtra, completitudMes, empleadosConReciboPorPeriodo,
-  esCarpetaFija, estadoMes, normalizarCarpeta, periodoActual, periodoAnterior, periodoDe, sanitizarNombreArchivo,
+  arbolCarpetas, esCarpetaFija, estadoMes, normalizarCarpeta, periodoActual, periodoAnterior, periodoDe, raizCarpeta,
+  rutasConArchivos, sanitizarNombreArchivo,
   slugCarpeta, validarArchivoDocumento,
 } from './reglas'
 import { labelPeriodo } from '@/lib/recibos'
@@ -132,5 +133,98 @@ describe('empleadosConReciboPorPeriodo', () => {
     expect(m.get('2026-07-01')).toBe(2)
     expect(m.get('2026-06-01')).toBe(1)
     expect(m.get('2026-05-01')).toBeUndefined()
+  })
+})
+
+// ── Subcarpetas (2026-09-15) ────────────────────────────────────────────────
+// `carpeta` guarda la RUTA: la oficinista divide Recibos de sueldos por sector
+// (Limpieza, Sal, Bahía Blanca…) y adentro por concepto (Aguinaldo, Premio anual).
+
+describe('normalizarCarpeta con rutas', () => {
+  it('canoniza solo el primer tramo y conserva los demás', () => {
+    expect(normalizarCarpeta('RECIBOS DE SUELDOS/Limpieza')).toBe('Recibos de sueldos/Limpieza')
+    expect(normalizarCarpeta('recibos de sueldos / Sal / Aguinaldo')).toBe('Recibos de sueldos/Sal/Aguinaldo')
+  })
+  it('acepta barra invertida (nombre copiado del explorador de Windows)', () => {
+    expect(normalizarCarpeta(String.raw`ART\Nomina`)).toBe('ART/Nomina')
+  })
+  it('descarta tramos vacíos y corta a MAX_NIVELES_CARPETA', () => {
+    expect(normalizarCarpeta('//ART///Nomina//')).toBe('ART/Nomina')
+    expect(normalizarCarpeta('a/b/c/d/e/f')).toBe('a/b/c/d')
+    expect(normalizarCarpeta('///')).toBe('')
+  })
+})
+
+describe('raizCarpeta', () => {
+  it('devuelve el primer tramo ya canonizado', () => {
+    expect(raizCarpeta('RECIBOS DE SUELDOS/Limpieza/Aguinaldo')).toBe('Recibos de sueldos')
+    expect(raizCarpeta('ARCA')).toBe('ARCA')
+    expect(raizCarpeta('')).toBe('')
+  })
+})
+
+describe('completitudMes con subcarpetas', () => {
+  it('un archivo en una subcarpeta cubre la carpeta fija', () => {
+    const c = completitudMes([{ periodo: '2026-04-01', carpeta: 'Recibos de sueldos/Limpieza/Aguinaldo' }])
+    expect(c.completas).toContain('Recibos de sueldos')
+  })
+})
+
+describe('carpetasExtra / carpetasDelMes con subcarpetas', () => {
+  it('solo cuentan las raíces, no cada subcarpeta', () => {
+    const docs = [
+      { periodo: '2026-04-01', carpeta: 'Recibos de sueldos/Limpieza' },
+      { periodo: '2026-04-01', carpeta: 'REPSAL/2026' },
+    ]
+    expect(carpetasExtra(docs)).toEqual(['REPSAL'])
+    expect(carpetasDelMes(docs)).toEqual([...CARPETAS_FIJAS, 'REPSAL'])
+  })
+})
+
+describe('arbolCarpetas', () => {
+  const docs = [
+    { id: '1', periodo: '2026-04-01', carpeta: 'Recibos de sueldos/Sal/Aguinaldo' },
+    { id: '2', periodo: '2026-04-01', carpeta: 'Recibos de sueldos/Sal' },
+    { id: '3', periodo: '2026-04-01', carpeta: 'RECIBOS DE SUELDOS/Limpieza' },
+    { id: '4', periodo: '2026-04-01', carpeta: 'F931' },
+    { id: '5', periodo: '2026-04-01', carpeta: '' },
+  ]
+  it('arma un nodo por tramo, ordenado, sin los sueltos de la raíz', () => {
+    const arbol = arbolCarpetas(docs)
+    expect(arbol.map((n) => n.nombre)).toEqual(['F931', 'Recibos de sueldos'])
+    const recibos = arbol[1]
+    expect(recibos.ruta).toBe('Recibos de sueldos')
+    expect(recibos.hijas.map((h) => h.nombre)).toEqual(['Limpieza', 'Sal'])
+    expect(recibos.hijas[1].ruta).toBe('Recibos de sueldos/Sal')
+    expect(recibos.hijas[1].hijas[0].ruta).toBe('Recibos de sueldos/Sal/Aguinaldo')
+  })
+  it('docs son los de ESE nivel y total incluye lo que cuelga', () => {
+    const recibos = arbolCarpetas(docs)[1]
+    expect(recibos.docs).toEqual([])          // no hay nada suelto en Recibos de sueldos
+    expect(recibos.total).toBe(3)             // Sal + Sal/Aguinaldo + Limpieza
+    const sal = recibos.hijas[1]
+    expect(sal.docs.map((d) => d.id)).toEqual(['2'])
+    expect(sal.total).toBe(2)
+  })
+})
+
+describe('rutasConArchivos', () => {
+  it('lista las rutas completas usadas, sin la raíz y sin repetir', () => {
+    expect(rutasConArchivos([
+      { periodo: '2026-04-01', carpeta: 'Recibos de sueldos/Sal' },
+      { periodo: '2026-05-01', carpeta: 'RECIBOS DE SUELDOS/Sal' },
+      { periodo: '2026-05-01', carpeta: 'F931' },
+      { periodo: '2026-05-01', carpeta: '' },
+    ])).toEqual(['F931', 'Recibos de sueldos/Sal'])
+  })
+})
+
+describe('slugCarpeta con rutas', () => {
+  it('aplasta la ruta en un solo segmento de la clave en R2', () => {
+    expect(slugCarpeta('Recibos de sueldos/Limpieza/Aguinaldo')).toBe('recibos-de-sueldos-limpieza-aguinaldo')
+  })
+  it('no deja escapar del prefijo con puntos ni barras', () => {
+    expect(slugCarpeta('../../etc')).toBe('etc')
+    expect(slugCarpeta('..')).toBe('carpeta')
   })
 })
