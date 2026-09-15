@@ -6,7 +6,12 @@ import Link from 'next/link'
 import { ChevronRight, ArrowRight } from 'lucide-react'
 import { Monograma } from '@/components/ui/monograma'
 import { EstadoBadgeSuave } from '@/components/ui/estado-pill'
-import { Segmented } from '@/components/ui/segmented'
+import { SegmentedLocal } from '@/components/ui/segmented-local'
+
+// Cota gruesa: un certificado que vence a más de un año no puede estar vencido
+// ni "próximo" (alerta_dias real máx. 30; 365+1 de holgura por TZ y margen).
+// Es solo un filtro de payload — el estado exacto lo decide getEstadoVencimiento.
+const MAX_ALERTA_DIAS = 365
 
 export default async function DashboardPage({
   searchParams,
@@ -16,7 +21,9 @@ export default async function DashboardPage({
   const sp = await searchParams
   const supabase = await createClient()
 
-  const [{ data: certs }, { data: empresas }, { data: empleados }] = await Promise.all([
+  const horizonte = new Date(Date.now() + (MAX_ALERTA_DIAS + 1) * 86400000).toISOString().slice(0, 10)
+
+  const [{ data: certs }, { data: empresas }, { data: empleados }, { count: certsSinEmpleado }, { count: certsEmpleadosActivos }] = await Promise.all([
     supabase
       .from('certificados')
       .select(`
@@ -28,9 +35,22 @@ export default async function DashboardPage({
         empresa:empresas(id, nombre, slug)
       `)
       .not('fecha_vencimiento', 'is', null)
+      .lte('fecha_vencimiento', horizonte)
       .order('fecha_vencimiento', { ascending: true }),
     supabase.from('empresas').select('id, nombre, slug').order('nombre'),
     supabase.from('empleados').select('id, empresa_id').eq('activo', true),
+    // Total real de certificados con fecha (sin traer filas): los que no son de
+    // empleados + los de empleados activos. "Al día" sale por resta.
+    supabase
+      .from('certificados')
+      .select('id', { count: 'exact', head: true })
+      .not('fecha_vencimiento', 'is', null)
+      .is('empleado_id', null),
+    supabase
+      .from('certificados')
+      .select('id, empleados!inner(activo)', { count: 'exact', head: true })
+      .not('fecha_vencimiento', 'is', null)
+      .eq('empleados.activo', true),
   ])
 
   const hoy = new Date()
@@ -45,15 +65,15 @@ export default async function DashboardPage({
     }))
   const vencidos = conEstado.filter((c) => c.estado === 'vencido')
   const proximos = conEstado.filter((c) => c.estado === 'proximo')
-  const alDia = conEstado.length - vencidos.length - proximos.length
-  const total = Math.max(1, conEstado.length)
+  // El fetch está acotado a un año: el total con fecha sale de los counts.
+  const totalConFecha = (certsSinEmpleado ?? 0) + (certsEmpleadosActivos ?? 0)
+  const alDia = totalConFecha - vencidos.length - proximos.length
+  const total = Math.max(1, totalConFecha)
 
   const masUrgente = vencidos[0]
   const diasUrgente = masUrgente ? Math.abs(diasHastaVencimiento(masUrgente.fecha_vencimiento!)) : 0
 
   const tab = sp.tab === 'vencidos' ? 'vencidos' : sp.tab === 'proximos' ? 'proximos' : 'todos'
-  const alertas = tab === 'vencidos' ? vencidos : tab === 'proximos' ? proximos : [...vencidos, ...proximos]
-  const visibles = alertas.slice(0, 6)
 
   const byEmpresa = (empresas ?? []).map((emp) => {
     const propios = conEstado.filter((c) => {
@@ -91,6 +111,67 @@ export default async function DashboardPage({
       nombre: c.empresa?.nombre ?? '—',
       href: c.empresa?.slug ? `/empresa/${c.empresa.slug}?vista=documentacion` : '/vencimientos',
     }
+  }
+
+  // Los 3 tabs viajan en el mismo payload (SegmentedLocal): cambiar de tab no
+  // vuelve al server. Cada lista muestra hasta 6 casos + su propio pie.
+  function listaAlertas(alertas: typeof conEstado) {
+    const visibles = alertas.slice(0, 6)
+    return (
+      <>
+        <div className="mt-4 space-y-2">
+          {visibles.length === 0 && (
+            <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+              Sin alertas en esta vista.
+            </p>
+          )}
+          {visibles.map((c) => {
+            const dias = diasHastaVencimiento(c.fecha_vencimiento!)
+            const dueno = duenoDe(c)
+            const label =
+              dias < 0
+                ? `Venció hace ${Math.abs(dias)} ${Math.abs(dias) === 1 ? 'día' : 'días'}`
+                : dias === 0
+                  ? 'Vence hoy'
+                  : `Vence en ${dias} ${dias === 1 ? 'día' : 'días'}`
+            return (
+              <Link
+                key={c.id}
+                href={dueno.href}
+                className="flex items-center gap-4 rounded-xl border border-border px-4 py-3 transition-colors hover:bg-muted/50"
+              >
+                <Monograma nombre={dueno.nombre} size="md" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{dueno.nombre}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {c.tipo?.nombre ?? c.tipo_nombre_custom ?? 'Certificado'}
+                  </p>
+                </div>
+                <EstadoBadgeSuave estado={c.estado} label={label} className="shrink-0" />
+                <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:block">
+                  {format(new Date(c.fecha_vencimiento!.slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy')}
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
+              </Link>
+            )
+          })}
+        </div>
+
+        {alertas.length > 0 && (
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              {visibles.length} {visibles.length === 1 ? 'caso visible' : 'casos visibles'} de {alertas.length} alertas
+            </p>
+            <Link
+              href="/vencimientos"
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Ver todos
+            </Link>
+          </div>
+        )}
+      </>
+    )
   }
 
   return (
@@ -196,67 +277,15 @@ export default async function DashboardPage({
           <h2 className="text-lg font-semibold tracking-tight">Vencimientos prioritarios</h2>
           <p className="text-sm text-muted-foreground">Ordenados por urgencia</p>
 
-          <Segmented
+          <SegmentedLocal
             className="mt-4"
-            active={tab}
+            inicial={tab}
             tabs={[
-              { key: 'todos', label: 'Todos', href: '/dashboard' },
-              { key: 'vencidos', label: 'Vencidos', href: '/dashboard?tab=vencidos' },
-              { key: 'proximos', label: 'Próximos', href: '/dashboard?tab=proximos' },
+              { key: 'todos', label: 'Todos', content: listaAlertas([...vencidos, ...proximos]) },
+              { key: 'vencidos', label: 'Vencidos', content: listaAlertas(vencidos) },
+              { key: 'proximos', label: 'Próximos', content: listaAlertas(proximos) },
             ]}
           />
-
-          <div className="mt-4 space-y-2">
-            {visibles.length === 0 && (
-              <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-                Sin alertas en esta vista.
-              </p>
-            )}
-            {visibles.map((c) => {
-              const dias = diasHastaVencimiento(c.fecha_vencimiento!)
-              const dueno = duenoDe(c)
-              const label =
-                dias < 0
-                  ? `Venció hace ${Math.abs(dias)} ${Math.abs(dias) === 1 ? 'día' : 'días'}`
-                  : dias === 0
-                    ? 'Vence hoy'
-                    : `Vence en ${dias} ${dias === 1 ? 'día' : 'días'}`
-              return (
-                <Link
-                  key={c.id}
-                  href={dueno.href}
-                  className="flex items-center gap-4 rounded-xl border border-border px-4 py-3 transition-colors hover:bg-muted/50"
-                >
-                  <Monograma nombre={dueno.nombre} size="md" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{dueno.nombre}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {c.tipo?.nombre ?? c.tipo_nombre_custom ?? 'Certificado'}
-                    </p>
-                  </div>
-                  <EstadoBadgeSuave estado={c.estado} label={label} className="shrink-0" />
-                  <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:block">
-                    {format(new Date(c.fecha_vencimiento!.slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy')}
-                  </span>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
-                </Link>
-              )
-            })}
-          </div>
-
-          {alertas.length > 0 && (
-            <div className="mt-4 flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                {visibles.length} {visibles.length === 1 ? 'caso visible' : 'casos visibles'} de {alertas.length} alertas
-              </p>
-              <Link
-                href="/vencimientos"
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                Ver todos
-              </Link>
-            </div>
-          )}
         </div>
 
         <div className="space-y-6">

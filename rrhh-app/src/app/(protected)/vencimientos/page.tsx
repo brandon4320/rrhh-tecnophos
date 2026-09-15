@@ -14,19 +14,38 @@ export default async function VencimientosPage({
   const { empresa, tipo, estado } = await searchParams
   const supabase = await createClient()
 
+  // Filtro GRUESO en la DB para no traer toda la tabla: rangos de fecha con
+  // holgura de ±1 día (el server corre en UTC y el estado se define en hora AR)
+  // y tipo_id solo si es un UUID válido. El bloque `filtered` de abajo refina
+  // con getEstadoVencimiento, que es quien decide el estado exacto.
+  const MAX_ALERTA_DIAS = 365
+  const d = (n: number) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10)
+
+  let certsQuery = supabase
+    .from('certificados')
+    .select(`
+      *,
+      tipo:tipos_certificado(id, nombre),
+      empleado:empleados(id, nombre, apellido, activo, empresa_id, empresa:empresas(nombre, slug)),
+      vehiculo:vehiculos(id, patente, empresa_id, empresa:empresas(nombre, slug)),
+      equipo:equipos(id, nombre, empresa_id, empresa:empresas(nombre, slug)),
+      empresa:empresas(nombre, slug)
+    `)
+    .not('fecha_vencimiento', 'is', null)
+
+  if (estado === 'vencido') {
+    certsQuery = certsQuery.lte('fecha_vencimiento', d(0))
+  } else if (estado === 'proximo') {
+    certsQuery = certsQuery.gte('fecha_vencimiento', d(-1)).lte('fecha_vencimiento', d(MAX_ALERTA_DIAS + 1))
+  } else if (estado === 'vigente') {
+    certsQuery = certsQuery.gte('fecha_vencimiento', d(-1))
+  }
+  if (tipo && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tipo)) {
+    certsQuery = certsQuery.eq('tipo_id', tipo)
+  }
+
   const [{ data: certs }, { data: empresas }, { data: tipos }] = await Promise.all([
-    supabase
-      .from('certificados')
-      .select(`
-        *,
-        tipo:tipos_certificado(id, nombre),
-        empleado:empleados(id, nombre, apellido, activo, empresa_id, empresa:empresas(nombre, slug)),
-        vehiculo:vehiculos(id, patente, empresa_id, empresa:empresas(nombre, slug)),
-        equipo:equipos(id, nombre, empresa_id, empresa:empresas(nombre, slug)),
-        empresa:empresas(nombre, slug)
-      `)
-      .not('fecha_vencimiento', 'is', null)
-      .order('fecha_vencimiento', { ascending: true }),
+    certsQuery.order('fecha_vencimiento', { ascending: true }),
     supabase.from('empresas').select('id, nombre, slug').order('nombre'),
     supabase.from('tipos_certificado').select('id, nombre').order('orden'),
   ])

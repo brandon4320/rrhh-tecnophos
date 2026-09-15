@@ -10,7 +10,7 @@ import { Monograma } from '@/components/ui/monograma'
 import { EstadoPill, EstadoBadgeSuave } from '@/components/ui/estado-pill'
 import { BarraVencimiento } from '@/components/ui/barra-vencimiento'
 import { Donut } from '@/components/ui/donut'
-import { Segmented } from '@/components/ui/segmented'
+import { SegmentedLocal } from '@/components/ui/segmented-local'
 import VehiculosClient from './VehiculosClient'
 import EquiposClient from './EquiposClient'
 import EmpresaCertsClient from './EmpresaCertsClient'
@@ -39,6 +39,14 @@ function fmtFechaCorta(fecha: string) {
   return format(new Date(fecha.slice(0, 10) + 'T12:00:00'), 'd MMM yyyy', { locale: es }).replace('.', '')
 }
 
+// Select liviano para el Resumen: solo lo que necesitan los KPIs y las listas.
+// Los archivos, notas y secciones se traen únicamente en la vista Documentación.
+const CERT_RESUMEN = 'id, fecha_vencimiento, alerta_dias, created_at, tipo_nombre_custom, tipo:tipos_certificado(nombre)'
+
+// Select completo para la Documentación (los clients editan y muestran adjuntos).
+const CERT_DOC =
+  'id, tipo_id, tipo_nombre_custom, fecha_vencimiento, notas, alerta_dias, created_at, tipo:tipos_certificado(nombre), archivos(id, nombre, path)'
+
 export default async function EmpresaPage({
   params,
   searchParams,
@@ -46,72 +54,61 @@ export default async function EmpresaPage({
   params: Promise<{ slug: string }>
   searchParams: Promise<{ vista?: string; tab?: string }>
 }) {
-  const [{ slug }, sp, sesion] = await Promise.all([params, searchParams, getSesion()])
+  const [{ slug }, sp] = await Promise.all([params, searchParams])
   const supabase = await createClient()
-
-  const { data: empresa } = await supabase
-    .from('empresas')
-    .select('id, nombre, slug')
-    .eq('slug', slug)
-    .single()
-
-  if (!empresa) notFound()
-
-  const canEdit = sesion?.rol === 'admin' || sesion?.rol === 'usuario'
-
-  const [
-    { data: empleados },
-    { data: vehiculos },
-    { data: equipos },
-    { data: secciones },
-    { data: certsEmpresa },
-    { data: tiposVehiculo },
-    { data: tiposEquipo },
-  ] = await Promise.all([
-    supabase
-      .from('empleados')
-      .select('id, nombre, apellido, sector, certificados(id, fecha_vencimiento, alerta_dias, created_at, tipo:tipos_certificado(nombre), tipo_nombre_custom)')
-      .eq('empresa_id', empresa.id)
-      .eq('activo', true)
-      .order('nombre'),
-    supabase
-      .from('vehiculos')
-      .select(
-        '*, certificados(id, tipo_id, tipo_nombre_custom, fecha_vencimiento, notas, alerta_dias, created_at, tipo:tipos_certificado(nombre), archivos(id, nombre, path))'
-      )
-      .eq('empresa_id', empresa.id)
-      .eq('activo', true)
-      .order('patente'),
-    supabase
-      .from('equipos')
-      .select(
-        '*, certificados(id, tipo_id, tipo_nombre_custom, fecha_vencimiento, notas, alerta_dias, created_at, tipo:tipos_certificado(nombre), archivos(id, nombre, path))'
-      )
-      .eq('empresa_id', empresa.id)
-      .eq('activo', true)
-      .order('nombre'),
-    supabase
-      .from('activo_secciones')
-      .select('id, nombre')
-      .eq('empresa_id', empresa.id)
-      .order('nombre'),
-    supabase
-      .from('certificados')
-      .select('*, tipo:tipos_certificado(nombre), archivos(id, nombre, path)')
-      .eq('empresa_id', empresa.id)
-      .order('fecha_vencimiento'),
-    supabase.from('tipos_certificado').select('*').eq('aplica_vehiculo', true).order('orden'),
-    supabase.from('tipos_certificado').select('*').eq('aplica_equipo', true).order('orden'),
-  ])
-
   const vista = sp.vista === 'documentacion' ? 'documentacion' : 'resumen'
 
-  // Documentos de empresa por categoría (null = habilitación clásica)
-  const habilitaciones = (certsEmpresa ?? []).filter((c) => c.categoria !== 'programa_seguridad')
-  const programasSeguridad = (certsEmpresa ?? []).filter((c) => c.categoria === 'programa_seguridad')
+  // El lookup de empresa entra al mismo batch: las demás queries filtran por el
+  // slug vía join (empresas!inner), así ninguna espera a resolver el id primero.
 
   /* ── Vista Documentación: habilitaciones + programas + vehículos + activos ── */
   if (vista === 'documentacion') {
+    const [
+      sesion,
+      { data: empresa },
+      { data: vehiculos },
+      { data: equipos },
+      { data: secciones },
+      { data: certsEmpresa },
+      { data: tiposVehiculo },
+      { data: tiposEquipo },
+    ] = await Promise.all([
+      getSesion(),
+      supabase.from('empresas').select('id, nombre, slug').eq('slug', slug).single(),
+      supabase
+        .from('vehiculos')
+        .select(`*, empresas!inner(slug), certificados(${CERT_DOC})`)
+        .eq('empresas.slug', slug)
+        .eq('activo', true)
+        .order('patente'),
+      supabase
+        .from('equipos')
+        .select(`*, empresas!inner(slug), certificados(${CERT_DOC})`)
+        .eq('empresas.slug', slug)
+        .eq('activo', true)
+        .order('nombre'),
+      supabase
+        .from('activo_secciones')
+        .select('id, nombre, empresas!inner(slug)')
+        .eq('empresas.slug', slug)
+        .order('nombre'),
+      supabase
+        .from('certificados')
+        .select('*, empresas!inner(slug), tipo:tipos_certificado(nombre), archivos(id, nombre, path)')
+        .eq('empresas.slug', slug)
+        .order('fecha_vencimiento'),
+      supabase.from('tipos_certificado').select('*').eq('aplica_vehiculo', true).order('orden'),
+      supabase.from('tipos_certificado').select('*').eq('aplica_equipo', true).order('orden'),
+    ])
+
+    if (!empresa) notFound()
+
+    const canEdit = sesion?.rol === 'admin' || sesion?.rol === 'usuario'
+
+    // Documentos de empresa por categoría (null = habilitación clásica)
+    const habilitaciones = (certsEmpresa ?? []).filter((c) => c.categoria !== 'programa_seguridad')
+    const programasSeguridad = (certsEmpresa ?? []).filter((c) => c.categoria === 'programa_seguridad')
+
     return (
       <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8" id="documentacion">
         <div className="mb-8 flex items-center gap-4">
@@ -163,6 +160,45 @@ export default async function EmpresaPage({
   }
 
   /* ── Vista Resumen (dashboard del mockup) ── */
+
+  const [
+    sesion,
+    { data: empresa },
+    { data: empleados },
+    { data: vehiculos },
+    { data: equipos },
+    { data: certsEmpresa },
+  ] = await Promise.all([
+    getSesion(),
+    supabase.from('empresas').select('id, nombre, slug').eq('slug', slug).single(),
+    supabase
+      .from('empleados')
+      .select(`id, nombre, apellido, sector, empresas!inner(slug), certificados(${CERT_RESUMEN})`)
+      .eq('empresas.slug', slug)
+      .eq('activo', true)
+      .order('nombre'),
+    supabase
+      .from('vehiculos')
+      .select(`id, patente, empresas!inner(slug), certificados(${CERT_RESUMEN})`)
+      .eq('empresas.slug', slug)
+      .eq('activo', true)
+      .order('patente'),
+    supabase
+      .from('equipos')
+      .select(`id, nombre, empresas!inner(slug), certificados(${CERT_RESUMEN})`)
+      .eq('empresas.slug', slug)
+      .eq('activo', true)
+      .order('nombre'),
+    supabase
+      .from('certificados')
+      .select(`${CERT_RESUMEN}, empresas!inner(slug)`)
+      .eq('empresas.slug', slug)
+      .order('fecha_vencimiento'),
+  ])
+
+  if (!empresa) notFound()
+
+  const canEdit = sesion?.rol === 'admin' || sesion?.rol === 'usuario'
 
   // Todos los certificados del ámbito de la empresa, con su dueño
   interface CertConDueno extends CertFecha {
@@ -253,6 +289,85 @@ export default async function EmpresaPage({
   }).sort((a, b) => b.personas - a.personas)
 
   const tab = sp.tab === 'empleados' ? 'empleados' : 'vencimientos'
+
+  const contenidoVencimientos = (
+    <div className="mt-4 space-y-2">
+      {atencion.length === 0 && (
+        <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+          Nada requiere atención. Todo al día.
+        </p>
+      )}
+      {atencion.map((c) => {
+        const dias = diasHastaVencimiento(c.fecha_vencimiento!)
+        const label =
+          dias < 0
+            ? `Vencido hace ${Math.abs(dias)} ${Math.abs(dias) === 1 ? 'día' : 'días'}`
+            : dias === 0
+              ? 'Vence hoy'
+              : `Vence en ${dias} ${dias === 1 ? 'día' : 'días'}`
+        return (
+          <div
+            key={c.id}
+            className="flex items-center gap-4 rounded-xl border border-border px-4 py-3"
+          >
+            <Monograma nombre={c.nombre} size="md" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{c.nombre}</p>
+              <p className="truncate text-xs text-muted-foreground">{c.detalle}</p>
+              <BarraVencimiento
+                className="mt-2"
+                fecha={c.fecha_vencimiento!}
+                alertaDias={c.alerta_dias}
+              />
+            </div>
+            <div className="shrink-0 text-right">
+              <EstadoPill estado={dias < 0 ? 'vencido' : 'proximo'} label={label} />
+              <p className="mt-0.5 text-xs text-muted-foreground">{fmtFechaCorta(c.fecha_vencimiento!)}</p>
+            </div>
+            <Link
+              href={c.href}
+              className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Abrir
+            </Link>
+          </div>
+        )
+      })}
+      {atencion.length > 0 && (
+        <p className="pt-1 text-xs text-muted-foreground">
+          Se muestran los casos que requieren una acción concreta.
+        </p>
+      )}
+    </div>
+  )
+
+  const contenidoEmpleados = (
+    <div className="mt-4 space-y-2">
+      {(empleados ?? []).map((emp) => {
+        const nombreCompleto = [emp.nombre, emp.apellido].filter(Boolean).join(' ')
+        const certs = emp.certificados ?? []
+        const estado = certs.length > 0 ? peorEstado(certs) : 'sin_fecha'
+        return (
+          <div key={emp.id} className="flex items-center gap-4 rounded-xl border border-border px-4 py-3">
+            <Monograma nombre={nombreCompleto} size="md" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{nombreCompleto}</p>
+              <p className="text-xs text-muted-foreground">
+                {emp.sector?.trim() || 'General'} · {certs.length} {certs.length === 1 ? 'certificado' : 'certificados'}
+              </p>
+            </div>
+            <EstadoPill estado={estado} />
+            <Link
+              href={`/legajo/${emp.id}`}
+              className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Abrir
+            </Link>
+          </div>
+        )
+      })}
+    </div>
+  )
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
@@ -364,91 +479,14 @@ export default async function EmpresaPage({
           <h2 className="text-lg font-semibold tracking-tight">Atención requerida</h2>
           <p className="text-sm text-muted-foreground">Ordenado por urgencia</p>
 
-          <Segmented
+          <SegmentedLocal
             className="mt-4"
-            active={tab}
+            inicial={tab}
             tabs={[
-              { key: 'vencimientos', label: 'Vencimientos', href: `/empresa/${slug}` },
-              { key: 'empleados', label: 'Todos los empleados', href: `/empresa/${slug}?tab=empleados` },
+              { key: 'vencimientos', label: 'Vencimientos', content: contenidoVencimientos },
+              { key: 'empleados', label: 'Todos los empleados', content: contenidoEmpleados },
             ]}
           />
-
-          {tab === 'vencimientos' ? (
-            <div className="mt-4 space-y-2">
-              {atencion.length === 0 && (
-                <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-                  Nada requiere atención. Todo al día.
-                </p>
-              )}
-              {atencion.map((c) => {
-                const dias = diasHastaVencimiento(c.fecha_vencimiento!)
-                const label =
-                  dias < 0
-                    ? `Vencido hace ${Math.abs(dias)} ${Math.abs(dias) === 1 ? 'día' : 'días'}`
-                    : dias === 0
-                      ? 'Vence hoy'
-                      : `Vence en ${dias} ${dias === 1 ? 'día' : 'días'}`
-                return (
-                  <div
-                    key={c.id}
-                    className="flex items-center gap-4 rounded-xl border border-border px-4 py-3"
-                  >
-                    <Monograma nombre={c.nombre} size="md" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{c.nombre}</p>
-                      <p className="truncate text-xs text-muted-foreground">{c.detalle}</p>
-                      <BarraVencimiento
-                        className="mt-2"
-                        fecha={c.fecha_vencimiento!}
-                        alertaDias={c.alerta_dias}
-                      />
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <EstadoPill estado={dias < 0 ? 'vencido' : 'proximo'} label={label} />
-                      <p className="mt-0.5 text-xs text-muted-foreground">{fmtFechaCorta(c.fecha_vencimiento!)}</p>
-                    </div>
-                    <Link
-                      href={c.href}
-                      className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      Abrir
-                    </Link>
-                  </div>
-                )
-              })}
-              {atencion.length > 0 && (
-                <p className="pt-1 text-xs text-muted-foreground">
-                  Se muestran los casos que requieren una acción concreta.
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="mt-4 space-y-2">
-              {(empleados ?? []).map((emp) => {
-                const nombreCompleto = [emp.nombre, emp.apellido].filter(Boolean).join(' ')
-                const certs = emp.certificados ?? []
-                const estado = certs.length > 0 ? peorEstado(certs) : 'sin_fecha'
-                return (
-                  <div key={emp.id} className="flex items-center gap-4 rounded-xl border border-border px-4 py-3">
-                    <Monograma nombre={nombreCompleto} size="md" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{nombreCompleto}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {emp.sector?.trim() || 'General'} · {certs.length} {certs.length === 1 ? 'certificado' : 'certificados'}
-                      </p>
-                    </div>
-                    <EstadoPill estado={estado} />
-                    <Link
-                      href={`/legajo/${emp.id}`}
-                      className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      Abrir
-                    </Link>
-                  </div>
-                )
-              })}
-            </div>
-          )}
         </div>
 
         <div className="space-y-6">

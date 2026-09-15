@@ -20,23 +20,30 @@ export interface Sesion {
 /** Sesión actual (o null). Cacheada por request para no repetir queries. */
 export const getSesion = cache(async (): Promise<Sesion | null> => {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
+  // getClaims() verifica la FIRMA del JWT. Con signing keys asimétricas
+  // (dashboard de Supabase → JWT Keys) la verificación es local (JWKS cacheado,
+  // sin round-trip a Auth); con HS256 cae a validar contra el servidor, igual
+  // que getUser(). Nunca confía en la cookie sin verificar.
+  const { data } = await supabase.auth.getClaims()
+  const claims = data?.claims
+  if (!claims) return null
 
   const { data: perfil } = await supabase
     .from('perfiles')
     .select('nombre, rol, empresa_acceso')
-    .eq('id', user.id)
+    .eq('id', claims.sub)
     .single()
 
+  // Sin perfil no hay rol confiable: tratarlo como no autenticado (antes caía
+  // en rol 'usuario' por defecto, que es un rol RRHH con escritura).
+  if (!perfil) return null
+
   return {
-    userId: user.id,
-    email: user.email ?? null,
-    nombre: perfil?.nombre ?? null,
-    rol: (perfil?.rol as Rol) ?? 'usuario',
-    empresaAcceso: perfil?.empresa_acceso ?? null,
+    userId: claims.sub,
+    email: (claims.email as string | undefined) ?? null,
+    nombre: perfil.nombre ?? null,
+    rol: perfil.rol as Rol,
+    empresaAcceso: perfil.empresa_acceso ?? null,
   }
 })
 

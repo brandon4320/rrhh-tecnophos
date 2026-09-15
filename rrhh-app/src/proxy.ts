@@ -32,10 +32,12 @@ export async function proxy(request: NextRequest) {
     },
   })
 
-  // IMPORTANTE: getUser() revalida el token contra Supabase (no confiar en la cookie sola).
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // IMPORTANTE: getClaims() verifica la firma del token — no confía en la cookie
+  // sola. Con signing keys asimétricas la verificación es LOCAL (JWKS cacheado):
+  // saca el round-trip a Supabase Auth del camino de cada navegación/prefetch.
+  // Con HS256 valida contra el servidor, igual que el getUser() anterior.
+  const { data } = await supabase.auth.getClaims()
+  const user = data?.claims ?? null
 
   const { pathname } = request.nextUrl
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))
