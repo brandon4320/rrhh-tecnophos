@@ -14,8 +14,8 @@ import { subirDocumento } from '@/lib/upload-client'
 import { labelPeriodo } from '@/lib/recibos'
 import {
   CARPETAS_FIJAS, CARPETA_RAIZ, CARPETA_RECIBOS, ESTADO_MES_LABEL, LABEL_RAIZ, MESES_CORTOS, anioMesAR, arbolCarpetas,
-  carpetasDelMes, completitudMes, estadoMes, fmtBytes, normalizarCarpeta, periodoActual, periodoAnterior, periodoDe,
-  rutasConArchivos, validarArchivoDocumento, type NodoCarpeta,
+  carpetasDelMes, completitudMes, estadoMes, excedeNiveles, fmtBytes, MAX_NIVELES_CARPETA, normalizarCarpeta,
+  periodoActual, periodoAnterior, periodoDe, rutasConArchivos, validarArchivoDocumento, type NodoCarpeta,
 } from '@/modules/documentos/reglas'
 import { fmtFechaAR } from '@/lib/fechas-ar'
 
@@ -136,6 +136,11 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
     if (subiendo) return
     if (form.archivos.length === 0) return toast.error('Elegí al menos un archivo.')
     const carpeta = form.carpeta === OTRA ? normalizarCarpeta(form.otra) : form.carpeta
+    // normalizarCarpeta recorta de más; si guardáramos igual, el archivo terminaría en
+    // otra carpeta que la escrita y el toast de éxito diría que salió bien.
+    if (form.carpeta === OTRA && excedeNiveles(form.otra)) {
+      return toast.error(`La ruta tiene demasiadas carpetas anidadas (el máximo es ${MAX_NIVELES_CARPETA}).`)
+    }
     if (form.carpeta === OTRA && !carpeta) return toast.error('Escribí el nombre de la carpeta.')
     for (const a of form.archivos) {
       const invalido = validarArchivoDocumento(a)
@@ -311,10 +316,13 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
                   const niveles = c.split('/')
                   // Sangría con espacios finos: un <optgroup> no se puede elegir y acá
                   // la subcarpeta ES una opción válida.
+                  // Con solo la hoja, los cinco "Aguinaldo" de Limpieza, Sal, Palas,
+                  // Oficina y Bahía Blanca quedaban escritos igual y no había forma de
+                  // saber cuál se estaba eligiendo: va la RUTA ENTERA.
                   return (
                     <option key={c} value={c}>
-                      {' '.repeat((niveles.length - 1) * 3)}
-                      {niveles.length > 1 ? `└ ${niveles.at(-1)}` : c}
+                      {' '.repeat((niveles.length - 1) * 2)}
+                      {niveles.length > 1 ? `└ ${c}` : c}
                     </option>
                   )
                 })}
@@ -406,7 +414,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
                 // Con contenido se pinta con el acento; la de recibos también si el legajo ya la cubre.
                 cubierta={nodo.total > 0 || (c === CARPETA_RECIBOS && actual.recibosCompletos)}
                 suelta={esRaiz}
-                dragOver={dragOver === c}
+                dragOver={dragOver}
                 borrando={borrando}
                 className={esRaiz ? 'sm:col-span-2 xl:col-span-3' : undefined}
                 onAgregar={abrirCarga}
@@ -415,6 +423,8 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
                 onDragOver={(e) => onDragOver(e, c)}
                 onDragLeave={() => setDragOver(null)}
                 onDrop={(e) => onDrop(e, c)}
+                onDragOverRuta={onDragOver}
+                onDropRuta={onDrop}
                 extra={
                   c === CARPETA_RECIBOS ? (
                     <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs">
@@ -443,14 +453,15 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
 
 function CarpetaCard({
   nodo, canEdit, subiendo, cubierta, suelta, dragOver, borrando, extra, className,
-  onAgregar, onVer, onEliminar, onDragOver, onDragLeave, onDrop,
+  onAgregar, onVer, onEliminar, onDragOver, onDragLeave, onDrop, onDragOverRuta, onDropRuta,
 }: {
   nodo: NodoCarpeta<DocumentoMensual>
   canEdit: boolean
   subiendo: boolean
   cubierta: boolean
   suelta?: boolean
-  dragOver: boolean
+  /** Ruta con el archivo encima: la tarjeta se pinta solo si es la SUYA. */
+  dragOver: string | null
   borrando: string | null
   extra?: React.ReactNode
   className?: string
@@ -460,6 +471,8 @@ function CarpetaCard({
   onDragOver: (e: DragEvent) => void
   onDragLeave: () => void
   onDrop: (e: DragEvent) => void
+  onDragOverRuta: (e: DragEvent, ruta: string) => void
+  onDropRuta: (e: DragEvent, ruta: string) => void
 }) {
   const nombre = nodo.nombre
   const Icono = nodo.total > 0 ? FolderOpen : Folder
@@ -470,7 +483,7 @@ function CarpetaCard({
       onDrop={onDrop}
       className={clsx(
         'flex flex-col rounded-2xl border bg-card transition-colors',
-        dragOver ? 'border-primary bg-primary/5' : 'border-border',
+        dragOver === nodo.ruta ? 'border-primary bg-primary/5' : 'border-border',
         className
       )}
     >
@@ -501,7 +514,8 @@ function CarpetaCard({
               es el orden del explorador de Windows, que es lo que ella conoce. */}
           {nodo.hijas.map((h) => (
             <SubCarpeta key={h.ruta} nodo={h} nivel={0} canEdit={canEdit} subiendo={subiendo} borrando={borrando}
-              onAgregar={onAgregar} onVer={onVer} onEliminar={onEliminar} />
+              dragOver={dragOver} onAgregar={onAgregar} onVer={onVer} onEliminar={onEliminar}
+              onDragOver={onDragOverRuta} onDragLeave={onDragLeave} onDrop={onDropRuta} />
           ))}
           <ListaArchivos docs={nodo.docs} canEdit={canEdit} borrando={borrando} onVer={onVer} onEliminar={onEliminar} sangria={0} />
         </div>
@@ -510,24 +524,37 @@ function CarpetaCard({
   )
 }
 
-/** Un nivel de subcarpeta dentro de la tarjeta. Se despliega sola si tiene poco adentro. */
+/** Un nivel de subcarpeta dentro de la tarjeta. Arranca cerrada; se abre al tocarla. */
 function SubCarpeta({
-  nodo, nivel, canEdit, subiendo, borrando, onAgregar, onVer, onEliminar,
+  nodo, nivel, canEdit, subiendo, borrando, dragOver, onAgregar, onVer, onEliminar, onDragOver, onDragLeave, onDrop,
 }: {
   nodo: NodoCarpeta<DocumentoMensual>
   nivel: number
   canEdit: boolean
   subiendo: boolean
   borrando: string | null
+  dragOver: string | null
   onAgregar: (ruta: string) => void
   onVer: (d: DocumentoMensual) => void
   onEliminar: (d: DocumentoMensual) => void
+  onDragOver: (e: DragEvent, ruta: string) => void
+  onDragLeave: () => void
+  onDrop: (e: DragEvent, ruta: string) => void
 }) {
   const [abierta, setAbierta] = useState(false)
   const sangria = nivel + 1
   return (
     <div className="border-b border-border last:border-b-0">
-      <div className="flex items-center gap-2 py-2 pr-3" style={{ paddingLeft: `${1 + sangria * 0.85}rem` }}>
+      {/* Los handlers van en la FILA de la subcarpeta y cortan la propagación: si no,
+          soltar sobre "Limpieza" disparaba el drop de la tarjeta y los archivos
+          terminaban en "Recibos de sueldos". */}
+      <div
+        onDragOver={(e) => { e.stopPropagation(); onDragOver(e, nodo.ruta) }}
+        onDragLeave={(e) => { e.stopPropagation(); onDragLeave() }}
+        onDrop={(e) => { e.stopPropagation(); onDrop(e, nodo.ruta) }}
+        className={clsx('flex items-center gap-2 py-2 pr-3', dragOver === nodo.ruta && 'bg-primary/10')}
+        style={{ paddingLeft: `${1 + sangria * 0.85}rem` }}
+      >
         <button
           onClick={() => setAbierta((v) => !v)}
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -548,7 +575,8 @@ function SubCarpeta({
         <>
           {nodo.hijas.map((h) => (
             <SubCarpeta key={h.ruta} nodo={h} nivel={sangria} canEdit={canEdit} subiendo={subiendo} borrando={borrando}
-              onAgregar={onAgregar} onVer={onVer} onEliminar={onEliminar} />
+              dragOver={dragOver} onAgregar={onAgregar} onVer={onVer} onEliminar={onEliminar}
+              onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop} />
           ))}
           <ListaArchivos docs={nodo.docs} canEdit={canEdit} borrando={borrando} onVer={onVer} onEliminar={onEliminar} sangria={sangria} />
         </>

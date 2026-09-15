@@ -59,6 +59,17 @@ export function normalizarCarpeta(v: unknown): string {
   return tramos.join(SEP_CARPETA)
 }
 
+/**
+ * `true` si la ruta escrita tiene más tramos de los que se guardan. `normalizarCarpeta`
+ * recorta en silencio (tiene que devolver un string siempre, y corre también en el
+ * servidor), así que el formulario usa esto para avisar en vez de guardar el archivo
+ * en una carpeta distinta de la que se pidió.
+ */
+export function excedeNiveles(v: unknown): boolean {
+  if (typeof v !== 'string') return false
+  return v.split(/[/\\]+/).filter((t) => t.trim()).length > MAX_NIVELES_CARPETA
+}
+
 /** Primer tramo de la ruta: la carpeta que se ve en la grilla del mes. */
 export function raizCarpeta(v: unknown): string {
   return normalizarCarpeta(v).split(SEP_CARPETA)[0] ?? CARPETA_RAIZ

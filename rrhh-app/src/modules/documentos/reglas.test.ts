@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   CARPETAS_FIJAS, agruparPorCarpeta, anioMesAR, carpetasDelMes, carpetasExtra, completitudMes, empleadosConReciboPorPeriodo,
-  arbolCarpetas, esCarpetaFija, estadoMes, normalizarCarpeta, periodoActual, periodoAnterior, periodoDe, raizCarpeta,
+  arbolCarpetas, esCarpetaFija, estadoMes, excedeNiveles, normalizarCarpeta, periodoActual, periodoAnterior, periodoDe, raizCarpeta,
   rutasConArchivos, sanitizarNombreArchivo,
   slugCarpeta, validarArchivoDocumento,
 } from './reglas'
@@ -226,5 +226,15 @@ describe('slugCarpeta con rutas', () => {
   it('no deja escapar del prefijo con puntos ni barras', () => {
     expect(slugCarpeta('../../etc')).toBe('etc')
     expect(slugCarpeta('..')).toBe('carpeta')
+  })
+})
+
+describe('excedeNiveles', () => {
+  it('avisa cuando la ruta tiene mas tramos de los que se guardan', () => {
+    expect(excedeNiveles('a/b/c/d')).toBe(false)
+    expect(excedeNiveles('a/b/c/d/e')).toBe(true)
+    // los tramos vacios no cuentan: '//a//b//' son dos, no seis
+    expect(excedeNiveles('//a//b//')).toBe(false)
+    expect(excedeNiveles(null)).toBe(false)
   })
 })
