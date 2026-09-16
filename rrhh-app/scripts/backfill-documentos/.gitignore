@@ -1,0 +1,4 @@
+# Salidas del backfill: rutas locales de la PC de quien lo corre y el registro
+# de lo ya subido. Llevan nombres de empleados: NO van al repo, que es publico.
+plan.json
+subidos.json

@@ -157,7 +157,7 @@ describe('agruparCatalogo', () => {
     expect(ropa.total).toBe(3)
     const familia = ropa.entradas.find((e) => e.tipo === 'familia')
     expect(familia).toMatchObject({ tipo: 'familia', base: 'Camisa ADC' })
-    expect(familia!.tipo === 'familia' && familia.variantes.map((v) => v.variante)).toEqual(['36', '42'])
+    expect(familia!.tipo === 'familia' && familia!.variantes.map((v) => v.variante)).toEqual(['36', '42'])
   })
 
   it('una familia de un solo miembro NO genera rótulo: va como ítem suelto', () => {
