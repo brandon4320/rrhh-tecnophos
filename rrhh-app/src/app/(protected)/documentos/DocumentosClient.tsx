@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -53,6 +53,7 @@ const btnMini = 'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs fon
 export default function DocumentosClient({ empresa, anio, documentos, recibosPorPeriodo, empleadosActivos, canEdit }: Props) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLDivElement>(null)
   // "Hoy" fijo por montaje (y en hora AR): así el SSR en UTC y el browser coinciden
   // y el memo de meses tiene una dependencia estable.
   const [hoy] = useState(() => new Date())
@@ -69,6 +70,10 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
   const [form, setForm] = useState<{ abierto: boolean; mes: number; carpeta: string; otra: string; notas: string; archivos: File[] }>({
     abierto: false, mes: mesSel, carpeta: CARPETAS_FIJAS[0], otra: '', notas: '', archivos: [],
   })
+  // Sube en CADA «Agregar». Con `form.abierto` a secas no alcanzaba: si el
+  // formulario ya estaba abierto, el efecto no se volvía a disparar y tocar una
+  // carpeta de más abajo cambiaba el destino sin mover la pantalla.
+  const [pedidosDeCarga, setPedidosDeCarga] = useState(0)
   const [progreso, setProgreso] = useState<{ actual: number; total: number } | null>(null)
   const subiendo = progreso !== null
   const [borrando, setBorrando] = useState<string | null>(null)
@@ -115,7 +120,19 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
     }
     const conocida = opcionesCarpeta.includes(carpeta) || carpeta === CARPETA_RAIZ
     setForm({ abierto: true, mes: mesSel, carpeta: conocida ? carpeta : OTRA, otra: conocida ? '' : carpeta, notas: '', archivos })
+    setPedidosDeCarga((n) => n + 1)
   }
+
+  // El formulario vive ARRIBA de las carpetas, así que tocar «Agregar» en una de
+  // las de abajo lo abría fuera de la pantalla y parecía que no había pasado nada.
+  // Respeta «reducir movimiento» del sistema: ahí salta en vez de deslizarse.
+  useEffect(() => {
+    if (pedidosDeCarga === 0 || !formRef.current) return
+    const quietito = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    // 'start' y no 'center': el formulario es alto y centrado le queda el encabezado
+    // arriba del borde. El scroll-mt-6 de la tarjeta evita que quede pegado al tope.
+    formRef.current.scrollIntoView({ behavior: quietito ? 'auto' : 'smooth', block: 'start' })
+  }, [pedidosDeCarga])
   function cerrarCarga() {
     setForm((f) => ({ ...f, abierto: false, archivos: [], notas: '', otra: '' }))
     if (fileRef.current) fileRef.current.value = ''
@@ -293,7 +310,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
 
       {/* ── Formulario de carga ── */}
       {canEdit && form.abierto && (
-        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5">
+        <div ref={formRef} className="scroll-mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-5">
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm font-semibold text-foreground">Cargar archivos</p>
             <button onClick={cerrarCarga} className="text-muted-foreground hover:text-foreground disabled:opacity-50" aria-label="Cerrar" disabled={subiendo}>
