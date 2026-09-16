@@ -154,6 +154,21 @@ for (const slug of new Set(pendientes.map((p) => p.empresaSlug))) {
   if (!idPorSlug[slug]) throw new Error(`Tu usuario no ve la empresa '${slug}' (o no existe).`)
 }
 
+// La tabla tiene que existir ANTES de subir un solo byte. El 2026-09-15 la
+// migración 17 no estaba aplicada en producción: el PUT a R2 anduvo 48 veces y
+// los 48 registros fallaron después, dejando 48 objetos huérfanos en el bucket
+// que ya no se pueden borrar desde la app (el DELETE necesita la fila).
+{
+  const { error } = await supabase.from('documentos_mensuales').select('id').limit(1)
+  if (error) {
+    throw new Error(
+      `No se puede escribir en documentos_mensuales: ${error.message}\n` +
+      'Si dice que no encuentra la tabla, falta aplicar supabase/17_documentos_mensuales_2026_09_11.sql ' +
+      'en el editor SQL de Supabase. No se subió nada.'
+    )
+  }
+}
+
 let hechos = 0, ok = 0
 const fallas = []
 let siguiente = 0
