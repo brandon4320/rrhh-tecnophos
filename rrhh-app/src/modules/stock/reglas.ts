@@ -107,7 +107,10 @@ export const ESTADO_STOCK_LABEL: Record<EstadoVencimiento, string> = {
   vencido: 'Sin stock',
   proximo: 'Bajo mínimo',
   vigente: 'OK',
-  sin_fecha: 'Sin alerta',
+  // 'sin_fecha' SOLO ocurre con stock <= 0 y sin mínimo: el ítem está vacío, pero
+  // nadie pidió que avise. Decía "Sin alerta", que describe la configuración y no
+  // el stock: la fila parecía normal estando en cero. Gris (no alarma) pero honesto.
+  sin_fecha: 'En cero',
 }
 
 /** Compras de un mes ('YYYY-MM'): cuántas y cuánto (solo las que tienen precio). */
@@ -153,4 +156,121 @@ export function normalizarNombre(s: string): string {
 /** Categorías distintas presentes, ordenadas; sin vacíos. */
 export function categoriasDe(items: { categoria?: string | null }[]): string[] {
   return [...new Set(items.map((i) => (i.categoria ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'))
+}
+
+// ============================================================
+// Organización del catálogo para la vista: categoría → familia → ítem.
+// La mitad del catálogo son talles de una misma prenda ("Camisa ADC T 36"…
+// "T 54"): en una lista plana alfabética son nueve filas casi idénticas.
+// Acá se agrupan, pero NUNCA se fusionan: cada fila sigue siendo un ítem real
+// con su id, porque los movimientos (y sobre todo el ajuste por conteo, que
+// escribe la diferencia contra el stock del ítem) necesitan un id verdadero.
+// ============================================================
+
+export const SIN_CATEGORIA = 'Sin categoría'
+
+/** Talles alfabéticos en orden real; los numéricos se ordenan como números. */
+const TALLES = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
+
+/**
+ * "Camisa ADC T 42" → { base: 'Camisa ADC', variante: '42' }. null si no es una variante.
+ * Exige el marcador T/Talle antes del talle, así "Bidón 20 L" o "Lavandina 5 L"
+ * no se parten. Conservador a propósito: lo peor que puede pasar con un falso
+ * positivo es que dos filas queden agrupadas de más — nada se oculta ni se suma.
+ */
+export function partirVariante(nombre: string): { base: string; variante: string } | null {
+  const m = /^(.+?)\s+(?:T|Talle)\.?\s*([A-Za-z]{1,4}|\d{1,2})$/.exec(nombre.trim())
+  if (!m) return null
+  const v = m[2].toUpperCase()
+  if (/^\d+$/.test(v)) return { base: m[1].trim(), variante: v }
+  return TALLES.includes(v) ? { base: m[1].trim(), variante: v } : null
+}
+
+function compararVariante(a: string, b: string): number {
+  const ia = TALLES.indexOf(a), ib = TALLES.indexOf(b)
+  if (ia !== -1 && ib !== -1) return ia - ib
+  const na = Number(a), nb = Number(b)
+  if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb
+  return a.localeCompare(b, 'es')
+}
+
+/** Orden del catálogo: por nombre base y, dentro de una familia, por talle real (S, M, L, XL). */
+export function compararItems(a: { nombre: string }, b: { nombre: string }): number {
+  const va = partirVariante(a.nombre), vb = partirVariante(b.nombre)
+  const base = (va?.base ?? a.nombre).localeCompare(vb?.base ?? b.nombre, 'es')
+  if (base !== 0) return base
+  if (!va || !vb) return a.nombre.localeCompare(b.nombre, 'es')
+  return compararVariante(va.variante, vb.variante)
+}
+
+/** Una familia de talles (≥2 variantes) o un ítem suelto con su nombre completo. */
+export type EntradaCatalogo<T> =
+  | { tipo: 'familia'; base: string; variantes: { item: T; variante: string }[] }
+  | { tipo: 'item'; item: T }
+
+export interface GrupoCategoria<T> {
+  categoria: string
+  total: number
+  sinStock: number
+  bajoMinimo: number
+  entradas: EntradaCatalogo<T>[]
+}
+
+/**
+ * Agrupa por categoría (y dentro, por familia de talles) con los subtotales que
+ * van en el encabezado de cada sección. `estadoDe` la calcula quien llama, que
+ * es el único que conoce el stock.
+ */
+export function agruparCatalogo<T extends { nombre: string; categoria?: string | null }>(
+  items: T[],
+  estadoDe: (item: T) => EstadoVencimiento
+): GrupoCategoria<T>[] {
+  const porCategoria = new Map<string, T[]>()
+  for (const it of items) {
+    const cat = (it.categoria ?? '').trim() || SIN_CATEGORIA
+    const arr = porCategoria.get(cat)
+    if (arr) arr.push(it)
+    else porCategoria.set(cat, [it])
+  }
+
+  const grupos: GrupoCategoria<T>[] = []
+  for (const [categoria, propios] of porCategoria) {
+    let sinStock = 0, bajoMinimo = 0
+    for (const it of propios) {
+      const e = estadoDe(it)
+      if (e === 'vencido') sinStock++
+      else if (e === 'proximo') bajoMinimo++
+    }
+
+    // Familias por nombre base; las de un solo miembro se muestran como ítem suelto
+    // (un rótulo "Campera ADC" sobre una única fila sería ruido, no estructura).
+    const porBase = new Map<string, { item: T; variante: string }[]>()
+    const sueltos: T[] = []
+    for (const it of propios) {
+      const v = partirVariante(it.nombre)
+      if (!v) { sueltos.push(it); continue }
+      const arr = porBase.get(v.base)
+      if (arr) arr.push({ item: it, variante: v.variante })
+      else porBase.set(v.base, [{ item: it, variante: v.variante }])
+    }
+
+    const entradas: EntradaCatalogo<T>[] = []
+    for (const [base, variantes] of porBase) {
+      if (variantes.length === 1) sueltos.push(variantes[0].item)
+      else entradas.push({ tipo: 'familia', base, variantes: variantes.sort((a, b) => compararVariante(a.variante, b.variante)) })
+    }
+    for (const item of sueltos) entradas.push({ tipo: 'item', item })
+
+    const nombreDe = (e: EntradaCatalogo<T>) => (e.tipo === 'familia' ? e.base : e.item.nombre)
+    entradas.sort((a, b) => nombreDe(a).localeCompare(nombreDe(b), 'es'))
+
+    grupos.push({ categoria, total: propios.length, sinStock, bajoMinimo, entradas })
+  }
+
+  // "Sin categoría" al final; el resto alfabético.
+  return grupos.sort((a, b) => {
+    if (a.categoria === SIN_CATEGORIA) return 1
+    if (b.categoria === SIN_CATEGORIA) return -1
+    return a.categoria.localeCompare(b.categoria, 'es')
+  })
 }
