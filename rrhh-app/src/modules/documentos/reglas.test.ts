@@ -306,3 +306,16 @@ describe('completitudMes con lista de empresa', () => {
     expect(c.total).toBe(2)
   })
 })
+
+describe('estadoMes sin carpetas que completar', () => {
+  it('lista vacía NO es un mes completo', () => {
+    // Si alguien configura una empresa sin carpetas fijas, los doce meses no
+    // pueden salir en verde sin que se haya subido nada.
+    const c = completitudMes([], [], [])
+    expect(c.total).toBe(0)
+    expect(c.faltantes).toEqual([])
+    expect(estadoMes('2026-08-01', c, 0, HOY)).toBe('vencido')
+    expect(estadoMes('2026-12-01', c, 0, HOY)).toBe('sin_fecha')
+    expect(estadoMes('2026-08-01', c, 3, HOY)).toBe('proximo')
+  })
+})

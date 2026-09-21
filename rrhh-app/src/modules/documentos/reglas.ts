@@ -256,7 +256,10 @@ export const ESTADO_MES_LABEL: Record<EstadoVencimiento, string> = {
  *  - sin_fecha → nada cargado, mes en curso o futuro (todavía no corresponde)
  */
 export function estadoMes(periodo: string, completitud: Completitud, cantidadArchivos: number, now: Date = new Date()): EstadoVencimiento {
-  if (completitud.faltantes.length === 0) return 'vigente'
+  // `total > 0` además de «sin faltantes»: una empresa configurada en
+  // CARPETAS_POR_EMPRESA con lista vacía no tiene nada que completar, y sin esta
+  // guarda los doce meses saldrían «Completo» en verde sin un solo archivo.
+  if (completitud.total > 0 && completitud.faltantes.length === 0) return 'vigente'
   if (completitud.completas.length > 0 || cantidadArchivos > 0) return 'proximo'
   return periodo < periodoActual(now) ? 'vencido' : 'sin_fecha'
 }

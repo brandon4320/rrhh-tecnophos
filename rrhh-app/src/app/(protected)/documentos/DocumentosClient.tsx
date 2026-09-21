@@ -54,11 +54,13 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLDivElement>(null)
-  // "Hoy" fijo por montaje (y en hora AR): así el SSR en UTC y el browser coinciden
-  // y el memo de meses tiene una dependencia estable.
   // Las carpetas fijas DE ESTA EMPRESA: Necochea maneja menos documentación que
   // las demás y no tiene sentido mostrarle cuatro carpetas que nunca va a llenar.
+  // La referencia es estable (sale de una constante del módulo), así que sirve
+  // como dependencia de los useMemo de abajo.
   const fijas = carpetasFijasDe(empresa.slug)
+  // "Hoy" fijo por montaje (y en hora AR): así el SSR en UTC y el browser coinciden
+  // y el memo de meses tiene una dependencia estable.
   const [hoy] = useState(() => new Date())
   const anioActual = anioMesAR(hoy).anio
   const limiteActual = periodoActual(hoy)
