@@ -173,6 +173,10 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
 
   const esAdmin = sesion.rol === 'admin'
 
+  // `usePathname()` no incluye la query: para estas dos vistas hay que mirar ?vista=.
+  const enEmpresa = !!activa && pathname === `/empresa/${activa.slug}`
+  const enDocumentacion = searchParams.get('vista') === 'documentacion'
+
   type Vista = { key: string; label: string; href: string; active: boolean; external?: boolean }
   const vistas: Vista[] = !activa
     ? []
@@ -186,10 +190,14 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           { key: 'carga', label: 'Carga manual', href: ENLACES_ARCOR.cargar, active: false, external: true },
         ]
       : [
-          { key: 'resumen', label: 'Resumen', href: `/empresa/${activa.slug}`, active: pathname === `/empresa/${activa.slug}` },
+          // Resumen y Documentación comparten pathname y se distinguen por ?vista=,
+          // así que mirar solo el pathname dejaba «Resumen» encendido estando en
+          // Documentación. El criterio es el MISMO que el de la página
+          // (`empresa/[slug]/page.tsx`): documentación si vista=documentacion, si no resumen.
+          { key: 'resumen', label: 'Resumen', href: `/empresa/${activa.slug}`, active: enEmpresa && !enDocumentacion },
           { key: 'empleados', label: 'Empleados', href: `/empleados?empresa=${activa.slug}`, active: pathname.startsWith('/empleados') },
           { key: 'vencimientos', label: 'Vencimientos', href: `/vencimientos?empresa=${activa.slug}`, active: pathname.startsWith('/vencimientos') },
-          { key: 'documentacion', label: 'Documentación', href: `/empresa/${activa.slug}?vista=documentacion`, active: false },
+          { key: 'documentacion', label: 'Documentación', href: `/empresa/${activa.slug}?vista=documentacion`, active: enEmpresa && enDocumentacion },
           { key: 'documentos', label: 'Doc. mensual', href: `/documentos?empresa=${activa.slug}`, active: pathname.startsWith('/documentos') },
           { key: 'stock', label: 'Stock', href: `/stock?empresa=${activa.slug}`, active: pathname.startsWith('/stock') },
         ]
