@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   CARPETAS_FIJAS, agruparPorCarpeta, anioMesAR, carpetasDelMes, carpetasExtra, completitudMes, empleadosConReciboPorPeriodo,
-  arbolCarpetas, esCarpetaFija, estadoMes, excedeNiveles, normalizarCarpeta, periodoActual, periodoAnterior, periodoDe, raizCarpeta,
+  arbolCarpetas, carpetasFijasDe, esCarpetaFija, estadoMes, excedeNiveles, normalizarCarpeta, periodoActual, periodoAnterior, periodoDe, raizCarpeta,
   rutasConArchivos, sanitizarNombreArchivo,
   slugCarpeta, validarArchivoDocumento,
 } from './reglas'
@@ -236,5 +236,73 @@ describe('excedeNiveles', () => {
     // los tramos vacios no cuentan: '//a//b//' son dos, no seis
     expect(excedeNiveles('//a//b//')).toBe(false)
     expect(excedeNiveles(null)).toBe(false)
+  })
+})
+
+// ── Carpetas fijas por empresa (2026-09-21) ───────────────────────────
+// Necochea solo maneja ART y recibos: mostrarle las seis dejaba el mes en 2/6
+// para siempre. Lo que NO puede pasar es esconder algo ya cargado.
+
+describe('carpetasFijasDe', () => {
+  it('Necochea lleva solo ART y Recibos de sueldos', () => {
+    expect(carpetasFijasDe('tecnophos-necochea')).toEqual(['ART', 'Recibos de sueldos'])
+  })
+  it('cualquier otra empresa lleva las seis', () => {
+    expect(carpetasFijasDe('adc')).toEqual(CARPETAS_FIJAS)
+    expect(carpetasFijasDe('tecnophos-bb')).toEqual(CARPETAS_FIJAS)
+    expect(carpetasFijasDe(undefined)).toEqual(CARPETAS_FIJAS)
+    expect(carpetasFijasDe(null)).toEqual(CARPETAS_FIJAS)
+    expect(carpetasFijasDe('empresa-que-no-existe')).toEqual(CARPETAS_FIJAS)
+  })
+})
+
+describe('carpetasDelMes con lista de empresa', () => {
+  const fijasNeco = carpetasFijasDe('tecnophos-necochea')
+
+  it('muestra solo las de la empresa cuando el mes está vacío', () => {
+    expect(carpetasDelMes([], fijasNeco)).toEqual(['ART', 'Recibos de sueldos'])
+  })
+
+  it('una carpeta fuera de la lista PERO con archivos se sigue viendo', () => {
+    // Es la garantía importante: Aylen ya cargó F931 y Aportes en Necochea.
+    // Sacarlas de la lista no puede hacer desaparecer esos archivos.
+    const docs = [
+      { periodo: '2026-09-01', carpeta: 'F931' },
+      { periodo: '2026-09-01', carpeta: 'Aportes sindicales' },
+    ]
+    expect(carpetasDelMes(docs, fijasNeco)).toEqual(['ART', 'Recibos de sueldos', 'Aportes sindicales', 'F931'])
+  })
+
+  it('no repite una carpeta que ya está en la lista de la empresa', () => {
+    const docs = [{ periodo: '2026-09-01', carpeta: 'ART' }]
+    expect(carpetasDelMes(docs, fijasNeco)).toEqual(['ART', 'Recibos de sueldos'])
+  })
+})
+
+describe('completitudMes con lista de empresa', () => {
+  const fijasNeco = carpetasFijasDe('tecnophos-necochea')
+
+  it('cuenta sobre 2 y no sobre 6', () => {
+    const c = completitudMes([{ periodo: '2026-09-01', carpeta: 'ART' }], [], fijasNeco)
+    expect(c.total).toBe(2)
+    expect(c.completas).toEqual(['ART'])
+    expect(c.faltantes).toEqual(['Recibos de sueldos'])
+  })
+
+  it('con ART y recibos el mes queda completo, aunque no haya F931', () => {
+    const docs = [
+      { periodo: '2026-09-01', carpeta: 'ART' },
+      { periodo: '2026-09-01', carpeta: 'Recibos de sueldos' },
+    ]
+    const c = completitudMes(docs, [], fijasNeco)
+    expect(c.faltantes).toEqual([])
+    expect(estadoMes('2026-09-01', c, docs.length, HOY)).toBe('vigente')
+  })
+
+  it('una carpeta de fuera de la lista no suma ni resta', () => {
+    const docs = [{ periodo: '2026-09-01', carpeta: 'F931' }]
+    const c = completitudMes(docs, [], fijasNeco)
+    expect(c.completas).toEqual([])
+    expect(c.total).toBe(2)
   })
 })

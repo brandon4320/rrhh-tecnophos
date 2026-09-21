@@ -8,9 +8,33 @@
 import type { EstadoVencimiento } from '@/types'
 import { diaClaveAR } from '@/lib/fechas-ar'
 
-/** Carpetas que se repiten todos los meses (en el orden en que se muestran). */
+/**
+ * Carpetas que se repiten todos los meses (en el orden en que se muestran).
+ * Es el repertorio COMPLETO: de acá sale la canonización de nombres
+ * ("RECIBOS DE SUELDOS" → "Recibos de sueldos") para todas las empresas.
+ */
 export const CARPETAS_FIJAS = ['Aportes sindicales', 'ART', 'F931', 'Pagos', 'Recibos de sueldos', 'SVO'] as const
 export type CarpetaFija = (typeof CARPETAS_FIJAS)[number]
+
+/**
+ * Qué carpetas fijas le corresponden a cada empresa. No todas manejan la misma
+ * documentación: en Tecnophos Necochea la oficinista solo carga ART y recibos, y
+ * las otras cuatro quedaban vacías para siempre dejando el mes en 2/6 — o sea,
+ * "incompleto" cuando en realidad estaba completo (pedido de Agus, 2026-09-21).
+ *
+ * La empresa que no figure acá usa las seis. Esto decide lo que se MUESTRA y lo
+ * que CUENTA para la completitud; una carpeta con archivos siempre se ve, figure
+ * o no en la lista (ver `carpetasDelMes`), así que sacar una de acá nunca
+ * esconde documentación ya cargada.
+ */
+export const CARPETAS_POR_EMPRESA: Record<string, readonly CarpetaFija[]> = {
+  'tecnophos-necochea': ['ART', 'Recibos de sueldos'],
+}
+
+/** Las carpetas fijas de una empresa (por slug). Sin slug conocido, las seis. */
+export function carpetasFijasDe(slug?: string | null): readonly CarpetaFija[] {
+  return (slug && CARPETAS_POR_EMPRESA[slug]) || CARPETAS_FIJAS
+}
 
 /** `carpeta = ''` en la base = archivos sueltos en la raíz del mes. */
 export const CARPETA_RAIZ = ''
@@ -75,19 +99,25 @@ export function raizCarpeta(v: unknown): string {
   return normalizarCarpeta(v).split(SEP_CARPETA)[0] ?? CARPETA_RAIZ
 }
 
-/** Carpetas NO fijas con archivos, ordenadas (nunca la raíz). Solo el primer nivel. */
-export function carpetasExtra(docs: DocMinimo[]): string[] {
+/**
+ * Carpetas con archivos que NO están en la lista de la empresa, ordenadas (nunca
+ * la raíz). Solo el primer nivel. El filtro va contra `fijas` y no contra
+ * `esCarpetaFija`: en Necochea, F931 no es una carpeta de la empresa pero SÍ es
+ * una carpeta fija del repertorio, y si se filtrara por eso los archivos que ya
+ * tiene cargados ahí no se verían en ningún lado.
+ */
+export function carpetasExtra(docs: DocMinimo[], fijas: readonly string[] = CARPETAS_FIJAS): string[] {
   const extras = new Set<string>()
   for (const d of docs) {
     const c = raizCarpeta(d.carpeta)
-    if (c && !esCarpetaFija(c)) extras.add(c)
+    if (c && !fijas.includes(c)) extras.add(c)
   }
   return [...extras].sort((a, b) => a.localeCompare(b, 'es'))
 }
 
-/** Carpetas a mostrar en un mes: las fijas siempre, más las extra que tengan archivos. */
-export function carpetasDelMes(docs: DocMinimo[]): string[] {
-  return [...CARPETAS_FIJAS, ...carpetasExtra(docs)]
+/** Carpetas a mostrar en un mes: las de la empresa siempre, más las que tengan archivos. */
+export function carpetasDelMes(docs: DocMinimo[], fijas: readonly string[] = CARPETAS_FIJAS): string[] {
+  return [...fijas, ...carpetasExtra(docs, fijas)]
 }
 
 /** Agrupa los documentos de un mes por carpeta EXACTA ('' = raíz, la ruta entera si está anidada). */
@@ -171,13 +201,17 @@ export interface Completitud {
  * carpeta como completa por otra vía (p. ej. "Recibos de sueldos" cuando todos
  * los empleados activos tienen su recibo en el legajo).
  */
-export function completitudMes(docs: DocMinimo[], cubiertas: readonly string[] = []): Completitud {
+export function completitudMes(
+  docs: DocMinimo[],
+  cubiertas: readonly string[] = [],
+  fijas: readonly CarpetaFija[] = CARPETAS_FIJAS
+): Completitud {
   // Por la RAÍZ: un archivo en 'Recibos de sueldos/Limpieza' cubre 'Recibos de sueldos'.
   const con = new Set<string>(cubiertas)
   for (const d of docs) con.add(raizCarpeta(d.carpeta))
-  const completas = CARPETAS_FIJAS.filter((c) => con.has(c))
-  const faltantes = CARPETAS_FIJAS.filter((c) => !con.has(c))
-  return { completas, faltantes, total: CARPETAS_FIJAS.length }
+  const completas = fijas.filter((c) => con.has(c))
+  const faltantes = fijas.filter((c) => !con.has(c))
+  return { completas, faltantes, total: fijas.length }
 }
 
 /** 'YYYY-MM-01' del mes (1..12) de un año. */

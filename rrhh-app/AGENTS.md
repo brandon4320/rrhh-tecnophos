@@ -198,7 +198,15 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   `arbolCarpetas()`. En la clave de R2 la ruta se aplasta a UN segmento (`slugCarpeta`). Réplica de las carpetas en disco de la oficinista: las **6 carpetas
   fijas** (Aportes sindicales, ART, F931, Pagos, Recibos de sueldos, SVO) viven en código
   (`modules/documentos/reglas.ts::CARPETAS_FIJAS`) y se muestran siempre; se admiten carpetas
-  extra escritas a mano. Son documentos de la EMPRESA: lo de cada persona sigue en `recibos_sueldo`
+  extra escritas a mano. **No todas las empresas llevan las seis**: `CARPETAS_POR_EMPRESA`
+  (por slug) define el subconjunto y `carpetasFijasDe(slug)` lo resuelve — hoy solo
+  `tecnophos-necochea`, con ART + Recibos de sueldos, porque las otras cuatro quedaban vacías
+  para siempre y el mes nunca llegaba a 6/6. Esa lista decide lo que se MUESTRA y lo que CUENTA
+  para la completitud (`carpetasDelMes`, `completitudMes` y las rayitas del chip del mes la
+  reciben por parámetro). **La canonización sigue usando las seis** (`normalizarCarpeta`,
+  `esCarpetaFija`): si no, "F931" en Necochea dejaría de unificarse con "f931". Y
+  `carpetasExtra` filtra contra la lista de la empresa, no contra `esCarpetaFija`, para que una
+  carpeta con archivos se vea SIEMPRE: sacar una del subconjunto nunca esconde lo ya cargado. Son documentos de la EMPRESA: lo de cada persona sigue en `recibos_sueldo`
   (la carpeta "Recibos de sueldos" muestra cuántos empleados activos ya tienen el suyo y cuenta como
   completa si están todos). UI en `documentos/DocumentosClient.tsx`, API `/api/documentos`.
 - **En los `<select>` de tipo de certificado, la opción "Otro" usa el valor

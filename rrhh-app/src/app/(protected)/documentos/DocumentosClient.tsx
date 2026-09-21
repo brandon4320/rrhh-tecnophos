@@ -13,8 +13,8 @@ import type { DocumentoMensual } from '@/types'
 import { subirDocumento } from '@/lib/upload-client'
 import { labelPeriodo } from '@/lib/recibos'
 import {
-  CARPETAS_FIJAS, CARPETA_RAIZ, CARPETA_RECIBOS, ESTADO_MES_LABEL, LABEL_RAIZ, MESES_CORTOS, anioMesAR, arbolCarpetas,
-  carpetasDelMes, completitudMes, estadoMes, excedeNiveles, fmtBytes, MAX_NIVELES_CARPETA, normalizarCarpeta,
+  CARPETA_RAIZ, CARPETA_RECIBOS, ESTADO_MES_LABEL, LABEL_RAIZ, MESES_CORTOS, anioMesAR, arbolCarpetas,
+  carpetasDelMes, carpetasFijasDe, completitudMes, estadoMes, excedeNiveles, fmtBytes, MAX_NIVELES_CARPETA, normalizarCarpeta,
   periodoActual, periodoAnterior, periodoDe, rutasConArchivos, validarArchivoDocumento, type NodoCarpeta,
 } from '@/modules/documentos/reglas'
 import { fmtFechaAR } from '@/lib/fechas-ar'
@@ -56,6 +56,9 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
   const formRef = useRef<HTMLDivElement>(null)
   // "Hoy" fijo por montaje (y en hora AR): así el SSR en UTC y el browser coinciden
   // y el memo de meses tiene una dependencia estable.
+  // Las carpetas fijas DE ESTA EMPRESA: Necochea maneja menos documentación que
+  // las demás y no tiene sentido mostrarle cuatro carpetas que nunca va a llenar.
+  const fijas = carpetasFijasDe(empresa.slug)
   const [hoy] = useState(() => new Date())
   const anioActual = anioMesAR(hoy).anio
   const limiteActual = periodoActual(hoy)
@@ -68,7 +71,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
     return ant.startsWith(String(anio)) ? Number(ant.slice(5, 7)) : 1
   })
   const [form, setForm] = useState<{ abierto: boolean; mes: number; carpeta: string; otra: string; notas: string; archivos: File[] }>({
-    abierto: false, mes: mesSel, carpeta: CARPETAS_FIJAS[0], otra: '', notas: '', archivos: [],
+    abierto: false, mes: mesSel, carpeta: fijas[0], otra: '', notas: '', archivos: [],
   })
   // Sube en CADA «Agregar». Con `form.abierto` a secas no alcanzaba: si el
   // formulario ya estaba abierto, el efecto no se volvía a disparar y tocar una
@@ -91,17 +94,17 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
       const delMes = porPeriodo.get(periodo) ?? []
       const conRecibo = recibosPorPeriodo[periodo] ?? 0
       const recibosCompletos = empleadosActivos > 0 && conRecibo >= empleadosActivos
-      const completitud = completitudMes(delMes, recibosCompletos ? [CARPETA_RECIBOS] : [])
+      const completitud = completitudMes(delMes, recibosCompletos ? [CARPETA_RECIBOS] : [], fijas)
       return {
         mes: i + 1, periodo, docs: delMes, conRecibo, recibosCompletos, completitud,
         estado: estadoMes(periodo, completitud, delMes.length, hoy),
       }
     })
-  }, [docs, anio, recibosPorPeriodo, empleadosActivos, hoy])
+  }, [docs, anio, recibosPorPeriodo, empleadosActivos, hoy, fijas])
 
   const actual = meses[mesSel - 1]
   const arbol = useMemo(() => arbolCarpetas(actual.docs), [actual])
-  const carpetas = useMemo(() => carpetasDelMes(actual.docs), [actual])
+  const carpetas = useMemo(() => carpetasDelMes(actual.docs, fijas), [actual, fijas])
   const sueltos = useMemo(() => actual.docs.filter((d) => !normalizarCarpeta(d.carpeta)), [actual])
   // Rutas de TODO el año, para ofrecerlas en el selector del formulario: así mandar
   // algo a "Recibos de sueldos/Limpieza" no obliga a escribir la ruta a mano.
@@ -239,7 +242,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
 
   // Las fijas primero y después todo lo que ya existe en el año (incluidas las
   // subcarpetas, con su ruta completa), sin repetir.
-  const opcionesCarpeta = [...new Set<string>([...CARPETAS_FIJAS, ...rutasDelAnio])]
+  const opcionesCarpeta = [...new Set<string>([...fijas, ...rutasDelAnio])]
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
@@ -267,7 +270,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
             )}
           </div>
           {canEdit && (
-            <button onClick={() => abrirCarga(CARPETAS_FIJAS[0])} className={btnPrimary} disabled={subiendo}>
+            <button onClick={() => abrirCarga(fijas[0])} className={btnPrimary} disabled={subiendo}>
               <Upload className="size-4" strokeWidth={2} />
               Cargar archivos
             </button>
@@ -296,7 +299,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
                 </span>
               </div>
               <div className="mt-1.5 flex gap-0.5">
-                {CARPETAS_FIJAS.map((c) => (
+                {fijas.map((c) => (
                   <span
                     key={c}
                     className={clsx('h-1 flex-1 rounded-full', m.completitud.completas.includes(c) ? 'bg-primary' : 'bg-border')}
@@ -405,7 +408,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="text-lg font-semibold tracking-tight">{labelPeriodo(actual.periodo)}</h2>
             <EstadoPill estado={actual.estado} label={ESTADO_MES_LABEL[actual.estado]} />
-            {actual.completitud.faltantes.length > 0 && actual.completitud.faltantes.length < CARPETAS_FIJAS.length && (
+            {actual.completitud.faltantes.length > 0 && actual.completitud.faltantes.length < fijas.length && (
               <span className="text-xs text-muted-foreground">Faltan: {actual.completitud.faltantes.join(', ')}</span>
             )}
           </div>
