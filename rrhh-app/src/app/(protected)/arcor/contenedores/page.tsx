@@ -1,7 +1,7 @@
 import { Segmented } from '@/components/ui/segmented'
 import { TablaContenedores } from '@/components/arcor/TablaContenedores'
 import { AccionesArcor } from '@/components/arcor/AccionesArcor'
-import { getContenedores, getMeses } from '@/modules/arcor/queries'
+import { getContenedores, getMeses, getRevisarPendientes } from '@/modules/arcor/queries'
 import { ESTADOS_CONTENEDOR, LUGARES, esMesValido, mesActual, tituloLugar, type EstadoContenedor } from '@/modules/arcor/reglas'
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +19,10 @@ export default async function ArcorContenedoresPage({
   const lugar = (LUGARES as readonly string[]).includes(sp.lugar ?? '') ? sp.lugar : undefined
   const estado = (ESTADOS_CONTENEDOR as readonly string[]).includes(sp.estado ?? '') ? (sp.estado as EstadoContenedor) : undefined
 
-  const items = await getContenedores({ mes, lugar, estado, limit: 1000 })
+  const [items, dudosas] = await Promise.all([
+    getContenedores({ mes, lugar, estado, limit: 1000 }),
+    getRevisarPendientes(),
+  ])
 
   const href = (p: { mes?: string; lugar?: string | null; estado?: string | null }) => {
     const q = new URLSearchParams()
@@ -46,7 +49,7 @@ export default async function ArcorContenedoresPage({
             active={mes}
             tabs={opcionesMes.slice(0, 6).map((m) => ({ key: m, label: m.charAt(0) + m.slice(1).toLowerCase(), href: href({ mes: m }) }))}
           />
-          <AccionesArcor revisar={items.filter((c) => c.estado === 'revisar_foto').length} />
+          <AccionesArcor revisar={dudosas} />
         </div>
       </div>
 

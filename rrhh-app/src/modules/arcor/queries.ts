@@ -89,6 +89,20 @@ export interface ResumenMes {
   porLugar: ReturnType<typeof resumenPorLugar>
 }
 
+/**
+ * Fotos que esperan en la galería de revisión, de CUALQUIER mes. El botón "Revisar
+ * dudosas" no puede mirar solo el mes en curso: el 02/10 quedaba gris con tres dudosas
+ * de Córdoba del 30/09 esperando, porque caían en septiembre.
+ */
+export async function getRevisarPendientes(): Promise<number> {
+  const db = await adb()
+  const { count } = await db
+    .from('arcor_contenedores')
+    .select('*', { count: 'exact', head: true })
+    .eq('estado', 'revisar_foto')
+  return count ?? 0
+}
+
 export async function getResumenMes(mes: string): Promise<ResumenMes> {
   const db = await adb()
   const res = await db
