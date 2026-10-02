@@ -1,18 +1,24 @@
 'use client'
 
-import { useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+import { UserX } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { subirArchivo } from '@/lib/upload-client'
 import { getEstadoVencimiento } from '@/types'
 import type { Empleado, TipoCertificado, Empresa, Archivo, Recibo } from '@/types'
 import RecibosSueldo from './RecibosSueldo'
 import type { Tables } from '@/types/database'
 import { Monograma } from '@/components/ui/monograma'
 import { EstadoPill } from '@/components/ui/estado-pill'
+import { mensajeError } from '@/lib/errores'
+import { abrirArchivo, borrarArchivo, subirArchivosACertificado } from '@/lib/archivos-client'
+import {
+  ALERTA_DIAS_DEFECTO, ALERTA_DIAS_MAX, AVISO_SIN_VENCIMIENTO, alertaComoTexto, llevarALaVista, useEnfocarAlAbrir,
+  validarAlertaDias,
+} from '@/lib/formularios'
 import clsx from 'clsx'
 
 /** Certificado tal como lo devuelve la query del legajo (con relaciones). */
@@ -29,7 +35,25 @@ interface Props {
   recibos: Recibo[]
   isAdmin: boolean
   canEdit: boolean
+  /** Certificado a abrir al entrar (?cert=<id>, desde el dashboard o vencimientos). */
+  certInicial?: string | null
+  /** Recién creado (?nuevo=1): el formulario de certificado arranca abierto. */
+  abrirAlta?: boolean
 }
+
+const FORM_VACIO = {
+  tipo_id: '',
+  tipo_nombre_custom: '',
+  fecha_vencimiento: '',
+  fecha_emision: '',
+  numero_documento: '',
+  notas: '',
+  /** Texto crudo: se valida al guardar (ver validarAlertaDias). */
+  alerta_dias: String(ALERTA_DIAS_DEFECTO),
+}
+
+const inputCls =
+  'w-full px-3.5 py-2.5 rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring'
 
 export default function LegajoClient({
   empleado,
@@ -37,75 +61,111 @@ export default function LegajoClient({
   tiposCertificado,
   empresas,
   recibos,
-  isAdmin,
   canEdit,
+  certInicial = null,
+  abrirAlta = false,
 }: Props) {
   const supabase = createClient()
   const router = useRouter()
   const [certs, setCerts] = useState(initCerts)
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm] = useState(abrirAlta && canEdit)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [activeCertId, setActiveCertId] = useState<string | null>(null)
+  const [activeCertId, setActiveCertId] = useState<string | null>(certInicial)
+  // Certificado a llevar a la vista: el del link profundo al entrar, o el recién creado.
+  const [certALaVista, setCertALaVista] = useState<string | null>(certInicial)
   const [editingEmpleado, setEditingEmpleado] = useState(false)
   const [savingEmpleado, setSavingEmpleado] = useState(false)
+  const [activo, setActivo] = useState(empleado.activo !== false)
+  const [cambiandoAlta, setCambiandoAlta] = useState(false)
   const [empleadoData, setEmpleadoData] = useState({
     nombre: empleado.nombre ?? '',
     apellido: empleado.apellido ?? '',
     empresa_id: empleado.empresa_id ?? '',
     sector: empleado.sector ?? '',
   })
-
-  const [form, setForm] = useState({
-    tipo_id: '',
-    tipo_nombre_custom: '',
-    fecha_vencimiento: '',
-    fecha_emision: '',
-    numero_documento: '',
-    notas: '',
-    alerta_dias: 30,
-  })
+  const [form, setForm] = useState(FORM_VACIO)
+  // Cada apertura del formulario lo trae a la vista con el foco en el primer campo
+  // (vive debajo de la lista: antes "Agregar certificado" lo abría fuera de pantalla).
+  const [aperturas, setAperturas] = useState(abrirAlta && canEdit ? 1 : 0)
+  const formRef = useEnfocarAlAbrir<HTMLFormElement>(aperturas, 'center')
+  const avisoNuevo = useRef(false)
 
   const nombreCompleto = useMemo(() => {
     return [empleadoData.nombre, empleadoData.apellido].filter(Boolean).join(' ')
   }, [empleadoData])
 
+  useEffect(() => {
+    if (!certALaVista) return
+    const el = document.getElementById(`cert-${certALaVista}`)
+    if (el) llevarALaVista(el, 'center')
+  }, [certALaVista])
+
+  // ?nuevo=1 viene del alta de empleado: se avisa una vez y se saca de la URL
+  // para que recargar no vuelva a abrir el formulario.
+  useEffect(() => {
+    if (!abrirAlta || avisoNuevo.current) return
+    avisoNuevo.current = true
+    toast.success('Empleado creado', { description: 'Cargá su primer certificado.' })
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('nuevo')
+      window.history.replaceState(null, '', url)
+    } catch { /* la URL es cosmética */ }
+  }, [abrirAlta])
+
   function resetForm() {
-    setForm({
-      tipo_id: '',
-      tipo_nombre_custom: '',
-      fecha_vencimiento: '',
-      fecha_emision: '',
-      numero_documento: '',
-      notas: '',
-      alerta_dias: 30,
-    })
+    setForm(FORM_VACIO)
     setShowForm(false)
     setEditingId(null)
   }
 
-  function openEdit(cert: any) {
+  function abrirNuevo() {
+    setForm(FORM_VACIO)
+    setEditingId(null)
+    setShowForm(true)
+    setAperturas((n) => n + 1)
+  }
+
+  function openEdit(cert: CertConRelaciones) {
     setForm({
-      tipo_id: cert.tipo_id ?? '',
+      // Un certificado "Otro" tiene tipo_id null y el nombre en tipo_nombre_custom:
+      // sin esto el select quedaba en "Seleccionar..." y no se podía guardar.
+      tipo_id: cert.tipo_id ?? (cert.tipo_nombre_custom ? 'otro' : ''),
       tipo_nombre_custom: cert.tipo_nombre_custom ?? '',
       fecha_vencimiento: cert.fecha_vencimiento?.slice(0, 10) ?? '',
       fecha_emision: cert.fecha_emision?.slice(0, 10) ?? '',
       numero_documento: cert.numero_documento ?? '',
       notas: cert.notas ?? '',
-      alerta_dias: cert.alerta_dias ?? 30,
+      alerta_dias: alertaComoTexto(cert.alerta_dias),
     })
     setEditingId(cert.id)
     setShowForm(true)
-    setTimeout(() => {
-      document.getElementById('cert-form')?.scrollIntoView({ behavior: 'smooth' })
-    }, 100)
+    setAperturas((n) => n + 1)
+  }
+
+  function escCancela(cancelar: () => void) {
+    return (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        cancelar()
+      }
+    }
   }
 
   async function handleSave() {
+    if (!form.tipo_id) {
+      toast.error('Elegí el tipo de certificado.')
+      return
+    }
     if (form.tipo_id === 'otro' && !form.tipo_nombre_custom.trim()) {
       toast.error('Especificá el nombre del certificado.')
+      return
+    }
+    const alerta = validarAlertaDias(form.alerta_dias)
+    if (!alerta.ok) {
+      toast.error(alerta.error)
       return
     }
     setSaving(true)
@@ -119,57 +179,71 @@ export default function LegajoClient({
       fecha_emision: form.fecha_emision || null,
       numero_documento: form.numero_documento || null,
       notas: form.notas || null,
-      alerta_dias: form.alerta_dias,
+      alerta_dias: alerta.valor,
     }
+    const sinVencimiento = form.fecha_vencimiento ? undefined : { description: AVISO_SIN_VENCIMIENTO }
 
     if (editingId) {
+      const certId = editingId
       const { data, error } = await supabase
         .from('certificados')
         .update({ ...payload, updated_at: new Date().toISOString() })
-        .eq('id', editingId)
-        .select('*, tipo:tipos_certificado(nombre, orden), archivos(*)')
+        .eq('id', certId)
+        .select('*, tipo:tipos_certificado(nombre, orden)')
         .single()
 
       setSaving(false)
       if (error || !data) {
-        toast.error('No se pudo guardar el certificado.')
+        toast.error(mensajeError(error, 'guardar el certificado'))
         return // el form queda abierto, no se pierde lo tipeado
       }
       setCerts((prev) =>
-        prev.map((c) => (c.id === editingId ? { ...data, archivos: c.archivos } : c))
+        prev.map((c) => (c.id === certId ? { ...data, archivos: c.archivos } : c))
       )
-      toast.success('Certificado actualizado')
+      toast.success('Certificado actualizado', sinVencimiento)
+      setActiveCertId(certId)
+      setCertALaVista(certId)
     } else {
       const { data, error } = await supabase
         .from('certificados')
         .insert(payload)
-        .select('*, tipo:tipos_certificado(nombre, orden), archivos(*)')
+        .select('*, tipo:tipos_certificado(nombre, orden)')
         .single()
 
       setSaving(false)
       if (error || !data) {
-        toast.error('No se pudo agregar el certificado.')
+        toast.error(mensajeError(error, 'agregar el certificado'))
         return
       }
       setCerts((prev) => [...prev, { ...data, archivos: [] }])
-      toast.success('Certificado agregado')
+      toast.success('Certificado agregado', sinVencimiento ?? { description: 'Ya podés adjuntarle el archivo.' })
+      // Se abre la tarjeta nueva: lo siguiente casi siempre es subir el escaneo.
+      setActiveCertId(data.id)
+      setCertALaVista(data.id)
     }
     resetForm()
+    router.refresh()
   }
 
-  async function handleDelete(certId: string) {
-    if (!confirm('¿Eliminar este certificado?')) return
-    const { error } = await supabase.from('certificados').delete().eq('id', certId)
-    if (error) {
-      toast.error('No se pudo eliminar el certificado.')
+  async function handleDelete(cert: CertConRelaciones) {
+    const n = cert.archivos?.length ?? 0
+    const adjuntos = n > 0 ? ` y ${n === 1 ? 'su archivo adjunto' : `sus ${n} archivos adjuntos`}` : ''
+    if (!confirm(`¿Eliminar el certificado "${cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? 'Sin tipo'}"${adjuntos}? No se puede deshacer.`)) return
+    // .select() devuelve lo borrado: si la RLS no dejó borrar nada no hay error, pero tampoco filas.
+    const { data, error } = await supabase.from('certificados').delete().eq('id', cert.id).select('id')
+    if (error || !data?.length) {
+      toast.error(error ? mensajeError(error, 'eliminar el certificado') : 'No se pudo eliminar: el certificado ya no existe o no tenés permiso.')
       return
     }
-    setCerts((prev) => prev.filter((c) => c.id !== certId))
+    setCerts((prev) => prev.filter((c) => c.id !== cert.id))
+    if (editingId === cert.id) resetForm()
+    toast.success('Certificado eliminado')
+    router.refresh()
   }
 
   async function handleSaveEmpleado() {
     if (!empleadoData.nombre.trim() || !empleadoData.empresa_id) {
-      alert('Completá al menos nombre y empresa.')
+      toast.error('Completá al menos nombre y empresa.')
       return
     }
 
@@ -189,67 +263,83 @@ export default function LegajoClient({
     setSavingEmpleado(false)
 
     if (error) {
-      alert('No se pudo actualizar el empleado.')
+      toast.error(mensajeError(error, 'guardar los datos del empleado'))
       return
     }
 
+    toast.success('Datos del empleado guardados')
     setEditingEmpleado(false)
     router.refresh()
   }
 
-  async function handleDeleteEmpleado() {
-    if (!confirm('¿Eliminar este empleado? Esta acción desactiva el legajo actual.')) return
-
-    const { error } = await supabase
+  /** "Eliminar" nunca borró: desactiva el legajo (borrado lógico, reversible). */
+  async function handleDarDeBaja() {
+    const ok = confirm(
+      `¿Dar de baja a ${nombreCompleto}?\n\n` +
+        'Deja de aparecer en Empleados, Vencimientos y el Dashboard. ' +
+        'Sus certificados, archivos y comprobantes se conservan, y lo podés reactivar ' +
+        'desde Empleados → Dados de baja.'
+    )
+    if (!ok) return
+    setCambiandoAlta(true)
+    const { data, error } = await supabase
       .from('empleados')
       .update({ activo: false, updated_at: new Date().toISOString() })
       .eq('id', empleado.id)
+      .select('id')
+    setCambiandoAlta(false)
 
-    if (error) {
-      alert('No se pudo eliminar el empleado.')
+    if (error || !data?.length) {
+      toast.error(error ? mensajeError(error, 'dar de baja al empleado') : 'No se pudo dar de baja: no tenés permiso sobre este legajo.')
       return
     }
 
+    toast.success(`${nombreCompleto} quedó dado de baja`)
     router.push('/empleados')
     router.refresh()
   }
 
-  async function handleFileUpload(certId: string, files: FileList) {
-    setUploading(certId)
-
-    for (const file of Array.from(files)) {
-      try {
-        const archivo = await subirArchivo(file, certId, {
-          empleadoId: empleado.id,
-          empresaSlug: empleado.empresa?.slug ?? '',
-        })
-        setCerts((prev) =>
-          prev.map((c) =>
-            c.id === certId ? { ...c, archivos: [...c.archivos, archivo] } : c
-          )
-        )
-      } catch (e) {
-        alert(e instanceof Error ? e.message : 'No se pudo guardar el archivo.')
-      }
+  async function handleReactivar() {
+    setCambiandoAlta(true)
+    const { data, error } = await supabase
+      .from('empleados')
+      .update({ activo: true, updated_at: new Date().toISOString() })
+      .eq('id', empleado.id)
+      .select('id')
+    setCambiandoAlta(false)
+    if (error || !data?.length) {
+      toast.error(error ? mensajeError(error, 'reactivar al empleado') : 'No se pudo reactivar: no tenés permiso sobre este legajo.')
+      return
     }
-
-    setUploading(null)
+    setActivo(true)
+    toast.success(`${nombreCompleto} está activo de nuevo`)
+    router.refresh()
   }
 
-  async function handleDeleteArchivo(certId: string, archivoId: string) {
-    if (!confirm('¿Eliminar este archivo?')) return
-
-    const res = await fetch(`/api/archivo?id=${archivoId}`, { method: 'DELETE' })
-
-    if (res.ok) {
-      setCerts((prev) =>
-        prev.map((c) =>
-          c.id === certId
-            ? { ...c, archivos: c.archivos.filter((a: any) => a.id !== archivoId) }
-            : c
+  async function handleFileUpload(certId: string, files: File[]) {
+    setUploading(certId)
+    const ok = await subirArchivosACertificado(
+      files,
+      certId,
+      { empleadoId: empleado.id, empresaSlug: empleado.empresa?.slug ?? '' },
+      (archivo) =>
+        setCerts((prev) =>
+          prev.map((c) => (c.id === certId ? { ...c, archivos: [...c.archivos, archivo as Archivo] } : c))
         )
+    )
+    setUploading(null)
+    if (ok > 0) router.refresh()
+  }
+
+  async function handleDeleteArchivo(certId: string, archivo: Archivo) {
+    if (!confirm(`¿Eliminar el archivo "${archivo.nombre}"?`)) return
+    if (!(await borrarArchivo(archivo.id))) return
+    setCerts((prev) =>
+      prev.map((c) =>
+        c.id === certId ? { ...c, archivos: c.archivos.filter((a) => a.id !== archivo.id) } : c
       )
-    }
+    )
+    router.refresh()
   }
 
   const slug = empleado.empresa?.slug ?? ''
@@ -269,6 +359,27 @@ export default function LegajoClient({
         <span>/</span>
         <span className="font-medium text-foreground">{nombreCompleto}</span>
       </div>
+
+      {!activo && (
+        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning-subtle px-4 py-3 text-sm">
+          <UserX className="size-4 shrink-0 text-warning" strokeWidth={1.75} />
+          <p className="min-w-0 flex-1 text-foreground">
+            <span className="font-medium">Este empleado está dado de baja.</span>{' '}
+            <span className="text-muted-foreground">
+              No aparece en Empleados, Vencimientos ni en el Dashboard. Sus certificados y archivos se conservan.
+            </span>
+          </p>
+          {canEdit && (
+            <button
+              onClick={handleReactivar}
+              disabled={cambiandoAlta}
+              className="shrink-0 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            >
+              {cambiandoAlta ? 'Reactivando…' : 'Reactivar'}
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -298,16 +409,7 @@ export default function LegajoClient({
               Editar
             </button>
             <button
-              onClick={handleDeleteEmpleado}
-              className="rounded-lg border border-danger/30 px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger-subtle"
-            >
-              Eliminar
-            </button>
-            <button
-              onClick={() => {
-                resetForm()
-                setShowForm(true)
-              }}
+              onClick={abrirNuevo}
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -320,7 +422,11 @@ export default function LegajoClient({
       </div>
 
       {canEdit && editingEmpleado && (
-        <div className="bg-card rounded-xl border border-border p-6 mb-8">
+        <form
+          onSubmit={(e) => { e.preventDefault(); handleSaveEmpleado() }}
+          onKeyDown={escCancela(() => setEditingEmpleado(false))}
+          className="bg-card rounded-xl border border-border p-6 mb-8"
+        >
           <h3 className="font-semibold text-foreground mb-5">Editar empleado</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
@@ -332,7 +438,8 @@ export default function LegajoClient({
                 onChange={(e) =>
                   setEmpleadoData((prev) => ({ ...prev, nombre: e.target.value }))
                 }
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={inputCls}
+                autoFocus
               />
             </div>
 
@@ -344,7 +451,7 @@ export default function LegajoClient({
                 onChange={(e) =>
                   setEmpleadoData((prev) => ({ ...prev, apellido: e.target.value }))
                 }
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={inputCls}
               />
             </div>
 
@@ -355,7 +462,7 @@ export default function LegajoClient({
                 onChange={(e) =>
                   setEmpleadoData((prev) => ({ ...prev, empresa_id: e.target.value }))
                 }
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={inputCls}
               >
                 {empresas.map((empresaItem) => (
                   <option key={empresaItem.id} value={empresaItem.id}>
@@ -373,27 +480,41 @@ export default function LegajoClient({
                 onChange={(e) =>
                   setEmpleadoData((prev) => ({ ...prev, sector: e.target.value }))
                 }
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={inputCls}
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={handleSaveEmpleado}
+              type="submit"
               disabled={savingEmpleado}
               className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
             >
               {savingEmpleado ? 'Guardando...' : 'Guardar cambios'}
             </button>
             <button
+              type="button"
               onClick={() => setEditingEmpleado(false)}
               className="text-sm text-muted-foreground hover:text-foreground px-3 py-2.5"
             >
               Cancelar
             </button>
+            {/* La baja vive acá y no al lado de "Agregar certificado": es una acción
+                rara y antes se confundía con borrar. */}
+            {activo && (
+              <button
+                type="button"
+                onClick={handleDarDeBaja}
+                disabled={cambiandoAlta}
+                className="ml-auto inline-flex items-center gap-2 rounded-lg border border-danger/30 px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger-subtle disabled:opacity-50"
+              >
+                <UserX className="size-4" strokeWidth={1.75} />
+                {cambiandoAlta ? 'Dando de baja…' : 'Dar de baja'}
+              </button>
+            )}
           </div>
-        </div>
+        </form>
       )}
 
       <div className="space-y-3 mb-8">
@@ -408,7 +529,14 @@ export default function LegajoClient({
           const isOpen = activeCertId === cert.id
 
           return (
-            <div key={cert.id} className="bg-card rounded-xl border border-border overflow-hidden">
+            <div
+              key={cert.id}
+              id={`cert-${cert.id}`}
+              className={clsx(
+                'scroll-mt-6 bg-card rounded-xl border overflow-hidden',
+                isOpen && certALaVista === cert.id ? 'border-primary/40' : 'border-border'
+              )}
+            >
               <div
                 className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-accent transition-colors"
                 onClick={() => setActiveCertId(isOpen ? null : cert.id)}
@@ -425,7 +553,7 @@ export default function LegajoClient({
                   <EstadoPill estado={estado} />
                   {cert.fecha_vencimiento && (
                     <p className="text-xs text-muted-foreground mt-1 tabular-nums">
-                      {format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')}
+                      {format(new Date(cert.fecha_vencimiento.slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy')}
                     </p>
                   )}
                 </div>
@@ -467,7 +595,7 @@ export default function LegajoClient({
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Fecha de emisión</p>
                         <p className="text-foreground">
-                          {format(new Date(cert.fecha_emision + 'T12:00:00'), 'dd/MM/yyyy')}
+                          {format(new Date(cert.fecha_emision.slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy')}
                         </p>
                       </div>
                     )}
@@ -476,14 +604,14 @@ export default function LegajoClient({
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Vencimiento</p>
                         <p className="text-foreground">
-                          {format(new Date(cert.fecha_vencimiento + 'T12:00:00'), 'dd/MM/yyyy')}
+                          {format(new Date(cert.fecha_vencimiento.slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy')}
                         </p>
                       </div>
                     )}
 
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Alerta previa</p>
-                      <p className="text-foreground">{cert.alerta_dias} días</p>
+                      <p className="text-foreground">{cert.alerta_dias ?? ALERTA_DIAS_DEFECTO} días</p>
                     </div>
 
                     {cert.notas && (
@@ -500,7 +628,7 @@ export default function LegajoClient({
                     </p>
 
                     <div className="space-y-2">
-                      {cert.archivos?.map((archivo: any) => (
+                      {cert.archivos?.map((archivo) => (
                         <div
                           key={archivo.id}
                           className="flex items-center gap-3 bg-card rounded-lg border border-border px-3 py-2"
@@ -529,15 +657,7 @@ export default function LegajoClient({
 
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={async () => {
-                                const res = await fetch(
-                                  `/api/archivo?path=${encodeURIComponent(archivo.path)}`
-                                )
-                                if (res.ok) {
-                                  const { url } = await res.json()
-                                  window.open(url, '_blank')
-                                }
-                              }}
+                              onClick={() => abrirArchivo(archivo.path)}
                               className="text-xs text-primary hover:underline"
                             >
                               Ver
@@ -545,7 +665,7 @@ export default function LegajoClient({
 
                             {canEdit && (
                               <button
-                                onClick={() => handleDeleteArchivo(cert.id, archivo.id)}
+                                onClick={() => handleDeleteArchivo(cert.id, archivo)}
                                 className="text-xs text-danger/80 hover:text-danger"
                               >
                                 Eliminar
@@ -586,13 +706,18 @@ export default function LegajoClient({
                         </svg>
                         {uploading === cert.id ? 'Subiendo...' : 'Subir archivo'}
                         <input
-                          ref={fileInputRef}
                           type="file"
                           multiple
                           className="sr-only"
                           accept=".pdf,.jpg,.jpeg,.png,.webp"
                           disabled={uploading === cert.id}
-                          onChange={(e) => e.target.files && handleFileUpload(cert.id, e.target.files)}
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files ?? [])
+                            // Vaciar el input: si no, volver a elegir el mismo archivo
+                            // después de un error no dispara onChange.
+                            e.target.value = ''
+                            if (files.length) handleFileUpload(cert.id, files)
+                          }}
                         />
                       </label>
 
@@ -617,7 +742,7 @@ export default function LegajoClient({
                       </button>
 
                       <button
-                        onClick={() => handleDelete(cert.id)}
+                        onClick={() => handleDelete(cert)}
                         className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg border border-danger/30 text-danger hover:bg-danger-subtle transition-colors"
                       >
                         <svg
@@ -645,7 +770,14 @@ export default function LegajoClient({
       </div>
 
       {canEdit && showForm && (
-        <div id="cert-form" className="bg-card rounded-xl border border-primary/30 p-6 shadow-sm">
+        <form
+          key={editingId ?? 'nuevo'}
+          ref={formRef}
+          id="cert-form"
+          onSubmit={(e) => { e.preventDefault(); handleSave() }}
+          onKeyDown={escCancela(resetForm)}
+          className="scroll-mt-6 bg-card rounded-xl border border-primary/30 p-6 shadow-sm"
+        >
           <h3 className="font-semibold text-foreground mb-5">
             {editingId ? 'Editar certificado' : 'Nuevo certificado'}
           </h3>
@@ -658,7 +790,7 @@ export default function LegajoClient({
               <select
                 value={form.tipo_id}
                 onChange={(e) => setForm((f) => ({ ...f, tipo_id: e.target.value }))}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={inputCls}
               >
                 <option value="">Seleccionar...</option>
                 {tiposCertificado.map((t) => (
@@ -681,7 +813,7 @@ export default function LegajoClient({
                   onChange={(e) =>
                     setForm((f) => ({ ...f, tipo_nombre_custom: e.target.value }))
                   }
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className={inputCls}
                   placeholder="Ej: Curso de Primeros Auxilios"
                 />
               </div>
@@ -695,7 +827,7 @@ export default function LegajoClient({
                 type="date"
                 value={form.fecha_emision}
                 onChange={(e) => setForm((f) => ({ ...f, fecha_emision: e.target.value }))}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={inputCls}
               />
             </div>
 
@@ -709,8 +841,11 @@ export default function LegajoClient({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, fecha_vencimiento: e.target.value }))
                 }
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={inputCls}
               />
+              {!form.fecha_vencimiento && (
+                <p className="mt-1 text-xs text-warning">{AVISO_SIN_VENCIMIENTO}</p>
+              )}
             </div>
 
             <div>
@@ -723,7 +858,7 @@ export default function LegajoClient({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, numero_documento: e.target.value }))
                 }
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className={inputCls}
                 placeholder="Nro. de resolución, carnet, etc."
               />
             </div>
@@ -734,13 +869,12 @@ export default function LegajoClient({
               </label>
               <input
                 type="number"
+                inputMode="numeric"
                 min={1}
-                max={365}
+                max={ALERTA_DIAS_MAX}
                 value={form.alerta_dias}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, alerta_dias: parseInt(e.target.value) || 30 }))
-                }
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                onChange={(e) => setForm((f) => ({ ...f, alerta_dias: e.target.value }))}
+                className={inputCls}
               />
             </div>
 
@@ -750,7 +884,7 @@ export default function LegajoClient({
                 value={form.notas}
                 onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))}
                 rows={3}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                className={clsx(inputCls, 'resize-none')}
                 placeholder="Información adicional..."
               />
             </div>
@@ -758,20 +892,22 @@ export default function LegajoClient({
 
           <div className="flex items-center gap-3">
             <button
-              onClick={handleSave}
+              type="submit"
               disabled={saving || !form.tipo_id}
               className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
             >
               {saving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Agregar certificado'}
             </button>
             <button
+              type="button"
               onClick={resetForm}
               className="text-sm text-muted-foreground hover:text-foreground px-3 py-2.5"
             >
               Cancelar
             </button>
+            <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">Enter guarda · Esc cancela</span>
           </div>
-        </div>
+        </form>
       )}
 
       <RecibosSueldo
