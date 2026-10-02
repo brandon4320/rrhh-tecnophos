@@ -9,7 +9,7 @@ import {
   ChevronDown, ChevronLeft, ChevronRight, ExternalLink, FileText, Folder, FolderOpen, Plus, Trash2, Upload, Users, X,
 } from 'lucide-react'
 import { EstadoPill } from '@/components/ui/estado-pill'
-import type { DocumentoMensual } from '@/types'
+import type { DocumentoMensual as DocumentoMensualFila } from '@/types'
 import { subirDocumento } from '@/lib/upload-client'
 import { labelPeriodo } from '@/lib/recibos'
 import {
@@ -18,6 +18,12 @@ import {
   periodoActual, periodoAnterior, periodoDe, rutasConArchivos, validarArchivoDocumento, type NodoCarpeta,
 } from '@/modules/documentos/reglas'
 import { fmtFechaAR } from '@/lib/fechas-ar'
+
+/** Lo que trae la página (DOC_COLUMNAS en modules/documentos/reglas.ts), no la fila entera. */
+type DocumentoMensual = Pick<
+  DocumentoMensualFila,
+  'id' | 'periodo' | 'carpeta' | 'nombre_archivo' | 'path' | 'size_bytes' | 'created_at' | 'origen' | 'notas'
+>
 
 interface Props {
   empresa: { id: string; nombre: string; slug: string }

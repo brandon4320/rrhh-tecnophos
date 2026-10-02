@@ -60,6 +60,9 @@ export interface DocMinimo {
   carpeta: string
 }
 
+/** Columnas que usa la pantalla de documentación mensual (el select no trae de más). */
+export const DOC_COLUMNAS = 'id, periodo, carpeta, nombre_archivo, path, size_bytes, created_at, origen, notas'
+
 export function esCarpetaFija(c: string): c is CarpetaFija {
   return (CARPETAS_FIJAS as readonly string[]).includes(c)
 }
