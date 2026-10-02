@@ -15,7 +15,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const [sesion, { data: empresas }, { data: empleados }] = await Promise.all([
     getSesion(),
     supabase.from('empresas').select('id, nombre, slug').order('nombre'),
-    supabase.from('empleados').select('empresa_id, sector').eq('activo', true),
+    supabase.from('empleados').select('empresa_id').eq('activo', true),
   ])
 
   if (!sesion) redirect('/login')
@@ -24,24 +24,17 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   // va a su módulo — no puede entrar a las pantallas de RRHH.
   if (!tieneRol(sesion.rol, RRHH_ROLES)) redirect('/')
 
-  // Conteos por empresa y por sector para el panel lateral
-  const nav: EmpresaNav[] = (empresas ?? []).map((e) => {
-    const propios = (empleados ?? []).filter((emp) => emp.empresa_id === e.id)
-    const porSector = new Map<string, number>()
-    for (const emp of propios) {
-      const s = emp.sector?.trim() || 'General'
-      porSector.set(s, (porSector.get(s) ?? 0) + 1)
-    }
-    return {
-      id: e.id,
-      nombre: e.nombre,
-      slug: e.slug,
-      total: propios.length,
-      sectores: [...porSector.entries()]
-        .map(([nombre, count]) => ({ nombre, count }))
-        .sort((a, b) => b.count - a.count),
-    }
-  })
+  // Empleados activos por empresa, para el selector del panel lateral.
+  const porEmpresa = new Map<string, number>()
+  for (const emp of empleados ?? []) {
+    if (emp.empresa_id) porEmpresa.set(emp.empresa_id, (porEmpresa.get(emp.empresa_id) ?? 0) + 1)
+  }
+  const nav: EmpresaNav[] = (empresas ?? []).map((e) => ({
+    id: e.id,
+    nombre: e.nombre,
+    slug: e.slug,
+    total: porEmpresa.get(e.id) ?? 0,
+  }))
 
   return (
     <AppShell

@@ -93,7 +93,7 @@ rrhh-app/src/
 │       ├── arcor/ingest/           # ★ entrada de datos del sistema ARCOR (token, service role)
 │       └── comercial/{tarea,proyecto,tags,tarea-rapida}/
 ├── components/
-│   ├── layout/AppShell.tsx         # Sidebar única RRHH (empresa activa)
+│   ├── layout/AppShell.tsx         # Sidebar única RRHH (selector "Viendo": todas / empresa / ARCOR)
 │   ├── ui/                         # sistema de diseño (ver §7)
 │   ├── comercial/  arcor/  brand/
 ├── config/modules.ts               # registro de módulos + acceso por rol
@@ -262,9 +262,17 @@ El sistema actual es **minimal empresa-céntrico**:
   - `EstadoPill` / `EstadoBadgeSuave` — ÚNICO encoding de estado de vencimiento.
   - `Monograma` — avatares de iniciales (nada de tiles de colores).
   - `BarraVencimiento`, `Donut` (SVG puro), `Segmented` (tabs).
-- **AppShell** (`components/layout/AppShell.tsx`): sidebar única clara con selector
-  de **Empresa activa** (persistida en `localStorage.empresa_activa`). Sin rail de
-  módulos (decisión explícita de Brandon: no mezclar módulos).
+- **AppShell** (`components/layout/AppShell.tsx`): sidebar única clara. Arriba, el
+  selector **"Viendo"** (persistido en `localStorage.empresa_activa`) con **Todas las
+  empresas** como primera opción (solo si el usuario ve más de una), cada empresa y ARCOR.
+  Debajo, las vistas de lo elegido, con ícono y agrupadas: sin título (Resumen, Empleados,
+  Vencimientos), **Documentación** (Habilitaciones = `?vista=documentacion`, Mensual =
+  `/documentos`), **Recursos** (Flota, Stock) y **Administración**. Con "Todas" solo aparecen
+  las que existen para el grupo (Resumen general = `/dashboard`, Empleados, Vencimientos,
+  Flota). Cambiar de empresa te deja en la MISMA pantalla (`destino()`), no en el Resumen.
+  El usuario es un solo botón que abre Inicio, tema y cerrar sesión. Sin rail de módulos
+  (decisión explícita de Brandon: no mezclar módulos). Se sacaron los "Sectores": eran
+  links que llevaban todos a la misma página.
 - Botones primarios: `bg-primary hover:bg-primary/90 text-primary-foreground`
   (nunca `hover:brightness-*` ni `text-white` hardcodeado).
 - **Pendiente (F5)**: extender estos tokens a Comercial (EtapaBadge tiene 11 colores)
@@ -437,5 +445,7 @@ Argentina. Patrones obligatorios:
   `mesActualInput()`. NUNCA `new Date().toISOString().slice(0,10)` ni `getMonth()` a secas
   para decidir un mes o una fecha por defecto (a las 21:00 AR ya es "mañana" en UTC).
 - Slugs de empresa reservados: `recibos`, `documentos`, `docs`, `flota` (migraciones 18 y 20 lo imponen).
-- `AppShell` recuerda la "empresa activa" solo entre EMPRESAS; el portal ARCOR nunca queda
-  como preferido (si no, /dashboard mostraba la sidebar de ARCOR).
+- `AppShell` recuerda lo elegido solo entre empresas y "todas"; el portal ARCOR nunca queda
+  como preferido (si no, /dashboard mostraba la sidebar de ARCOR). En las pantallas que
+  aceptan todas las empresas (`RUTAS_GLOBALES`: /dashboard, /empleados, /vencimientos,
+  /flota), **no tener `?empresa=` significa "todas"**, no "la última elegida".
