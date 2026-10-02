@@ -71,7 +71,12 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [vista, setVista] = useState<VistaVencimientos>(vistaInicial)
+  // La pestaña sale de la URL (la cambiamos con replaceState: al volver atrás desde
+  // un legajo el payload puede ser el del primer render); la del server es el respaldo.
+  const [vista, setVista] = useState<VistaVencimientos>(() => {
+    const deUrl = PESTANIAS.find((t) => t.vista === searchParams.get('estado'))?.vista ?? 'pendientes'
+    return (deUrl === 'vigente' || deUrl === 'todos') && !incluyeVigentes ? vistaInicial : deUrl
+  })
   const [busqueda, setBusqueda] = useState(() => searchParams.get('q') ?? '')
 
   const buscadas = useMemo(
