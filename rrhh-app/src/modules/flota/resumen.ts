@@ -6,8 +6,8 @@
 import { diaClaveAR } from '@/lib/fechas-ar'
 import { getEstadoVencimiento, type EstadoVencimiento } from '@/types'
 import {
-  estadoChecklist, kmPorDia, nombreMantenimiento, proximoMantenimiento, diasEntre,
-  type EstadoChecklist, type ProximoMantenimiento, type Resultado,
+  estadoChecklist, hastaCuando, kmPorDia, nombreMantenimiento, proximoMantenimiento, diasEntre,
+  type EstadoChecklistInfo, type ProximoMantenimiento, type Resultado,
 } from './reglas'
 
 export interface DatosVehiculo {
@@ -26,7 +26,13 @@ export interface DatosVehiculo {
 export type Semaforo = 'rojo' | 'amarillo' | 'verde'
 
 export interface ResumenVehiculo {
-  checklist: { estado: EstadoChecklist; venceEn: number | null; diasDesde: number | null; ultimoResultado: Resultado | null; ultimoAt: string | null }
+  checklist: EstadoChecklistInfo & { ultimoResultado: Resultado | null; ultimoAt: string | null }
+  /**
+   * No apta para circular = tiene novedades GRAVES abiertas (cada ítem crítico
+   * marcado "Mal" abre una). Se limpia cuando la oficina las resuelve, no
+   * depende de cómo salió el último checklist.
+   */
+  noApta: boolean
   kmDia: number | null
   mantenimientos: (ProximoMantenimiento & { tipo: string; nombre: string })[]
   documentos: { nombre: string; vence: string; estado: EstadoVencimiento; dias: number }[]
@@ -51,9 +57,9 @@ export function mensajeResumenDiario(
   const activos = filas.filter((f) => f.checklistActivo)
 
   const vencidos = activos.filter((f) => f.r.checklist.estado === 'vencido')
-    .map((f) => `${f.patente} (hace ${plural(Math.abs(f.r.checklist.venceEn!), 'día', 'días')})`)
-  const porVencer = activos.filter((f) => f.r.checklist.estado === 'vence_pronto')
-    .map((f) => `${f.patente} (${f.r.checklist.venceEn === 0 ? 'hoy' : f.r.checklist.venceEn === 1 ? 'mañana' : `en ${f.r.checklist.venceEn} días`})`)
+    .map((f) => `${f.patente} (hace ${plural(Math.abs(f.r.checklist.venceEn), 'día', 'días')})`)
+  const pendientes = activos.filter((f) => f.r.checklist.estado === 'vence_pronto')
+    .map((f) => `${f.patente} (${hastaCuando(f.r.checklist)})`)
   const nunca = activos.filter((f) => f.r.checklist.estado === 'nunca').map((f) => f.patente)
 
   const services = filas.flatMap((f) =>
@@ -66,19 +72,17 @@ export function mensajeResumenDiario(
       .filter((d) => d.estado === 'vencido' || d.estado === 'proximo')
       .map((d) => `${f.patente}: ${d.nombre} ${d.estado === 'vencido' ? 'VENCIDO' : `vence en ${plural(d.dias, 'día', 'días')}`}`)
   )
-  const noAptas = filas.filter((f) => f.r.checklist.ultimoResultado === 'no_apto').map((f) => f.patente)
-  const graves = filas.filter((f) => f.r.novedades.altas > 0)
-    .map((f) => `${f.patente} (${plural(f.r.novedades.altas, 'grave', 'graves')})`)
+  const noAptas = filas.filter((f) => f.r.noApta)
+    .map((f) => `${f.patente} (${plural(f.r.novedades.altas, 'novedad grave', 'novedades graves')} sin resolver)`)
 
   const bloques: string[] = []
   const checklist = [
     vencidos.length ? `• Vencido: ${vencidos.join(', ')}` : null,
-    porVencer.length ? `• Vence pronto: ${porVencer.join(', ')}` : null,
+    pendientes.length ? `• Toca hacerlo: ${pendientes.join(', ')}` : null,
     nunca.length ? `• Sin hacer todavía: ${nunca.join(', ')}` : null,
   ].filter(Boolean)
   if (checklist.length) bloques.push(['*Checklist*', ...checklist].join('\n'))
   if (noAptas.length) bloques.push(`*No aptas para circular*\n• ${noAptas.join(', ')}`)
-  if (graves.length) bloques.push(`*Novedades graves sin resolver*\n• ${graves.join(', ')}`)
   if (services.length) bloques.push(['*Service*', ...services.map((s) => `• ${s}`)].join('\n'))
   if (documentos.length) bloques.push(['*Documentación*', ...documentos.map((d) => `• ${d}`)].join('\n'))
   if (!bloques.length) return null
@@ -129,8 +133,8 @@ export function resumirVehiculo(d: DatosVehiculo, hoy: string = diaClaveAR(new D
 
   const rojos: string[] = []
   const amarillos: string[] = []
-  if (ultimo?.resultado === 'no_apto') rojos.push('No apta en el último checklist')
-  if (altas > 0) rojos.push(`${altas} ${altas === 1 ? 'novedad grave abierta' : 'novedades graves abiertas'}`)
+  const noApta = altas > 0
+  if (noApta) rojos.push(`No apta para circular: ${altas} ${altas === 1 ? 'novedad grave abierta' : 'novedades graves abiertas'}`)
   for (const m of mantenimientos) {
     if (m.estado === 'vencido') rojos.push(`${m.nombre}: ${m.motivo}`)
     else if (m.estado === 'proximo') amarillos.push(`${m.nombre}: ${m.motivo}`)
@@ -140,8 +144,8 @@ export function resumirVehiculo(d: DatosVehiculo, hoy: string = diaClaveAR(new D
     else if (doc.estado === 'proximo') amarillos.push(`${doc.nombre} vence en ${doc.dias} ${doc.dias === 1 ? 'día' : 'días'}`)
   }
   if (d.checklist_activo) {
-    if (chk.estado === 'vencido') rojos.push(`Checklist vencido hace ${Math.abs(chk.venceEn!)} ${Math.abs(chk.venceEn!) === 1 ? 'día' : 'días'}`)
-    else if (chk.estado === 'vence_pronto') amarillos.push(chk.venceEn === 0 ? 'Checklist vence hoy' : `Checklist vence en ${chk.venceEn} ${chk.venceEn === 1 ? 'día' : 'días'}`)
+    if (chk.estado === 'vencido') rojos.push(`Checklist vencido hace ${Math.abs(chk.venceEn)} ${Math.abs(chk.venceEn) === 1 ? 'día' : 'días'}`)
+    else if (chk.estado === 'vence_pronto') amarillos.push(`Toca hacer el checklist (${hastaCuando(chk)})`)
     else if (chk.estado === 'nunca') amarillos.push('Sin checklist todavía')
   }
   const abiertasNoAltas = d.novedades.length - altas
@@ -153,6 +157,7 @@ export function resumirVehiculo(d: DatosVehiculo, hoy: string = diaClaveAR(new D
       ultimoResultado: (ultimo?.resultado as Resultado | undefined) ?? null,
       ultimoAt: ultimo?.created_at ?? null,
     },
+    noApta,
     kmDia,
     mantenimientos,
     documentos,

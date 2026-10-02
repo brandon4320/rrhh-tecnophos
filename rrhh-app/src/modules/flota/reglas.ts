@@ -18,16 +18,19 @@ export interface SlotFoto {
   obligatoria: boolean
 }
 
+// Los lados se nombran por el conductor, no por izquierda/derecha: según desde
+// dónde mire, cada uno entiende otra cosa. En Argentina el conductor va a la
+// izquierda (los ids `_izq`/`_der` siguen valiendo: NO cambiarlos).
 export const FOTOS_CHECKLIST: SlotFoto[] = [
   { slot: 'tablero', label: 'Tablero', ayuda: 'Con el motor en marcha: que se lean los kilómetros y los testigos', obligatoria: true },
-  { slot: 'frente', label: 'Frente', obligatoria: true },
-  { slot: 'trasera', label: 'Trasera', obligatoria: true },
-  { slot: 'lateral_izq', label: 'Lateral izquierdo', obligatoria: true },
-  { slot: 'lateral_der', label: 'Lateral derecho', obligatoria: true },
-  { slot: 'cubierta_di', label: 'Rueda delantera izquierda', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
-  { slot: 'cubierta_dd', label: 'Rueda delantera derecha', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
-  { slot: 'cubierta_ti', label: 'Rueda trasera izquierda', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
-  { slot: 'cubierta_td', label: 'Rueda trasera derecha', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
+  { slot: 'frente', label: 'Frente', ayuda: 'Que se vea la patente', obligatoria: true },
+  { slot: 'trasera', label: 'Trasera', ayuda: 'Que se vea la patente', obligatoria: true },
+  { slot: 'lateral_izq', label: 'Lateral, lado del conductor', obligatoria: true },
+  { slot: 'lateral_der', label: 'Lateral, lado del acompañante', obligatoria: true },
+  { slot: 'cubierta_di', label: 'Rueda delantera, lado del conductor', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
+  { slot: 'cubierta_dd', label: 'Rueda delantera, lado del acompañante', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
+  { slot: 'cubierta_ti', label: 'Rueda trasera, lado del conductor', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
+  { slot: 'cubierta_td', label: 'Rueda trasera, lado del acompañante', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
   { slot: 'auxilio', label: 'Rueda de auxilio', obligatoria: false },
   { slot: 'caja', label: 'Caja de carga', obligatoria: false },
 ]
@@ -209,6 +212,15 @@ export function novedadesDelChecklist(
   }))
 }
 
+/**
+ * Saca las novedades de ítems que ya tienen una novedad ABIERTA en el vehículo:
+ * una falla sin arreglar no abre un pendiente nuevo en cada checklist.
+ */
+export function novedadesNuevas<T extends { item: string }>(propuestas: T[], itemsAbiertos: Iterable<string>): T[] {
+  const abiertos = new Set(itemsAbiertos)
+  return propuestas.filter((n) => !abiertos.has(n.item))
+}
+
 // ── Kilómetros ──────────────────────────────────────────────────────────────
 
 /** Promedio diario máximo creíble para una camioneta de servicio. */
@@ -240,6 +252,14 @@ export function evaluarKm(
   return { inconsistente: false, motivo: null }
 }
 
+/** Sin historial no hay contra qué comparar: más que esto es casi seguro un dígito de más. */
+export const KM_PRIMERA_LECTURA_DUDOSA = 500_000
+
+/** La primera lectura de un vehículo se confirma si es altísima (la siguiente se mide contra ella). */
+export function kmPideConfirmacion(kmNuevo: number, kmAnterior: number | null): boolean {
+  return kmAnterior == null && kmNuevo > KM_PRIMERA_LECTURA_DUDOSA
+}
+
 export interface LecturaKm {
   fecha: string // timestamptz o 'YYYY-MM-DD'
   km: number
@@ -265,29 +285,110 @@ export function kmPorDia(lecturas: LecturaKm[], hoy: string = diaClaveAR(new Dat
 }
 
 // ── Checklist: ¿está al día? ────────────────────────────────────────────────
+//
+// Se cuenta por PERÍODO DE CALENDARIO, no "N días desde el último": el
+// checklist se hace los días 1 y 15. Con `checklist_cada_dias` < 28 los
+// períodos son quincenas (1 al 14 y 15 a fin de mes); con 28 o más, el mes
+// calendario (por si la empresa pasa a mensual). Hecho en cualquier día del
+// período, el período queda cubierto. Los primeros días de cada período sin
+// checklist son de gracia ("toca hacerlo"); después, vencido.
 
 export type EstadoChecklist = 'al_dia' | 'vence_pronto' | 'vencido' | 'nunca'
 
 export const ESTADO_CHECKLIST_LABEL: Record<EstadoChecklist, string> = {
   al_dia: 'Al día',
-  vence_pronto: 'Vence pronto',
+  vence_pronto: 'Toca hacerlo',
   vencido: 'Vencido',
   nunca: 'Sin checklist',
 }
 
-/** Días de anticipación con que se avisa que el checklist está por vencer. */
-export const AVISO_CHECKLIST_DIAS = 2
+/** Días al comienzo de cada período para hacer el checklist antes de que quede vencido. */
+export const GRACIA_CHECKLIST_DIAS = 3
+
+export function checklistMensual(cadaDias: number): boolean {
+  return cadaDias >= 28
+}
+
+/** 'Quincenal (días 1 y 15)' · 'Mensual (día 1)' */
+export function frecuenciaChecklist(cadaDias: number): string {
+  return checklistMensual(cadaDias) ? 'Mensual (día 1)' : 'Quincenal (días 1 y 15)'
+}
+
+export interface PeriodoChecklist {
+  desde: string
+  hasta: string
+  mensual: boolean
+}
+
+/** Período de calendario que contiene un día ('YYYY-MM-DD'). */
+export function periodoChecklist(dia: string, cadaDias: number): PeriodoChecklist {
+  const mes = dia.slice(0, 7)
+  const finDeMes = `${mes}-${String(ultimoDiaDelMes(dia)).padStart(2, '0')}`
+  if (checklistMensual(cadaDias)) return { desde: `${mes}-01`, hasta: finDeMes, mensual: true }
+  return Number(dia.slice(8, 10)) < 15
+    ? { desde: `${mes}-01`, hasta: `${mes}-14`, mensual: false }
+    : { desde: `${mes}-15`, hasta: finDeMes, mensual: false }
+}
+
+/** Último día para hacer el checklist de un período sin que quede vencido. */
+function limiteDelPeriodo(p: PeriodoChecklist): string {
+  return sumarDias(p.desde, GRACIA_CHECKLIST_DIAS - 1)
+}
+
+export interface EstadoChecklistInfo {
+  estado: EstadoChecklist
+  /** Días desde el último checklist (null si nunca se hizo). */
+  diasDesde: number | null
+  /** Período en curso. */
+  periodo: PeriodoChecklist
+  /** Primer día del período siguiente: desde cuándo toca el próximo. */
+  proximo: string
+  /**
+   * Hasta qué día hay tiempo (o desde cuándo está vencido): fin de la gracia del
+   * primer período que quedó sin checklist. null si está al día.
+   */
+  limite: string | null
+  /**
+   * al_dia: días hasta el período siguiente · vence_pronto / nunca: días de
+   * gracia que quedan (0 = hoy es el último; negativo = pasado) · vencido:
+   * negativo, días de atraso desde el límite.
+   */
+  venceEn: number
+}
 
 export function estadoChecklist(
   ultimoAt: string | null,
   cadaDias: number,
   hoy: string = diaClaveAR(new Date())
-): { estado: EstadoChecklist; diasDesde: number | null; venceEn: number | null } {
-  if (!ultimoAt) return { estado: 'nunca', diasDesde: null, venceEn: null }
-  const diasDesde = diasEntre(diaClaveAR(ultimoAt), hoy)
-  const venceEn = cadaDias - diasDesde
-  const estado: EstadoChecklist = venceEn < 0 ? 'vencido' : venceEn <= AVISO_CHECKLIST_DIAS ? 'vence_pronto' : 'al_dia'
-  return { estado, diasDesde, venceEn }
+): EstadoChecklistInfo {
+  const periodo = periodoChecklist(hoy, cadaDias)
+  const proximo = sumarDias(periodo.hasta, 1)
+
+  if (!ultimoAt) {
+    const limite = limiteDelPeriodo(periodo)
+    return { estado: 'nunca', diasDesde: null, periodo, proximo, limite, venceEn: diasEntre(hoy, limite) }
+  }
+
+  const diaUltimo = diaClaveAR(ultimoAt)
+  const diasDesde = diasEntre(diaUltimo, hoy)
+  if (diaUltimo >= periodo.desde) {
+    return { estado: 'al_dia', diasDesde, periodo, proximo, limite: null, venceEn: diasEntre(hoy, proximo) }
+  }
+
+  // El primer período que quedó sin checklist es el siguiente al del último. Si
+  // es el actual, todavía puede estar en la gracia; si es uno anterior (se
+  // saltearon quincenas enteras), está vencido desde entonces.
+  const primeroSinHacer = periodoChecklist(sumarDias(periodoChecklist(diaUltimo, cadaDias).hasta, 1), cadaDias)
+  const limite = limiteDelPeriodo(primeroSinHacer)
+  const venceEn = diasEntre(hoy, limite)
+  return { estado: venceEn >= 0 ? 'vence_pronto' : 'vencido', diasDesde, periodo, proximo, limite, venceEn }
+}
+
+/** 'hasta hoy' · 'hasta mañana' · 'hasta el 03/10': cuánto queda de la gracia del período. */
+export function hastaCuando(chk: Pick<EstadoChecklistInfo, 'venceEn' | 'limite'>): string {
+  if (chk.venceEn === 0) return 'hasta hoy'
+  if (chk.venceEn === 1) return 'hasta mañana'
+  return chk.limite ? `hasta el ${fmtDia(chk.limite)}` : ''
 }
 
 // ── Mantenimiento ───────────────────────────────────────────────────────────
@@ -340,6 +441,20 @@ export function proximoMantenimiento(
     }
   }
   const fechaPorTiempo = plan.cada_meses ? sumarMeses(diaClaveAR(ultimo.fecha), plan.cada_meses) : null
+
+  // Sin km para comparar (falta el del service o el actual) y sin intervalo por
+  // tiempo no hay nada que calcular: decirlo, no mostrarlo "al día".
+  if (kmRestantes == null && fechaPorTiempo == null) {
+    return {
+      estado: 'sin_dato',
+      kmObjetivo,
+      kmRestantes: null,
+      fechaEstimada: null,
+      motivo: kmObjetivo != null
+        ? `A los ${kmObjetivo.toLocaleString('es-AR')} km · falta el km actual del vehículo`
+        : 'Falta el km del último service para calcular el próximo',
+    }
+  }
 
   const candidatas = [fechaPorKm, fechaPorTiempo].filter((f): f is string => !!f)
   const fechaEstimada = candidatas.length ? candidatas.sort()[0] : null
@@ -411,6 +526,11 @@ export function diasEntre(desde: string, hasta: string): number {
 
 export function sumarDias(dia: string, n: number): string {
   return new Date(aUTC(dia) + n * 86_400_000).toISOString().slice(0, 10)
+}
+
+export function ultimoDiaDelMes(dia: string): number {
+  const [y, m] = dia.split('-').map(Number)
+  return new Date(Date.UTC(y, m, 0)).getUTCDate()
 }
 
 export function sumarMeses(dia: string, n: number): string {
