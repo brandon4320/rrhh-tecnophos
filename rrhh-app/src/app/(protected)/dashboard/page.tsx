@@ -1,17 +1,28 @@
 import { createClient } from '@/lib/supabase/server'
 import { getEstadoVencimiento, diasHastaVencimiento } from '@/types'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 import Link from 'next/link'
 import { ChevronRight, ArrowRight } from 'lucide-react'
 import { Monograma } from '@/components/ui/monograma'
 import { EstadoBadgeSuave } from '@/components/ui/estado-pill'
 import { SegmentedLocal } from '@/components/ui/segmented-local'
+import { TZ_AR } from '@/lib/fechas-ar'
+import {
+  ALERTA_DIAS_MAX, VENTANA_ALERTA_HABITUAL, empresaDeCertificado, fechaMasDias, hrefCertificado, titularCertificado,
+  unirPorId,
+} from '@/lib/vencimientos'
 
-// Cota gruesa: un certificado que vence a más de un año no puede estar vencido
-// ni "próximo" (alerta_dias real máx. 30; 365+1 de holgura por TZ y margen).
-// Es solo un filtro de payload — el estado exacto lo decide getEstadoVencimiento.
-const MAX_ALERTA_DIAS = 365
+/** Casos por lista en "Vencimientos prioritarios" (el resto, en /vencimientos). */
+const CASOS_VISIBLES = 15
+
+const CERT_COLUMNAS = `
+  id, fecha_vencimiento, alerta_dias, tipo_nombre_custom,
+  tipo:tipos_certificado(nombre),
+  empleado:empleados(id, nombre, apellido, activo, empresa_id, empresa:empresas(id, nombre, slug)),
+  vehiculo:vehiculos(id, patente, empresa_id, empresa:empresas(id, nombre, slug)),
+  equipo:equipos(id, nombre, empresa_id, empresa:empresas(id, nombre, slug)),
+  empresa:empresas(id, nombre, slug)
+`
 
 export default async function DashboardPage({
   searchParams,
@@ -21,22 +32,25 @@ export default async function DashboardPage({
   const sp = await searchParams
   const supabase = await createClient()
 
-  const horizonte = new Date(Date.now() + (MAX_ALERTA_DIAS + 1) * 86400000).toISOString().slice(0, 10)
-
-  const [{ data: certs }, { data: empresas }, { data: empleados }, { count: certsSinEmpleado }, { count: certsEmpleadosActivos }] = await Promise.all([
+  // Cota gruesa del fetch (el estado exacto lo decide getEstadoVencimiento):
+  // vencido = fecha < hoy, por vencer = dentro de SU alerta_dias. Todas las
+  // alertas hoy son de 30 días, así que alcanza con lo que vence hasta hoy + 31
+  // (+1 de holgura); los certificados con una alerta más larga (si alguien la
+  // carga) se traen aparte hasta el máximo que admite el formulario. Antes se
+  // traía un año entero de certificados para quedarse con un mes.
+  const [{ data: certsMes }, { data: certsAlertaLarga }, { data: empresas }, { data: empleados }, { count: certsSinEmpleado }, { count: certsEmpleadosActivos }] = await Promise.all([
     supabase
       .from('certificados')
-      .select(`
-        id, fecha_vencimiento, alerta_dias, tipo_nombre_custom,
-        tipo:tipos_certificado(nombre),
-        empleado:empleados(id, nombre, apellido, activo, empresa_id, empresa:empresas(id, nombre, slug)),
-        vehiculo:vehiculos(patente, empresa_id, empresa:empresas(id, nombre, slug)),
-        equipo:equipos(nombre, empresa_id, empresa:empresas(id, nombre, slug)),
-        empresa:empresas(id, nombre, slug)
-      `)
+      .select(CERT_COLUMNAS)
       .not('fecha_vencimiento', 'is', null)
-      .lte('fecha_vencimiento', horizonte)
+      .lte('fecha_vencimiento', fechaMasDias(VENTANA_ALERTA_HABITUAL + 1))
       .order('fecha_vencimiento', { ascending: true }),
+    supabase
+      .from('certificados')
+      .select(CERT_COLUMNAS)
+      .not('fecha_vencimiento', 'is', null)
+      .gt('alerta_dias', VENTANA_ALERTA_HABITUAL)
+      .lte('fecha_vencimiento', fechaMasDias(ALERTA_DIAS_MAX + 1)),
     supabase.from('empresas').select('id, nombre, slug').order('nombre'),
     supabase.from('empleados').select('id, empresa_id').eq('activo', true),
     // Total real de certificados con fecha (sin traer filas): los que no son de
@@ -53,9 +67,11 @@ export default async function DashboardPage({
       .eq('empleados.activo', true),
   ])
 
-  const hoy = new Date()
+  const certs = unirPorId(certsMes ?? [], certsAlertaLarga ?? []).sort((a, b) =>
+    (a.fecha_vencimiento ?? '').localeCompare(b.fecha_vencimiento ?? '')
+  )
 
-  const conEstado = (certs ?? [])
+  const conEstado = certs
     // El borrado de empleados es lógico (activo=false): sus certificados
     // quedan en la base pero no deben contar ni listarse acá.
     .filter((c) => !c.empleado || c.empleado.activo !== false)
@@ -65,7 +81,7 @@ export default async function DashboardPage({
     }))
   const vencidos = conEstado.filter((c) => c.estado === 'vencido')
   const proximos = conEstado.filter((c) => c.estado === 'proximo')
-  // El fetch está acotado a un año: el total con fecha sale de los counts.
+  // El fetch está acotado: el total con fecha sale de los counts.
   const totalConFecha = (certsSinEmpleado ?? 0) + (certsEmpleadosActivos ?? 0)
   const alDia = totalConFecha - vencidos.length - proximos.length
   const total = Math.max(1, totalConFecha)
@@ -88,35 +104,18 @@ export default async function DashboardPage({
     }
   })
 
-  function duenoDe(c: (typeof conEstado)[number]) {
-    if (c.empleado) {
-      return {
-        nombre: [c.empleado.nombre, c.empleado.apellido].filter(Boolean).join(' '),
-        href: `/legajo/${c.empleado.id}`,
-      }
-    }
-    if (c.vehiculo) {
-      return {
-        nombre: `Vehículo ${c.vehiculo.patente}`,
-        href: c.vehiculo.empresa?.slug ? `/empresa/${c.vehiculo.empresa.slug}?vista=documentacion` : '/vencimientos',
-      }
-    }
-    if (c.equipo) {
-      return {
-        nombre: c.equipo.nombre,
-        href: c.equipo.empresa?.slug ? `/empresa/${c.equipo.empresa.slug}?vista=documentacion` : '/vencimientos',
-      }
-    }
-    return {
-      nombre: c.empresa?.nombre ?? '—',
-      href: c.empresa?.slug ? `/empresa/${c.empresa.slug}?vista=documentacion` : '/vencimientos',
-    }
-  }
+  // Fecha del encabezado en hora AR (Vercel corre en UTC: desde las 21 ya era mañana).
+  const hoyTexto = new Intl.DateTimeFormat('es-AR', {
+    timeZone: TZ_AR, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  }).format(new Date()).replace(',', '')
+  // Solo la primera letra (la clase `capitalize` dejaba "Jueves 2 De Octubre De 2026").
+  const hoyLargo = hoyTexto.charAt(0).toUpperCase() + hoyTexto.slice(1)
 
   // Los 3 tabs viajan en el mismo payload (SegmentedLocal): cambiar de tab no
-  // vuelve al server. Cada lista muestra hasta 6 casos + su propio pie.
-  function listaAlertas(alertas: typeof conEstado) {
-    const visibles = alertas.slice(0, 6)
+  // vuelve al server. Cada lista muestra hasta CASOS_VISIBLES y su "Ver todos"
+  // abre /vencimientos en la MISMA vista.
+  function listaAlertas(alertas: typeof conEstado, hrefVerTodos: string) {
+    const visibles = alertas.slice(0, CASOS_VISIBLES)
     return (
       <>
         <div className="mt-4 space-y-2">
@@ -127,7 +126,8 @@ export default async function DashboardPage({
           )}
           {visibles.map((c) => {
             const dias = diasHastaVencimiento(c.fecha_vencimiento!)
-            const dueno = duenoDe(c)
+            const titular = titularCertificado(c)
+            const empresaNombre = empresaDeCertificado(c).nombre
             const label =
               dias < 0
                 ? `Venció hace ${Math.abs(dias)} ${Math.abs(dias) === 1 ? 'día' : 'días'}`
@@ -137,14 +137,14 @@ export default async function DashboardPage({
             return (
               <Link
                 key={c.id}
-                href={dueno.href}
+                href={hrefCertificado(c) ?? hrefVerTodos}
                 className="flex items-center gap-4 rounded-xl border border-border px-4 py-3 transition-colors hover:bg-muted/50"
               >
-                <Monograma nombre={dueno.nombre} size="md" />
+                <Monograma nombre={titular} size="md" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{dueno.nombre}</p>
+                  <p className="truncate text-sm font-medium">{titular}</p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {c.tipo?.nombre ?? c.tipo_nombre_custom ?? 'Certificado'}
+                    {[c.tipo?.nombre ?? c.tipo_nombre_custom ?? 'Certificado', empresaNombre].filter(Boolean).join(' · ')}
                   </p>
                 </div>
                 <EstadoBadgeSuave estado={c.estado} label={label} className="shrink-0" />
@@ -163,7 +163,7 @@ export default async function DashboardPage({
               {visibles.length} {visibles.length === 1 ? 'caso visible' : 'casos visibles'} de {alertas.length} alertas
             </p>
             <Link
-              href="/vencimientos"
+              href={hrefVerTodos}
               className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               Ver todos
@@ -174,13 +174,13 @@ export default async function DashboardPage({
     )
   }
 
+  const kpiLink = 'block rounded-xl px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/60'
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="mt-0.5 text-sm capitalize text-muted-foreground">
-          {format(hoy, "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}
-        </p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{hoyLargo}</p>
       </div>
 
       {/* ── Estado general + Atención ── */}
@@ -191,27 +191,35 @@ export default async function DashboardPage({
 
           <div className="mt-5 grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:divide-x sm:divide-border">
             <div className="sm:pr-6">
-              <p className="text-3xl font-semibold tabular-nums">{empleados?.length ?? 0}</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">Empleados</p>
+              <Link href="/empleados" className={kpiLink}>
+                <p className="text-3xl font-semibold tabular-nums">{empleados?.length ?? 0}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">Empleados</p>
+              </Link>
             </div>
             <div className="sm:px-6">
-              <p className={`text-3xl font-semibold tabular-nums ${vencidos.length > 0 ? 'text-danger' : ''}`}>
-                {vencidos.length}
-              </p>
-              <p className="mt-0.5 text-sm text-muted-foreground">Vencidos</p>
-              <p className="text-xs text-muted-foreground">requieren acción</p>
+              <Link href="/vencimientos?estado=vencido" className={kpiLink}>
+                <p className={`text-3xl font-semibold tabular-nums ${vencidos.length > 0 ? 'text-danger' : ''}`}>
+                  {vencidos.length}
+                </p>
+                <p className="mt-0.5 text-sm text-muted-foreground">Vencidos</p>
+                <p className="text-xs text-muted-foreground">requieren acción</p>
+              </Link>
             </div>
             <div className="sm:px-6">
-              <p className={`text-3xl font-semibold tabular-nums ${proximos.length > 0 ? 'text-warning' : ''}`}>
-                {proximos.length}
-              </p>
-              <p className="mt-0.5 text-sm text-muted-foreground">Por vencer</p>
-              <p className="text-xs text-muted-foreground">en su ventana de alerta</p>
+              <Link href="/vencimientos?estado=proximo" className={kpiLink}>
+                <p className={`text-3xl font-semibold tabular-nums ${proximos.length > 0 ? 'text-warning' : ''}`}>
+                  {proximos.length}
+                </p>
+                <p className="mt-0.5 text-sm text-muted-foreground">Por vencer</p>
+                <p className="text-xs text-muted-foreground">en su ventana de alerta</p>
+              </Link>
             </div>
             <div className="sm:pl-6">
-              <p className="text-3xl font-semibold tabular-nums text-success">{alDia}</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">Al día</p>
-              <p className="text-xs text-muted-foreground">documentación vigente</p>
+              <Link href="/vencimientos?estado=vigente" className={kpiLink}>
+                <p className="text-3xl font-semibold tabular-nums text-success">{alDia}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">Al día</p>
+                <p className="text-xs text-muted-foreground">documentación vigente</p>
+              </Link>
             </div>
           </div>
 
@@ -281,9 +289,9 @@ export default async function DashboardPage({
             className="mt-4"
             inicial={tab}
             tabs={[
-              { key: 'todos', label: 'Todos', content: listaAlertas([...vencidos, ...proximos]) },
-              { key: 'vencidos', label: 'Vencidos', content: listaAlertas(vencidos) },
-              { key: 'proximos', label: 'Próximos', content: listaAlertas(proximos) },
+              { key: 'todos', label: 'Todos', content: listaAlertas([...vencidos, ...proximos], '/vencimientos') },
+              { key: 'vencidos', label: 'Vencidos', content: listaAlertas(vencidos, '/vencimientos?estado=vencido') },
+              { key: 'proximos', label: 'Próximos', content: listaAlertas(proximos, '/vencimientos?estado=proximo') },
             ]}
           />
         </div>
@@ -302,24 +310,29 @@ export default async function DashboardPage({
               </div>
               <div className="divide-y divide-border">
                 {byEmpresa.map((emp) => (
-                  <Link
-                    key={emp.id}
-                    href={`/empresa/${emp.slug}`}
-                    className="grid grid-cols-[1fr_44px_44px] items-center gap-2 py-2.5 transition-colors hover:bg-muted/40"
-                  >
-                    <span className="min-w-0">
+                  <div key={emp.id} className="grid grid-cols-[1fr_44px_44px] items-center gap-2 py-1.5">
+                    <Link href={`/empresa/${emp.slug}`} className="min-w-0 rounded-lg px-1 py-1 -mx-1 transition-colors hover:bg-muted/40">
                       <span className="block truncate text-sm font-medium">{emp.nombre}</span>
                       <span className="block text-[11px] text-muted-foreground">
                         {emp.total} {emp.total === 1 ? 'empleado' : 'empleados'}
                       </span>
-                    </span>
-                    <span className={`text-right text-sm font-semibold tabular-nums ${emp.vencidos > 0 ? 'text-danger' : 'text-muted-foreground/50'}`}>
+                    </Link>
+                    {/* Cada número abre los vencimientos de ESA empresa en ese estado. */}
+                    <Link
+                      href={`/vencimientos?empresa=${emp.slug}&estado=vencido`}
+                      title={`Vencidos de ${emp.nombre}`}
+                      className={`rounded-lg py-1.5 text-right text-sm font-semibold tabular-nums transition-colors hover:bg-muted/60 ${emp.vencidos > 0 ? 'text-danger' : 'text-muted-foreground/50'}`}
+                    >
                       {emp.vencidos}
-                    </span>
-                    <span className={`text-right text-sm font-semibold tabular-nums ${emp.proximos > 0 ? 'text-warning' : 'text-muted-foreground/50'}`}>
+                    </Link>
+                    <Link
+                      href={`/vencimientos?empresa=${emp.slug}&estado=proximo`}
+                      title={`Por vencer de ${emp.nombre}`}
+                      className={`rounded-lg py-1.5 text-right text-sm font-semibold tabular-nums transition-colors hover:bg-muted/60 ${emp.proximos > 0 ? 'text-warning' : 'text-muted-foreground/50'}`}
+                    >
                       {emp.proximos}
-                    </span>
-                  </Link>
+                    </Link>
+                  </div>
                 ))}
               </div>
             </div>
@@ -332,11 +345,11 @@ export default async function DashboardPage({
 
             <div className="mt-4 space-y-4">
               {[
-                { label: 'Al día', count: alDia, color: 'bg-success' },
-                { label: 'Por vencer', count: proximos.length, color: 'bg-warning' },
-                { label: 'Vencidos', count: vencidos.length, color: 'bg-danger' },
+                { label: 'Al día', count: alDia, color: 'bg-success', href: '/vencimientos?estado=vigente' },
+                { label: 'Por vencer', count: proximos.length, color: 'bg-warning', href: '/vencimientos?estado=proximo' },
+                { label: 'Vencidos', count: vencidos.length, color: 'bg-danger', href: '/vencimientos?estado=vencido' },
               ].map((f) => (
-                <div key={f.label}>
+                <Link key={f.label} href={f.href} className="block rounded-lg transition-opacity hover:opacity-80">
                   <div className="mb-1.5 flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">{f.label}</span>
                     <span className="text-sm font-semibold tabular-nums">{f.count}</span>
@@ -344,7 +357,7 @@ export default async function DashboardPage({
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                     <div className={`h-full rounded-full ${f.color}`} style={{ width: `${(f.count / total) * 100}%` }} />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
