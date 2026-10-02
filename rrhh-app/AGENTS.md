@@ -189,13 +189,24 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   local + `router.refresh()`; `stock/page.tsx` remonta el client con `key={empresa.id}`.
   Migración 18: FK compuesta `(item_id, empresa_id) → stock_items` (el `empresa_id` denormalizado
   no puede apuntar a un ítem de otra empresa).
-  **Organización de la vista (2026-09-15)**: la mitad del catálogo son talles de una misma prenda
-  ("Camisa ADC T 36"… "T 54"), así que la lista se agrupa **categoría → familia → ítem**
-  (`agruparCatalogo`/`partirVariante`, con tests). Las familias se **rotulan, nunca se fusionan**:
-  cada fila sigue siendo un ítem con su id, porque el ajuste por conteo escribe la diferencia
-  contra el stock de UN ítem — una fila-familia con stock sumado escribiría basura. Regla dura:
-  `abrirMovimiento` solo con un id real. Ojo: `calcularStock` recibe SIEMPRE el catálogo completo
-  (si se alimenta con la lista filtrada, los ítems ocultos pierden su stock).
+  **Organización de la vista (2026-10-02)**: la mitad del catálogo son talles de una misma prenda
+  ("Camisa ADC T 36"… "T 54"), así que la ropa se muestra como **matriz prenda × talle** (una fila
+  por prenda, una columna por talle, una matriz por sistema letras/números) y el resto como tabla
+  plana `Ítem | Stock | Último movimiento` ordenada rojo → naranja → alfabético
+  (`agruparPrendas`/`matricesDePrendas`/`ordenarPorUrgencia`, con tests). La categoría es un filtro
+  (chips, ocultos si hay una sola). Un talle sin marcador "T" ("BOTINES SEGURIDAD 39") agrupa solo
+  si 3+ ítems comparten la base normalizada (sin acentos ni "de"). Las prendas se **rotulan,
+  nunca se fusionan**: cada celda es un ítem con su id, porque el ajuste por conteo escribe la
+  diferencia contra el stock de UN ítem — una fila-prenda con stock sumado escribiría basura.
+  Regla dura: `abrirMovimiento` solo con un id real. Ojo: `calcularStock` recibe SIEMPRE el
+  catálogo completo (si se alimenta con la lista filtrada, los ítems ocultos pierden su stock).
+  **Uso real**: casi todo son ENTREGAS de EPP/ropa a empleados (en pantalla consumo = "Entrega",
+  compra = "Ingreso"). "Registrar entrega" es la acción principal y es de varias líneas (encabezado
+  "Entregado a" + fecha, N líneas ítem + cantidad) guardadas en UN insert; el destinatario va en
+  `notas` (no hay vínculo con empleados). La pestaña **Movimientos** (`?tab=movimientos`) lista el
+  libro entero con filtros y busca también en las notas. `router.refresh()` va UNA vez al cerrar el
+  panel de movimientos, no por línea (la pantalla vive de su estado local; el refresh es para la
+  caché `staleTimes`).
   El estado `sin_fecha` se rotula **"En cero"**, no "Sin alerta": solo ocurre con stock ≤ 0 y sin
   mínimo, o sea que la fila está vacía aunque nadie pidió que avise (y no entra en "hay que
   comprar", por eso se cuenta aparte en el KPI "Sin stock").
