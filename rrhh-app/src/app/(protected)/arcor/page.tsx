@@ -7,25 +7,42 @@ import { AlertaCard } from '@/components/arcor/AlertaCard'
 import { ListaEventos } from '@/components/arcor/ListaEventos'
 import { ProvinciasBarras } from '@/components/arcor/ProvinciasBarras'
 import { AccionesArcor } from '@/components/arcor/AccionesArcor'
+import { AutoRefresh } from '@/components/arcor/AutoRefresh'
 import { ENLACES_ARCOR } from '@/modules/arcor/enlaces'
-import { getAlertasAbiertas, getEstados, getEventos, getResumenMes, getRevisarPendientes } from '@/modules/arcor/queries'
-import { alertaSilencio, evaluarSilencio, labelOrigen, mesActual, mesAnterior, nivelCredito, severidadAEstado } from '@/modules/arcor/reglas'
+import { getAlertasAbiertas, getColasAbiertas, getEstados, getEventos, getResumenConAnterior } from '@/modules/arcor/queries'
+import {
+  alertaSilencio, diasDelMes, evaluarSilencio, labelOrigen, mesActual, nivelCredito, severidadAEstado,
+  type ColaAbierta,
+} from '@/modules/arcor/reglas'
 import type { EstadoClaude, EstadoHeartbeat, EstadoPublicaciones, EstadoWhatsapp } from '@/modules/arcor/tipos'
-import { fmtFechaHoraAR, fmtFechaLargaAR, tiempoRelativo } from '@/lib/fechas-ar'
+import { diaClaveAR, fmtFechaAR, fmtFechaHoraAR, fmtFechaLargaAR, tiempoRelativo } from '@/lib/fechas-ar'
 
 export const dynamic = 'force-dynamic'
+
+/** "19 de meses anteriores · el más viejo del 05/09" (null si no hay arrastre). */
+function arrastre(c: ColaAbierta): string | null {
+  if (c.anteriores === 0) return null
+  return `${c.anteriores} de meses anteriores${c.masViejo ? ` · el más viejo del ${fmtFechaAR(c.masViejo)}` : ''}`
+}
 
 export default async function ArcorResumenPage() {
   const ahora = new Date()
   const mes = mesActual(ahora)
-  const [estados, abiertas, resumen, resumenPrevio, recientes, dudosas] = await Promise.all([
+  const dia = Number(diaClaveAR(ahora).slice(8, 10))
+  const [estados, abiertas, comparacion, recientes, colas] = await Promise.all([
     getEstados(),
     getAlertasAbiertas(),
-    getResumenMes(mes),
-    getResumenMes(mesAnterior(mes)),
-    getEventos({ limit: 10 }),
-    getRevisarPendientes(),
+    getResumenConAnterior(mes, dia),
+    getEventos({ limit: 10, sinRuido: true }),
+    getColasAbiertas(mes),
   ])
+  const resumen = comparacion.actual
+  const previo = comparacion.previo
+  // Pendiente ARCOR y Revisar foto cuentan TODOS los meses: son colas de trabajo, no
+  // estadística del mes (un pendiente del 30/09 sigue esperando el 1/10). El tile de
+  // Revisar foto y el botón "Revisar dudosas" muestran el mismo número.
+  const pendientes = colas.pendiente_arcor
+  const dudosas = colas.revisar_foto
 
   const wa = estados.whatsapp?.valor as EstadoWhatsapp | undefined
   const claude = estados.claude?.valor as EstadoClaude | undefined
@@ -41,7 +58,14 @@ export default async function ArcorResumenPage() {
   const todasAbiertas = sintetica ? [sintetica, ...abiertas] : abiertas
 
   const mesHref = `/arcor/contenedores?mes=${encodeURIComponent(mes)}`
-  const diff = resumen.total - resumenPrevio.total
+  const pendientesHref = '/arcor/contenedores?mes=todos&estado=pendiente_arcor'
+  // Comparación justa: el mes en curso contra el anterior HASTA EL MISMO DÍA (el 2/10,
+  // 3 contra los 158 de septiembre entero era "-155" sin sentido).
+  const nombrePrevio = previo.mes.split(' ')[0].toLowerCase()
+  const mesPrevioCompleto = dia >= diasDelMes(previo.mes)
+  const diff = resumen.total - previo.hastaDia
+  const vencidasPub = pub?.vencidas?.length ?? 0
+  const revisarPub = pub?.revisar?.length ?? 0
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
@@ -52,8 +76,11 @@ export default async function ArcorResumenPage() {
             Certificados de fumigación de contenedores · <span className="capitalize">{fmtFechaLargaAR(ahora.toISOString())}</span>
           </p>
         </div>
-        {/* Las dudosas de TODOS los meses: la galería no distingue mes (ver getRevisarPendientes) */}
-        <AccionesArcor revisar={dudosas} />
+        <div className="flex flex-wrap items-center gap-2">
+          <AutoRefresh generado={ahora.toISOString()} />
+          {/* Las dudosas de TODOS los meses: la galería no distingue mes */}
+          <AccionesArcor revisar={dudosas.total} />
+        </div>
       </div>
 
       {/* ── Estado del sistema ── */}
@@ -107,10 +134,18 @@ export default async function ArcorResumenPage() {
           <TileEstado
             className="sm:pl-6"
             label="Publicaciones Colabora"
-            estado={!pub ? 'sin_fecha' : pub.vencidas?.length ? 'proximo' : 'vigente'}
-            pill={!pub ? 'Sin datos' : pub.vencidas?.length ? `${pub.vencidas.length} vencidas` : 'Al día'}
+            estado={!pub ? 'sin_fecha' : vencidasPub ? 'proximo' : 'vigente'}
+            pill={!pub ? 'Sin datos' : vencidasPub ? `${vencidasPub} vencidas` : 'Al día'}
             valor={pub ? pub.pendientes : '—'}
-            sub={pub ? `en cola · ${pub.revisar?.length ?? 0} para revisar` : 'Todavía no reportó'}
+            sub={pub ? `en cola · ${revisarPub} para revisar` : 'Todavía no reportó'}
+            extra={
+              vencidasPub || revisarPub ? (
+                <Link href="/arcor/alertas#publicaciones" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+                  {vencidasPub ? `Ver ${vencidasPub === 1 ? 'la vencida' : `las ${vencidasPub} vencidas`}` : 'Ver cuáles'}
+                  <ArrowRight className="size-3" strokeWidth={1.75} />
+                </Link>
+              ) : undefined
+            }
           />
         </div>
       </section>
@@ -121,7 +156,9 @@ export default async function ArcorResumenPage() {
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
               <h2 className="text-lg font-semibold tracking-tight">Contenedores · <span className="capitalize">{mes.toLowerCase()}</span></h2>
-              <p className="text-sm text-muted-foreground">Certificados con fecha en el mes (misma regla que la pestaña del Sheets)</p>
+              <p className="text-sm text-muted-foreground">
+                Certificados con fecha en el mes (misma regla que la pestaña del Sheets). Pendientes y dudosas: de todos los meses.
+              </p>
             </div>
             <Link href={mesHref} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
               Ver tabla <ArrowRight className="size-3.5" strokeWidth={1.75} />
@@ -133,25 +170,32 @@ export default async function ArcorResumenPage() {
               <p className="text-3xl font-semibold tabular-nums">{resumen.total}</p>
               <p className="mt-0.5 text-sm text-muted-foreground">Total del mes</p>
               <p className="text-xs text-muted-foreground">
-                {resumenPrevio.total} el mes pasado{diff !== 0 && ` (${diff > 0 ? '+' : ''}${diff})`}
+                {mesPrevioCompleto
+                  ? `${previo.hastaDia} en todo ${nombrePrevio}`
+                  : `${previo.hastaDia} al ${dia} de ${nombrePrevio}`}
+                {diff !== 0 && ` (${diff > 0 ? '+' : ''}${diff})`}
               </p>
+              {!mesPrevioCompleto && (
+                <p className="text-xs text-muted-foreground">{nombrePrevio.charAt(0).toUpperCase() + nombrePrevio.slice(1)} cerró con {previo.total}</p>
+              )}
             </div>
             <div className="sm:px-6">
               <p className="text-3xl font-semibold tabular-nums">{resumen.encontrados}</p>
               <p className="mt-0.5 text-sm text-muted-foreground">Cargados</p>
               <p className="text-xs text-muted-foreground">{resumen.publicados} publicados en Colabora</p>
             </div>
-            <Link href={`${mesHref}&estado=pendiente_arcor`} className="group sm:px-6">
-              <p className={`text-3xl font-semibold tabular-nums ${resumen.pendientes > 0 ? 'text-warning' : ''}`}>{resumen.pendientes}</p>
+            <Link href={pendientesHref} className="group sm:px-6">
+              <p className={`text-3xl font-semibold tabular-nums ${pendientes.total > 0 ? 'text-warning' : ''}`}>{pendientes.total}</p>
               <p className="mt-0.5 text-sm text-muted-foreground group-hover:text-foreground">Pendiente ARCOR</p>
-              <p className="text-xs text-muted-foreground">esperan carga en Colabora</p>
+              <p className="text-xs text-muted-foreground">{arrastre(pendientes) ?? 'esperan carga en Colabora'}</p>
             </Link>
             {/* Las dudosas se resuelven en la galería del sistema ARCOR: el tile abre ese formulario. */}
             <a href={ENLACES_ARCOR.revisar} target="_blank" rel="noopener noreferrer" className="group sm:pl-6">
-              <p className={`text-3xl font-semibold tabular-nums ${resumen.revisar > 0 ? 'text-danger' : ''}`}>{resumen.revisar}</p>
+              <p className={`text-3xl font-semibold tabular-nums ${dudosas.total > 0 ? 'text-danger' : ''}`}>{dudosas.total}</p>
               <p className="mt-0.5 text-sm text-muted-foreground group-hover:text-foreground">Revisar foto</p>
+              {arrastre(dudosas) && <p className="text-xs text-muted-foreground">{arrastre(dudosas)}</p>}
               <p className="text-xs text-muted-foreground">
-                {resumen.revisar > 0 ? 'resolver en la galería ↗' : 'requieren una persona'}
+                {dudosas.total > 0 ? 'resolver en la galería ↗' : 'requieren una persona'}
               </p>
             </a>
           </div>

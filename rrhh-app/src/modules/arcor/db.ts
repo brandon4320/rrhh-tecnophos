@@ -26,3 +26,9 @@ export function rows<T>(res: { data: unknown; error: { message: string } | null 
   if (res.error) throw new Error(`No se pudo leer el módulo ARCOR: ${res.error.message}`)
   return (res.data as T[] | null) ?? []
 }
+
+/** Conteo de una consulta `{ count: 'exact', head: true }`, o excepción si falló (mismo criterio que rows). */
+export function contar(res: { count: number | null; error: { message: string } | null }): number {
+  if (res.error) throw new Error(`No se pudo leer el módulo ARCOR: ${res.error.message}`)
+  return res.count ?? 0
+}
