@@ -240,10 +240,26 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   - **El contenido del checklist vive en código** (`modules/flota/reglas.ts`: `FOTOS_CHECKLIST`,
     `SECCIONES_CHECKLIST`, con tests). Sumar o sacar un ítem es editar la lista; las respuestas se
     guardan por id, así que **no le cambies el id a un ítem existente**. "Mal" en un ítem `critico`
-    deja la camioneta como **no apta** y avisa al instante.
+    abre una novedad grave y avisa al instante. **"No apta" = tiene novedades graves ABIERTAS**
+    (`resumen.ts::noApta`), no "el último checklist dio no apto": se limpia cuando la oficina las
+    resuelve. Un ítem que ya tiene una novedad abierta no abre otra en el checklist siguiente.
+  - **Vencimiento por período de calendario** (`estadoChecklist`, con tests), no "N días desde el
+    último": con `checklist_cada_dias` < 28 los períodos son quincenas (1–14 y 15–fin de mes); con
+    ≥ 28, el mes. Hecho en cualquier día del período, queda al día; los primeros
+    `GRACIA_CHECKLIST_DIAS` (3) de un período sin checklist son "Toca hacerlo" (`vence_pronto`) y
+    después "Vencido". Si se salteó un período entero, está vencido aunque el nuevo esté en gracia.
+  - **Envío idempotente**: el celular genera un `envioId` (uuid) al empezar el borrador y el server
+    lo usa como `id` del checklist / novedad; un reintento con el mismo id (la respuesta se perdió
+    por la señal) devuelve lo ya guardado sin duplicar novedades ni avisos. El borrador vive en
+    `localStorage` con modo/paso (se retoma si la cámara mata la pestaña) y se descarta a las 12 h o
+    al cambiar de período; el server solo acepta fotos del mes actual o el anterior. Las fotos se
+    suben de fondo con timeout y reintentos (el blob queda en memoria): se puede avanzar y solo
+    Enviar espera a que estén todas arriba.
   - Un km que no cuadra (menor al último, o un salto imposible) **se guarda igual** marcado
     `km_inconsistente`, no pisa `vehiculos.km_actual` y abre una novedad "Revisar el kilometraje":
-    quien está en la camioneta no puede corregir el pasado.
+    quien está en la camioneta no puede corregir el pasado. El formulario avisa con la MISMA regla
+    (`evaluarKm`) y pide confirmar una primera lectura > 500.000 km. Un service cargado en Gestión
+    que sube el km pone `km_actualizado_at` = fecha del service, no "ahora".
   - Fotos: se comprimen en el celular (1600 px, JPEG) y suben por el server, así que **no dependen
     del CORS de R2**. Viven en `flota/<vehiculo_id>/<mes>/…` y `/api/archivo` las autoriza por la
     visibilidad del vehículo. `flota` es slug de empresa reservado.
