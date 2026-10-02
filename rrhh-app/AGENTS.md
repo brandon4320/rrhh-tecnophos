@@ -240,7 +240,10 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
     `/api/cron/flota`, firmado con `CRON_SECRET`. Arma el resumen del día por empresa
     (`mensajeResumenDiario`, la misma cuenta que ve `/flota`) y lo manda por WhatsApp
     (`lib/whatsapp.ts`, WAHA). **Sin las variables `WHATSAPP_WAHA_*` no se manda nada**: el aviso
-    queda registrado como "sin canal" y se ve en la pantalla de flota.
+    queda registrado como "sin canal" en `flota_avisos`. **Por decisión de Brandon (02/10/2026) el
+    WhatsApp queda "en desarrollo"**: `/flota` muestra un cartel en vez de la gestión de encargados
+    (`EncargadosClient.tsx` existe pero no se usa). Para habilitarlo: decidir el número, cargar las
+    variables y volver a montar `EncargadosClient` en `flota/page.tsx`.
   - Pantallas: `/flota?empresa=slug` (semáforo por vehículo + encargados + avisos),
     `/flota/<id>` (ficha: checklists con fotos y comparación con el anterior, novedades,
     mantenimiento, datos, QR y rotación del token) y `/flota/qr` (hoja imprimible, 4 por A4).

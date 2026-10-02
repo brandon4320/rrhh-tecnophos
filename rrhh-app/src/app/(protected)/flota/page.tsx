@@ -1,15 +1,11 @@
 import Link from 'next/link'
 import { ChevronRight, MessageCircle, Printer } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getSesion } from '@/lib/auth/session'
-import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
-import { hayCanalWhatsApp } from '@/lib/whatsapp'
 import { EstadoPill } from '@/components/ui/estado-pill'
 import { cargarFlota } from '@/modules/flota/queries'
 import { resumirVehiculo, type Semaforo } from '@/modules/flota/resumen'
 import { ESTADO_CHECKLIST_LABEL } from '@/modules/flota/reglas'
 import type { EstadoVencimiento } from '@/types'
-import EncargadosClient from './EncargadosClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,10 +24,7 @@ const CHECKLIST_PILL = { al_dia: 'vigente', vence_pronto: 'proximo', vencido: 'v
 export default async function FlotaPage({ searchParams }: { searchParams: Promise<{ empresa?: string }> }) {
   const { empresa } = await searchParams
   const supabase = await createClient()
-  const [{ data: empresas }, sesion] = await Promise.all([
-    supabase.from('empresas').select('id, nombre, slug').order('nombre'),
-    getSesion(),
-  ])
+  const { data: empresas } = await supabase.from('empresas').select('id, nombre, slug').order('nombre')
   const lista = empresas ?? []
   // Quien ve una sola empresa (acceso limitado a una sede) cae directo en la suya.
   const empresaSel = (empresa ? lista.find((e) => e.slug === empresa) : undefined) ?? (lista.length === 1 ? lista[0] : undefined)
@@ -52,15 +45,6 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
     )
   }
 
-  const [{ data: encargados }, { data: avisos }] = await Promise.all([
-    todas
-      ? supabase.from('flota_encargados').select('id, empresa_id, nombre, telefono, activo').eq('activo', true)
-      : supabase.from('flota_encargados').select('id, empresa_id, nombre, telefono, activo').eq('empresa_id', empresaSel.id).order('nombre'),
-    todas
-      ? Promise.resolve({ data: [] as { id: string; tipo: string; estado: string; mensaje: string; destinatarios: number; error: string | null; created_at: string }[] })
-      : supabase.from('flota_avisos').select('id, tipo, estado, mensaje, destinatarios, error, created_at').eq('empresa_id', empresaSel.id).order('created_at', { ascending: false }).limit(15),
-  ])
-
   const filas = flota
     .map((v) => ({ v, r: resumirVehiculo(v), empresa: nombreEmpresa.get(v.empresa_id) }))
     .sort((a, b) =>
@@ -70,20 +54,6 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
     )
 
   const cuenta = (s: Semaforo) => filas.filter((f) => f.r.semaforo === s).length
-  const canEdit = tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)
-
-  // Con todas: cuántos vehículos y cuántos encargados tiene cada empresa, para ver
-  // de un vistazo cuál todavía no tiene a quién avisarle.
-  const porEmpresa = todas
-    ? lista
-        .map((e) => ({
-          ...e,
-          vehiculos: flota.filter((v) => v.empresa_id === e.id).length,
-          encargados: (encargados ?? []).filter((x) => x.empresa_id === e.id).length,
-        }))
-        .filter((e) => e.vehiculos > 0)
-    : []
-
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -210,46 +180,20 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
         </div>
       )}
 
-      {todas ? (
-        porEmpresa.length > 0 && (
-          <section className="rounded-2xl border border-border bg-card">
-            <div className="border-b border-border px-5 py-4 sm:px-6">
-              <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-                <MessageCircle className="size-5 text-muted-foreground" strokeWidth={1.75} />
-                Avisos por WhatsApp
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Se configuran en cada empresa: cada una avisa a sus propios encargados.
-                {!hayCanalWhatsApp() && ' El envío todavía no está conectado.'}
-              </p>
-            </div>
-            <ul className="divide-y divide-border">
-              {porEmpresa.map((e) => (
-                <li key={e.id}>
-                  <Link href={`/flota?empresa=${e.slug}`} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/40 sm:px-6">
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium">{e.nombre}</span>
-                      <span className="block text-xs text-muted-foreground">{e.vehiculos} {e.vehiculos === 1 ? 'vehículo' : 'vehículos'}</span>
-                    </span>
-                    <span className={`text-xs ${e.encargados === 0 ? 'font-medium text-warning' : 'text-muted-foreground'}`}>
-                      {e.encargados === 0 ? 'Sin encargados' : `${e.encargados} ${e.encargados === 1 ? 'encargado' : 'encargados'}`}
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )
-      ) : (
-        <EncargadosClient
-          empresa={{ id: empresaSel.id, nombre: empresaSel.nombre }}
-          encargados={encargados ?? []}
-          avisos={avisos ?? []}
-          canalActivo={hayCanalWhatsApp()}
-          canEdit={canEdit}
-        />
-      )}
+      {/* Avisos por WhatsApp: el backend está armado e inactivo (lib/whatsapp.ts,
+          /api/cron/flota, EncargadosClient). Se habilita cuando se decida el número. */}
+      <section className="flex flex-wrap items-start gap-3 rounded-2xl border border-dashed border-border bg-card px-5 py-4 sm:px-6">
+        <MessageCircle className="mt-0.5 size-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-2 font-medium">
+            Avisos por WhatsApp
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">En desarrollo</span>
+          </p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Más adelante, un resumen cada mañana de lo vencido y un aviso al instante cuando una camioneta quede no apta. Por ahora, todo se ve en esta pantalla.
+          </p>
+        </div>
+      </section>
     </div>
   )
 }
