@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ChevronRight, Download, MessageCircle, PencilLine, Printer } from 'lucide-react'
+import { ChevronRight, MessageCircle, PencilLine, Printer } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSesion } from '@/lib/auth/session'
 import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
@@ -196,10 +196,12 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                       )}
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-right">
-                      <a href={`/api/flota/qr/${v.id}`} download title={`Descargar el QR de ${v.patente}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
-                        <Download className="size-3.5" strokeWidth={1.75} />
-                        QR
-                      </a>
+                      {emp && (
+                        <Link href={`/flota/qr?empresa=${emp.slug}&vehiculo=${v.id}&imprimir=1`} title={`Imprimir el QR de ${v.patente}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
+                          <Printer className="size-3.5" strokeWidth={1.75} />
+                          QR
+                        </Link>
+                      )}
                       <Link href={`/flota/${v.id}`} aria-label={`Ver ${v.patente}`} className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
                         <ChevronRight className="size-4" />
                       </Link>

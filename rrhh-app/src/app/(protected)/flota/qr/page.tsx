@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { urlApp } from '@/modules/flota/servidor'
 import BotonImprimir from './BotonImprimir'
+import ImprimirAlAbrir from './ImprimirAlAbrir'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,8 +13,9 @@ export const dynamic = 'force-dynamic'
  * Hoja para imprimir y pegar adentro de cada camioneta (cuatro por A4).
  * La barra lateral no sale en la impresión (AppShell usa print:hidden).
  */
-export default async function QRFlotaPage({ searchParams }: { searchParams: Promise<{ empresa?: string; vehiculo?: string }> }) {
-  const { empresa, vehiculo } = await searchParams
+export default async function QRFlotaPage({ searchParams }: { searchParams: Promise<{ empresa?: string; vehiculo?: string; imprimir?: string }> }) {
+  const { empresa, vehiculo, imprimir } = await searchParams
+  const desdeLista = imprimir === '1'
   if (!empresa) notFound()
   const supabase = await createClient()
   const { data: emp } = await supabase.from('empresas').select('id, nombre, slug').eq('slug', empresa).maybeSingle()
@@ -39,9 +41,10 @@ export default async function QRFlotaPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8 print:max-w-none print:p-0">
+      {desdeLista && etiquetas.length > 0 && <ImprimirAlAbrir />}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div>
-          <Link href={vehiculo ? `/flota/${vehiculo}` : `/flota?empresa=${emp.slug}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <Link href={vehiculo && !desdeLista ? `/flota/${vehiculo}` : `/flota?empresa=${emp.slug}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" /> Volver
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">QR para las camionetas</h1>
