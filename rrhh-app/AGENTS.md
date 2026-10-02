@@ -450,6 +450,16 @@ Argentina. Patrones obligatorios:
   en lecturas del server usá `leer(res)` para que un fallo lance en vez de mostrar "Todo al día".
 - Búsquedas en listas: `coincide(busqueda, ...campos)` de `src/lib/texto.ts` (por palabras,
   sin acentos, en cualquier orden).
+- Helpers compartidos (2026-10-02): `lib/paginar.ts` (`traerTodo`: PostgREST corta en 1000
+  filas sin avisar, paginá todo lo que pueda crecer), `lib/vencimientos.ts` (links profundos
+  `/legajo/<id>?cert=` y `?vista=documentacion&veh=|equipo=`), `lib/archivos-client.ts`
+  (ver/borrar adjuntos con toast), `lib/formularios.ts` (números como texto mientras se tipean),
+  `lib/imagen.ts` (comprime imágenes antes de subir) y `lib/empleados.ts` (duplicados de alta).
+- Después de mutar desde el cliente: estado local + `router.refresh()` (con
+  `staleTimes.dynamic=30`, sin el refresh Atrás muestra el estado viejo 30 s).
+- Navegación: cada carpeta con `page.tsx` que se visita seguido necesita su `loading.tsx`
+  (el de un segmento solo cubre a sus hijos). El hub vive en `src/app/(hub)/` para que su
+  loading no envuelva /login ni el QR público.
 - Español rioplatense en la UI (vos/agregá/podés).
 
 ---
