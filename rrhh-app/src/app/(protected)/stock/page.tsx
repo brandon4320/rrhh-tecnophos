@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getSesion } from '@/lib/auth/session'
 import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
+import { mensajeError } from '@/lib/errores'
 import StockClient from './StockClient'
 import type { StockMovimiento } from '@/types'
 
@@ -15,9 +16,9 @@ export const dynamic = 'force-dynamic'
 export default async function StockPage({
   searchParams,
 }: {
-  searchParams: Promise<{ empresa?: string }>
+  searchParams: Promise<{ empresa?: string; tab?: string }>
 }) {
-  const { empresa } = await searchParams
+  const { empresa, tab } = await searchParams
   const supabase = await createClient()
   const [{ data: empresas }, sesion] = await Promise.all([
     supabase.from('empresas').select('id, nombre, slug').order('nombre'),
@@ -81,7 +82,7 @@ export default async function StockPage({
         <h1 className="text-2xl font-semibold tracking-tight">Stock</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">{empresaSel.nombre}</p>
         <div className="mt-6 rounded-2xl border border-danger/30 bg-danger-subtle px-5 py-4 text-sm text-danger">
-          No se pudo cargar el stock. Detalle técnico: {errorCarga.message}
+          {mensajeError(errorCarga, 'cargar el stock')}
         </div>
       </div>
     )
@@ -95,6 +96,7 @@ export default async function StockPage({
       items={itemsRes.data ?? []}
       movimientos={movsRes.data ?? []}
       canEdit={tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)}
+      pestanaInicial={tab === 'movimientos' ? 'movimientos' : 'inventario'}
     />
   )
 }
