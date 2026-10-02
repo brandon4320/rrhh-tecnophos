@@ -1,6 +1,8 @@
 import Link from 'next/link'
-import { ChevronRight, MessageCircle, Printer } from 'lucide-react'
+import { ChevronRight, Download, MessageCircle, PencilLine, Printer } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { getSesion } from '@/lib/auth/session'
+import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import { EstadoPill } from '@/components/ui/estado-pill'
 import { cargarFlota } from '@/modules/flota/queries'
 import { resumirVehiculo, type Semaforo } from '@/modules/flota/resumen'
@@ -24,7 +26,11 @@ const CHECKLIST_PILL = { al_dia: 'vigente', vence_pronto: 'proximo', vencido: 'v
 export default async function FlotaPage({ searchParams }: { searchParams: Promise<{ empresa?: string }> }) {
   const { empresa } = await searchParams
   const supabase = await createClient()
-  const { data: empresas } = await supabase.from('empresas').select('id, nombre, slug').order('nombre')
+  const [{ data: empresas }, sesion] = await Promise.all([
+    supabase.from('empresas').select('id, nombre, slug').order('nombre'),
+    getSesion(),
+  ])
+  const canEdit = tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)
   const lista = empresas ?? []
   // Quien ve una sola empresa (acceso limitado a una sede) cae directo en la suya.
   const empresaSel = (empresa ? lista.find((e) => e.slug === empresa) : undefined) ?? (lista.length === 1 ? lista[0] : undefined)
@@ -54,6 +60,8 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
     )
 
   const cuenta = (s: Semaforo) => filas.filter((f) => f.r.semaforo === s).length
+  const sinDatos = filas.filter(({ v }) => !v.marca || !v.modelo || !v.anio).length
+  const boton = 'inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -63,13 +71,28 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
             {filas.length} {filas.length === 1 ? 'vehículo' : 'vehículos'} · {todas ? 'todas las empresas' : empresaSel.nombre}
           </p>
         </div>
-        {!todas && filas.length > 0 && (
-          <Link href={`/flota/qr?empresa=${empresaSel.slug}`} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-            <Printer className="size-4" strokeWidth={1.75} />
-            Imprimir QR de las camionetas
-          </Link>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {canEdit && filas.length > 0 && (
+            <Link href={todas ? '/flota/datos' : `/flota/datos?empresa=${empresaSel.slug}`} className={boton}>
+              <PencilLine className="size-4" strokeWidth={1.75} />
+              Cargar marca, modelo y año
+            </Link>
+          )}
+          {!todas && filas.length > 0 && (
+            <Link href={`/flota/qr?empresa=${empresaSel.slug}`} className={boton}>
+              <Printer className="size-4" strokeWidth={1.75} />
+              Imprimir QR de las camionetas
+            </Link>
+          )}
+        </div>
       </div>
+
+      {canEdit && sinDatos > 0 && (
+        <p className="rounded-xl border border-warning/30 bg-warning-subtle px-4 py-3 text-sm text-warning">
+          {sinDatos === filas.length ? 'Ninguna camioneta tiene' : `${sinDatos} ${sinDatos === 1 ? 'camioneta no tiene' : 'camionetas no tienen'}`} marca, modelo y año completos.{' '}
+          <Link href={todas ? '/flota/datos' : `/flota/datos?empresa=${empresaSel.slug}`} className="font-medium underline underline-offset-2">Cargarlos todos juntos</Link>
+        </p>
+      )}
 
       <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:divide-x sm:divide-border">
@@ -105,10 +128,13 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-          <table className="w-full min-w-[860px] text-sm">
+          <table className="w-full min-w-[1040px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                <th className="px-5 py-3">Vehículo</th>
+                <th className="px-5 py-3">Patente</th>
+                <th className="px-3 py-3">Marca</th>
+                <th className="px-3 py-3">Modelo</th>
+                <th className="px-3 py-3 text-right">Año</th>
                 {todas && <th className="px-3 py-3">Empresa</th>}
                 <th className="px-3 py-3">Estado</th>
                 <th className="px-3 py-3">Checklist</th>
@@ -123,10 +149,12 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                 const service = r.mantenimientos.find((m) => m.tipo === 'service') ?? r.mantenimientos[0]
                 return (
                   <tr key={v.id} className="transition-colors hover:bg-muted/40">
-                    <td className="px-5 py-3">
+                    <td className="whitespace-nowrap px-5 py-3">
                       <Link href={`/flota/${v.id}`} className="font-mono font-semibold tracking-wide hover:text-primary">{v.patente}</Link>
-                      <p className="text-xs text-muted-foreground">{[v.marca, v.modelo].filter(Boolean).join(' ') || v.descripcion || '—'}</p>
                     </td>
+                    <td className="px-3 py-3">{v.marca ?? <span className="text-muted-foreground">—</span>}</td>
+                    <td className="px-3 py-3">{v.modelo ?? <span className="text-muted-foreground">{v.descripcion ?? '—'}</span>}</td>
+                    <td className="px-3 py-3 text-right tabular-nums">{v.anio ?? <span className="text-muted-foreground">—</span>}</td>
                     {todas && (
                       <td className="px-3 py-3">
                         {emp ? (
@@ -158,7 +186,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                         </p>
                       ) : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="max-w-[240px] px-3 py-3">
+                    <td className="max-w-[200px] px-3 py-3">
                       {r.motivos.length === 0 ? (
                         <span className="text-xs text-muted-foreground">Nada pendiente</span>
                       ) : (
@@ -167,7 +195,11 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                         </p>
                       )}
                     </td>
-                    <td className="px-3 py-3 text-right">
+                    <td className="whitespace-nowrap px-3 py-3 text-right">
+                      <a href={`/api/flota/qr/${v.id}`} download title={`Descargar el QR de ${v.patente}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
+                        <Download className="size-3.5" strokeWidth={1.75} />
+                        QR
+                      </a>
                       <Link href={`/flota/${v.id}`} aria-label={`Ver ${v.patente}`} className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
                         <ChevronRight className="size-4" />
                       </Link>

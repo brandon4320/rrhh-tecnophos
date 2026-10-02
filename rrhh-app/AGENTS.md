@@ -244,9 +244,13 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
     WhatsApp queda "en desarrollo"**: `/flota` muestra un cartel en vez de la gestión de encargados
     (`EncargadosClient.tsx` existe pero no se usa). Para habilitarlo: decidir el número, cargar las
     variables y volver a montar `EncargadosClient` en `flota/page.tsx`.
-  - Pantallas: `/flota?empresa=slug` (semáforo por vehículo + encargados + avisos),
-    `/flota/<id>` (ficha: checklists con fotos y comparación con el anterior, novedades,
-    mantenimiento, datos, QR y rotación del token) y `/flota/qr` (hoja imprimible, 4 por A4).
+  - Pantallas: `/flota?empresa=slug` (semáforo por vehículo con patente/marca/modelo/año y
+    botón "QR" por fila), `/flota/<id>` (ficha: checklists con fotos y comparación con el anterior,
+    novedades, mantenimiento, datos, QR y rotación del token), `/flota/qr` (hoja imprimible, 4 por
+    A4), `/flota/datos` (marca/modelo/año de toda la flota en una grilla) y `/api/flota/qr/<id>`
+    (etiqueta PNG para descargar, con `next/og`; la RLS decide quién la baja).
+  - La etiqueta impresa dice "Checklist obligatorio" sin frecuencia: se hace los días 1 y 15 y
+    puede pasar a mensual sin reimprimir.
 
 ---
 

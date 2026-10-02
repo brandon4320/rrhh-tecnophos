@@ -21,7 +21,7 @@ export default async function QRFlotaPage({ searchParams }: { searchParams: Prom
 
   let q = supabase
     .from('vehiculos')
-    .select('id, patente, marca, modelo, descripcion, checklist_token')
+    .select('id, patente, marca, modelo, anio, descripcion, checklist_token')
     .eq('empresa_id', emp.id)
     .eq('activo', true)
     .eq('checklist_activo', true)
@@ -62,8 +62,8 @@ export default async function QRFlotaPage({ searchParams }: { searchParams: Prom
             <article key={v.id} className="flex flex-col items-center rounded-2xl border-2 border-dashed border-border bg-white p-6 text-center text-black [break-inside:avoid] print:rounded-none print:border-gray-300 print:p-8">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">{emp.nombre}</p>
               <p className="mt-2 font-mono text-3xl font-bold tracking-wider">{v.patente}</p>
-              {(v.marca || v.modelo || v.descripcion) && (
-                <p className="text-sm text-gray-500">{[v.marca, v.modelo].filter(Boolean).join(' ') || v.descripcion}</p>
+              {(v.marca || v.modelo || v.anio || v.descripcion) && (
+                <p className="text-sm text-gray-500">{[v.marca, v.modelo, v.anio].filter(Boolean).join(' ') || v.descripcion}</p>
               )}
               <div className="my-4 w-48 [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: v.svg }} />
               <p className="text-base font-semibold">Checklist obligatorio</p>
