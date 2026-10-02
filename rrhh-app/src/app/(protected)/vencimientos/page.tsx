@@ -1,10 +1,25 @@
 import { createClient } from '@/lib/supabase/server'
 import { getEstadoVencimiento, diasHastaVencimiento } from '@/types'
-import { format } from 'date-fns'
-import Link from 'next/link'
-import { Monograma } from '@/components/ui/monograma'
-import { EstadoPill } from '@/components/ui/estado-pill'
-import { VencimientosFilters } from './VencimientosFilters'
+import { traerTodo } from '@/lib/paginar'
+import {
+  ALERTA_DIAS_MAX, VENTANA_ALERTA_HABITUAL, empresaDeCertificado, fechaMasDias, hrefCertificado, titularCertificado,
+  unirPorId,
+} from '@/lib/vencimientos'
+import VencimientosClient, { type FilaVencimiento, type VistaVencimientos } from './VencimientosClient'
+
+const VISTAS: VistaVencimientos[] = ['pendientes', 'vencido', 'proximo', 'vigente', 'todos']
+
+// Columnas explícitas (antes select('*') + relaciones enteras). `archivos(count)`
+// alcanza para marcar los certificados que no tienen el archivo cargado.
+const CERT_COLUMNAS = `
+  id, fecha_vencimiento, alerta_dias, tipo_nombre_custom,
+  tipo:tipos_certificado(id, nombre),
+  empleado:empleados(id, nombre, apellido, activo, empresa:empresas(nombre, slug)),
+  vehiculo:vehiculos(id, patente, empresa:empresas(nombre, slug)),
+  equipo:equipos(id, nombre, empresa:empresas(nombre, slug)),
+  empresa:empresas(nombre, slug),
+  archivos(count)
+`
 
 export default async function VencimientosPage({
   searchParams,
@@ -14,164 +29,81 @@ export default async function VencimientosPage({
   const { empresa, tipo, estado } = await searchParams
   const supabase = await createClient()
 
-  // Filtro GRUESO en la DB para no traer toda la tabla: rangos de fecha con
-  // holgura de ±1 día (el server corre en UTC y el estado se define en hora AR)
-  // y tipo_id solo si es un UUID válido. El bloque `filtered` de abajo refina
-  // con getEstadoVencimiento, que es quien decide el estado exacto.
-  const MAX_ALERTA_DIAS = 365
-  const d = (n: number) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10)
+  // Vista por defecto: lo PENDIENTE (vencido + por vencer). "Todos" es explícito.
+  const vista: VistaVencimientos = VISTAS.includes(estado as VistaVencimientos) ? (estado as VistaVencimientos) : 'pendientes'
+  // Vigentes y Todos necesitan la tabla entera; las otras tres, solo lo que vence pronto.
+  const necesitaTodo = vista === 'vigente' || vista === 'todos'
+  const tipoUuid = tipo && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tipo) ? tipo : null
 
-  let certsQuery = supabase
-    .from('certificados')
-    .select(`
-      *,
-      tipo:tipos_certificado(id, nombre),
-      empleado:empleados(id, nombre, apellido, activo, empresa_id, empresa:empresas(nombre, slug)),
-      vehiculo:vehiculos(id, patente, empresa_id, empresa:empresas(nombre, slug)),
-      equipo:equipos(id, nombre, empresa_id, empresa:empresas(nombre, slug)),
-      empresa:empresas(nombre, slug)
-    `)
-    .not('fecha_vencimiento', 'is', null)
-
-  if (estado === 'vencido') {
-    certsQuery = certsQuery.lte('fecha_vencimiento', d(0))
-  } else if (estado === 'proximo') {
-    certsQuery = certsQuery.gte('fecha_vencimiento', d(-1)).lte('fecha_vencimiento', d(MAX_ALERTA_DIAS + 1))
-  } else if (estado === 'vigente') {
-    certsQuery = certsQuery.gte('fecha_vencimiento', d(-1))
-  }
-  if (tipo && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tipo)) {
-    certsQuery = certsQuery.eq('tipo_id', tipo)
+  const base = () => {
+    const q = supabase.from('certificados').select(CERT_COLUMNAS).not('fecha_vencimiento', 'is', null)
+    return tipoUuid ? q.eq('tipo_id', tipoUuid) : q
   }
 
-  const [{ data: certs }, { data: empresas }, { data: tipos }] = await Promise.all([
-    certsQuery.order('fecha_vencimiento', { ascending: true }),
+  // Filtro GRUESO en la DB (fechas en hora AR, +1 día de holgura); el estado exacto
+  // lo decide getEstadoVencimiento abajo. Para lo pendiente alcanza con lo que vence
+  // dentro de la ventana habitual (31 días) más los pocos certificados con una alerta
+  // más larga; todo paginado (PostgREST corta en 1000 filas sin avisar).
+  const [certsRes, extraRes, { data: empresas }, { data: tipos }] = await Promise.all([
+    necesitaTodo
+      ? traerTodo((d, h) => base().order('fecha_vencimiento').order('id').range(d, h))
+      : traerTodo((d, h) =>
+          base()
+            .lte('fecha_vencimiento', fechaMasDias(VENTANA_ALERTA_HABITUAL + 1))
+            .order('fecha_vencimiento')
+            .order('id')
+            .range(d, h)
+        ),
+    necesitaTodo
+      ? Promise.resolve({ data: [], error: null })
+      : base()
+          .gt('alerta_dias', VENTANA_ALERTA_HABITUAL)
+          .lte('fecha_vencimiento', fechaMasDias(ALERTA_DIAS_MAX + 1)),
     supabase.from('empresas').select('id, nombre, slug').order('nombre'),
     supabase.from('tipos_certificado').select('id, nombre').order('orden'),
   ])
 
-  const filtered = (certs ?? []).filter((c) => {
+  // Nunca "Todo al día" porque la consulta falló (AGENTS.md §10).
+  const errorCarga = certsRes.error ?? extraRes.error
+  if (errorCarga) throw new Error(errorCarga.message)
+
+  const certs = unirPorId(certsRes.data ?? [], extraRes.data ?? []).sort(
+    (a, b) => (a.fecha_vencimiento ?? '').localeCompare(b.fecha_vencimiento ?? '')
+  )
+
+  const filas: FilaVencimiento[] = []
+  for (const c of certs) {
     // Borrado lógico: certificados de empleados dados de baja no se listan
-    if (c.empleado && c.empleado.activo === false) return false
-
-    const entitySlug = c.empleado?.empresa?.slug ?? c.vehiculo?.empresa?.slug ?? c.equipo?.empresa?.slug ?? c.empresa?.slug ?? ''
-    const tipoId = c.tipo?.id ?? ''
+    if (c.empleado && c.empleado.activo === false) continue
+    const emp = empresaDeCertificado(c)
+    if (empresa && emp.slug !== empresa) continue
+    if (tipo && (c.tipo?.id ?? '') !== tipo) continue
     const est = getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias)
-
-    if (empresa && entitySlug !== empresa) return false
-    if (tipo && tipoId !== tipo) return false
-    if (estado && est !== estado) return false
-    return true
-  })
+    if (est === 'sin_fecha') continue
+    filas.push({
+      id: c.id,
+      titular: titularCertificado(c),
+      empresaNombre: emp.nombre,
+      tipoNombre: c.tipo?.nombre ?? c.tipo_nombre_custom ?? '—',
+      fecha: c.fecha_vencimiento!.slice(0, 10),
+      dias: diasHastaVencimiento(c.fecha_vencimiento!),
+      estado: est,
+      href: hrefCertificado(c),
+      sinArchivo: (c.archivos?.[0]?.count ?? 0) === 0,
+    })
+  }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Vencimientos</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {filtered.length} {filtered.length === 1 ? 'registro' : 'registros'}
-        </p>
-      </div>
-
-      <VencimientosFilters
-        empresa={empresa}
-        tipo={tipo}
-        estado={estado}
-        empresas={empresas ?? []}
-        tipos={tipos ?? []}
-      />
-
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        {filtered.length === 0 ? (
-          <div className="py-12 text-center text-sm text-muted-foreground">
-            No se encontraron registros con los filtros aplicados.
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Referencia
-                </th>
-                <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">
-                  Empresa
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Certificado
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Vencimiento
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Estado
-                </th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((cert) => {
-                const estado_ = getEstadoVencimiento(cert.fecha_vencimiento, cert.alerta_dias)
-                const dias = diasHastaVencimiento(cert.fecha_vencimiento!)
-                const empSlug = cert.empleado?.empresa?.slug ?? cert.vehiculo?.empresa?.slug ?? cert.equipo?.empresa?.slug ?? cert.empresa?.slug ?? ''
-                const empNombre = cert.empleado?.empresa?.nombre ?? cert.vehiculo?.empresa?.nombre ?? cert.equipo?.empresa?.nombre ?? cert.empresa?.nombre ?? '—'
-                const nombreEmpleado = [cert.empleado?.nombre, cert.empleado?.apellido].filter(Boolean).join(' ')
-                const referencia = cert.empleado
-                  ? nombreEmpleado
-                  : cert.vehiculo
-                    ? `Vehículo ${cert.vehiculo.patente}`
-                    : cert.equipo
-                      ? cert.equipo.nombre
-                      : empNombre
-                const detailHref = cert.empleado?.id
-                  ? `/legajo/${cert.empleado.id}`
-                  : empSlug
-                    ? `/empresa/${empSlug}?vista=documentacion`
-                    : undefined
-                const relativo =
-                  dias < 0
-                    ? `hace ${Math.abs(dias)} ${Math.abs(dias) === 1 ? 'día' : 'días'}`
-                    : dias === 0
-                      ? 'vence hoy'
-                      : `en ${dias} ${dias === 1 ? 'día' : 'días'}`
-
-                return (
-                  <tr key={cert.id} className="transition-colors hover:bg-muted/40">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <Monograma nombre={referencia} size="sm" />
-                        <span className="font-medium">{referencia}</span>
-                      </div>
-                    </td>
-                    <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{empNombre}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="tabular-nums">
-                        {format(new Date(cert.fecha_vencimiento!.slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy')}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{relativo}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <EstadoPill estado={estado_} />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {detailHref && (
-                        <Link
-                          href={detailHref}
-                          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        >
-                          Abrir
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
+    <VencimientosClient
+      // Remonta al cambiar los filtros del server: la pestaña inicial vuelve a salir de la URL.
+      key={`${empresa ?? ''}|${tipo ?? ''}|${vista}`}
+      filas={filas}
+      vista={vista}
+      incluyeVigentes={necesitaTodo}
+      empresa={empresa}
+      tipo={tipo}
+      empresas={empresas ?? []}
+      tipos={tipos ?? []}
+    />
   )
 }

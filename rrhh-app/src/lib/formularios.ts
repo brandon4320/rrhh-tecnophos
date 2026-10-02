@@ -4,9 +4,10 @@
 // "abrir el formulario = llevarlo a la vista y poner el foco".
 // ============================================================
 import { useEffect, useRef } from 'react'
+import { ALERTA_DIAS_MAX } from './vencimientos'
 
+export { ALERTA_DIAS_MAX }
 export const ALERTA_DIAS_DEFECTO = 30
-export const ALERTA_DIAS_MAX = 365
 
 /** Texto del aviso (no bloqueante) cuando un certificado se guarda sin vencimiento. */
 export const AVISO_SIN_VENCIMIENTO = 'Sin fecha de vencimiento no va a avisar cuando venza.'
