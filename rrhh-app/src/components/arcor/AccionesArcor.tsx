@@ -15,17 +15,20 @@ export function AccionesArcor({ revisar = 0, className }: { revisar?: number; cl
         href={ENLACES_ARCOR.revisar}
         target="_blank"
         rel="noopener noreferrer"
+        title={revisar > 0 ? `${revisar} foto(s) esperan que alguien lea el número` : 'No hay dudosas para revisar'}
         className={cn(
-          'inline-flex items-center gap-2 rounded-xl border bg-card px-4 py-2.5 text-sm font-medium transition-colors',
+          'inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition-colors',
+          // Con dudosas esperando, el botón tiene que llamar la atención: fondo de estado y
+          // número. Gris solo cuando la galería está vacía.
           revisar > 0
-            ? 'border-danger/30 text-danger hover:bg-danger-subtle'
-            : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+            ? 'border-danger bg-danger-subtle font-semibold text-danger hover:bg-danger/20'
+            : 'border-border bg-card font-medium text-muted-foreground hover:bg-muted hover:text-foreground'
         )}
       >
-        <FileQuestionMark className="size-4" strokeWidth={1.75} />
+        <FileQuestionMark className="size-4" strokeWidth={revisar > 0 ? 2 : 1.75} />
         Revisar dudosas
         {revisar > 0 && (
-          <span className="rounded-full bg-danger-subtle px-2 py-0.5 text-xs font-semibold tabular-nums text-danger">
+          <span className="min-w-5 rounded-full bg-danger px-1.5 py-0.5 text-center text-xs font-semibold tabular-nums text-background">
             {revisar}
           </span>
         )}

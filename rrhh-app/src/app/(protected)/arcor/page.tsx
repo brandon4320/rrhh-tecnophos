@@ -8,7 +8,7 @@ import { ListaEventos } from '@/components/arcor/ListaEventos'
 import { ProvinciasBarras } from '@/components/arcor/ProvinciasBarras'
 import { AccionesArcor } from '@/components/arcor/AccionesArcor'
 import { ENLACES_ARCOR } from '@/modules/arcor/enlaces'
-import { getAlertasAbiertas, getEstados, getEventos, getResumenMes } from '@/modules/arcor/queries'
+import { getAlertasAbiertas, getEstados, getEventos, getResumenMes, getRevisarPendientes } from '@/modules/arcor/queries'
 import { alertaSilencio, evaluarSilencio, labelOrigen, mesActual, mesAnterior, nivelCredito, severidadAEstado } from '@/modules/arcor/reglas'
 import type { EstadoClaude, EstadoHeartbeat, EstadoPublicaciones, EstadoWhatsapp } from '@/modules/arcor/tipos'
 import { fmtFechaHoraAR, fmtFechaLargaAR, tiempoRelativo } from '@/lib/fechas-ar'
@@ -18,12 +18,13 @@ export const dynamic = 'force-dynamic'
 export default async function ArcorResumenPage() {
   const ahora = new Date()
   const mes = mesActual(ahora)
-  const [estados, abiertas, resumen, resumenPrevio, recientes] = await Promise.all([
+  const [estados, abiertas, resumen, resumenPrevio, recientes, dudosas] = await Promise.all([
     getEstados(),
     getAlertasAbiertas(),
     getResumenMes(mes),
     getResumenMes(mesAnterior(mes)),
     getEventos({ limit: 10 }),
+    getRevisarPendientes(),
   ])
 
   const wa = estados.whatsapp?.valor as EstadoWhatsapp | undefined
@@ -51,7 +52,8 @@ export default async function ArcorResumenPage() {
             Certificados de fumigación de contenedores · <span className="capitalize">{fmtFechaLargaAR(ahora.toISOString())}</span>
           </p>
         </div>
-        <AccionesArcor revisar={resumen.revisar} />
+        {/* Las dudosas de TODOS los meses: la galería no distingue mes (ver getRevisarPendientes) */}
+        <AccionesArcor revisar={dudosas} />
       </div>
 
       {/* ── Estado del sistema ── */}
