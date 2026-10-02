@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton'
 
-// Inicio (hub): sin esto, "Inicio" desde la barra lateral congelaba la pantalla
+// Inicio (hub), en su propio grupo para no envolver /login ni el QR público: sin esto, "Inicio" desde la barra lateral congelaba la pantalla
 // hasta tener la sesión y las empresas.
 export default function Loading() {
   return (
