@@ -21,7 +21,7 @@ export default async function QRFlotaPage({ searchParams }: { searchParams: Prom
 
   let q = supabase
     .from('vehiculos')
-    .select('id, patente, marca, modelo, descripcion, checklist_token, checklist_cada_dias')
+    .select('id, patente, marca, modelo, descripcion, checklist_token')
     .eq('empresa_id', emp.id)
     .eq('activo', true)
     .eq('checklist_activo', true)
@@ -46,7 +46,7 @@ export default async function QRFlotaPage({ searchParams }: { searchParams: Prom
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">QR para las camionetas</h1>
           <p className="text-sm text-muted-foreground">
-            {etiquetas.length} {etiquetas.length === 1 ? 'etiqueta' : 'etiquetas'} · {emp.nombre}. Pegalas adentro, a la vista (parasol o guantera).
+            {etiquetas.length} {etiquetas.length === 1 ? 'etiqueta' : 'etiquetas'} · {emp.nombre}. Pegalas en la cara interna de la tapa de la guantera.
           </p>
         </div>
         <BotonImprimir />
@@ -66,7 +66,7 @@ export default async function QRFlotaPage({ searchParams }: { searchParams: Prom
                 <p className="text-sm text-gray-500">{[v.marca, v.modelo].filter(Boolean).join(' ') || v.descripcion}</p>
               )}
               <div className="my-4 w-48 [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: v.svg }} />
-              <p className="text-base font-semibold">Checklist cada {v.checklist_cada_dias} días</p>
+              <p className="text-base font-semibold">Checklist obligatorio</p>
               <p className="mt-1 max-w-[16rem] text-sm leading-snug text-gray-600">
                 Apuntá la cámara del celular al código. También sirve para avisar un golpe, una falla o una pinchadura.
               </p>
