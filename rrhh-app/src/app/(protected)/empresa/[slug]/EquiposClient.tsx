@@ -1,13 +1,22 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { subirArchivo } from '@/lib/upload-client'
 import { getEstadoVencimiento } from '@/types'
 import { EstadoPill } from '@/components/ui/estado-pill'
 import type { Equipo, TipoCertificado } from '@/types'
+import { mensajeError } from '@/lib/errores'
+import { abrirArchivo, borrarArchivo, subirArchivosACertificado } from '@/lib/archivos-client'
+import {
+  ALERTA_DIAS_DEFECTO, ALERTA_DIAS_MAX, AVISO_SIN_VENCIMIENTO, alertaComoTexto, llevarALaVista, useEnfocarAlAbrir,
+  validarAlertaDias,
+} from '@/lib/formularios'
 import clsx from 'clsx'
+
+type ArchivoCert = { id: string; nombre: string; path: string }
 
 interface CertEquipo {
   id: string
@@ -17,7 +26,7 @@ interface CertEquipo {
   notas?: string | null
   alerta_dias: number | null
   tipo?: { nombre: string } | null
-  archivos?: { id: string; nombre: string; path: string }[]
+  archivos?: ArchivoCert[]
 }
 
 interface EquipoConCerts extends Equipo {
@@ -36,6 +45,8 @@ interface Props {
   canEdit: boolean
   empresaSlug: string
   empresaId: string
+  /** Ítem a mostrar abierto al entrar (?equipo=<id>, desde el dashboard o vencimientos). */
+  abiertoInicial?: string | null
 }
 
 const FORM_EMPTY = {
@@ -43,13 +54,25 @@ const FORM_EMPTY = {
   tipo_nombre_custom: '',
   fecha_vencimiento: '',
   notas: '',
-  alerta_dias: 30,
+  /** Texto crudo: se valida al guardar (ver validarAlertaDias). */
+  alerta_dias: String(ALERTA_DIAS_DEFECTO),
 }
 
 const ITEM_EMPTY = { nombre: '', tipo: '', numero_serie: '' }
 
 // Sugerencias para el datalist de secciones nuevas
 const SECCIONES_SUGERIDAS = ['Equipos de medición', 'Matafuegos', 'Herramientas', 'Instalaciones']
+
+const inputCls = 'w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-card'
+
+function escCancela(cancelar: () => void) {
+  return (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      cancelar()
+    }
+  }
+}
 
 export default function EquiposClient({
   equipos: initEquipos,
@@ -58,17 +81,21 @@ export default function EquiposClient({
   canEdit,
   empresaSlug,
   empresaId,
+  abiertoInicial = null,
 }: Props) {
   const supabase = createClient()
+  const router = useRouter()
   const [equipos, setEquipos] = useState(initEquipos)
   const [secciones, setSecciones] = useState(initSecciones)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(abiertoInicial)
   const [editingCert, setEditingCert] = useState<string | null>(null)
   const [addingTo, setAddingTo] = useState<string | null>(null)
   const [form, setForm] = useState(FORM_EMPTY)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [uploadingCert, setUploadingCert] = useState<string | null>(null)
+  // Cada apertura del formulario de certificado lo trae a la vista con el foco puesto.
+  const [aperturas, setAperturas] = useState(0)
+  const formRef = useEnfocarAlAbrir<HTMLFormElement>(aperturas, 'nearest')
 
   // Alta de sección (solo el título)
   const [nuevaSeccionOpen, setNuevaSeccionOpen] = useState(false)
@@ -79,6 +106,13 @@ export default function EquiposClient({
   const [creandoItemEn, setCreandoItemEn] = useState<string | null>(null)
   const [itemForm, setItemForm] = useState(ITEM_EMPTY)
   const [savingItem, setSavingItem] = useState(false)
+
+  // Link profundo (?equipo=): el ítem ya arranca abierto; falta llevarlo a la vista.
+  useEffect(() => {
+    if (!abiertoInicial) return
+    const el = document.getElementById(`equipo-${abiertoInicial}`)
+    if (el) llevarALaVista(el, 'start')
+  }, [abiertoInicial])
 
   // Secciones a mostrar: tabla de secciones ∪ categorías usadas por equipos
   // (por si quedó algún equipo con categoría sin fila de sección)
@@ -94,11 +128,10 @@ export default function EquiposClient({
     const nombre = nombreSeccion.trim()
     if (!nombre) return
     if (nombresSecciones.some((n) => n.toLowerCase() === nombre.toLowerCase())) {
-      setError('Ya existe una sección con ese nombre.')
+      toast.error('Ya existe una sección con ese nombre.')
       return
     }
     setSavingSeccion(true)
-    setError('')
     const { data, error: err } = await supabase
       .from('activo_secciones')
       .insert({ empresa_id: empresaId, nombre })
@@ -107,36 +140,43 @@ export default function EquiposClient({
 
     setSavingSeccion(false)
     if (err || !data) {
-      setError('No se pudo crear la sección.')
+      toast.error(mensajeError(err, 'crear la sección'))
       return
     }
     setSecciones((prev) => [...prev, data])
     setNombreSeccion('')
     setNuevaSeccionOpen(false)
+    toast.success(`Sección "${nombre}" creada`)
+    router.refresh()
   }
 
   async function handleEliminarSeccion(nombre: string) {
     const fila = secciones.find((s) => s.nombre === nombre)
     if (!fila) return
     if (!confirm(`¿Eliminar la sección "${nombre}"?`)) return
-    const { error: err } = await supabase.from('activo_secciones').delete().eq('id', fila.id)
-    if (err) {
-      setError('No se pudo eliminar la sección.')
+    const { data, error: err } = await supabase.from('activo_secciones').delete().eq('id', fila.id).select('id')
+    if (err || !data?.length) {
+      toast.error(err ? mensajeError(err, 'eliminar la sección') : 'No se pudo eliminar: la sección ya no existe o no tenés permiso.')
       return
     }
     setSecciones((prev) => prev.filter((s) => s.id !== fila.id))
+    toast.success('Sección eliminada')
+    router.refresh()
   }
 
   function abrirAltaItem(seccion: string) {
     setItemForm(ITEM_EMPTY)
     setCreandoItemEn(seccion)
-    setError('')
+  }
+
+  function cerrarAltaItem() {
+    setCreandoItemEn(null)
+    setItemForm(ITEM_EMPTY)
   }
 
   async function handleCrearItem() {
     if (!itemForm.nombre.trim() || !creandoItemEn) return
     setSavingItem(true)
-    setError('')
     const { data, error: err } = await supabase
       .from('equipos')
       .insert({
@@ -151,24 +191,29 @@ export default function EquiposClient({
 
     setSavingItem(false)
     if (err || !data) {
-      setError('No se pudo crear el ítem')
+      toast.error(mensajeError(err, 'crear el ítem'))
       return
     }
 
     setEquipos((prev) => [...prev, { ...data, certificados: [] }])
-    setItemForm(ITEM_EMPTY)
-    setCreandoItemEn(null)
+    cerrarAltaItem()
     setExpandedId(data.id)
+    toast.success(`"${data.nombre}" agregado`)
+    router.refresh()
   }
 
-  async function handleDeleteEquipo(equipoId: string) {
-    if (!confirm('¿Eliminar este ítem y todos sus certificados?')) return
-    const { error: err } = await supabase.from('equipos').delete().eq('id', equipoId)
-    if (err) {
-      setError('No se pudo eliminar el ítem')
+  async function handleDeleteEquipo(eq: EquipoConCerts) {
+    const n = eq.certificados.length
+    const detalle = n > 0 ? ` y ${n === 1 ? 'su certificado' : `sus ${n} certificados`} (con los archivos adjuntos)` : ''
+    if (!confirm(`¿Eliminar "${eq.nombre}"${detalle}? No se puede deshacer.`)) return
+    const { data, error: err } = await supabase.from('equipos').delete().eq('id', eq.id).select('id')
+    if (err || !data?.length) {
+      toast.error(err ? mensajeError(err, 'eliminar el ítem') : 'No se pudo eliminar: el ítem ya no existe o no tenés permiso.')
       return
     }
-    setEquipos((prev) => prev.filter((e) => e.id !== equipoId))
+    setEquipos((prev) => prev.filter((e) => e.id !== eq.id))
+    toast.success('Ítem eliminado')
+    router.refresh()
   }
 
   function openAdd(equipoId: string) {
@@ -176,56 +221,82 @@ export default function EquiposClient({
     setEditingCert(null)
     setAddingTo(equipoId)
     setExpandedId(equipoId)
+    setAperturas((n) => n + 1)
   }
 
   function openEdit(cert: CertEquipo) {
     setForm({
-      tipo_id: cert.tipo_id ?? '',
+      // Un certificado "Otro" tiene tipo_id null y el nombre en tipo_nombre_custom:
+      // sin esto el select quedaba en "Seleccionar..." y no se podía guardar.
+      tipo_id: cert.tipo_id ?? (cert.tipo_nombre_custom ? 'otro' : ''),
       tipo_nombre_custom: cert.tipo_nombre_custom ?? '',
       fecha_vencimiento: cert.fecha_vencimiento?.slice(0, 10) ?? '',
       notas: cert.notas ?? '',
-      alerta_dias: cert.alerta_dias ?? 30,
+      alerta_dias: alertaComoTexto(cert.alerta_dias),
     })
     setEditingCert(cert.id)
     setAddingTo(null)
+    setAperturas((n) => n + 1)
+  }
+
+  function cancelarForm() {
+    setEditingCert(null)
+    setAddingTo(null)
+    setForm(FORM_EMPTY)
   }
 
   async function handleSave(equipoId: string) {
+    if (!form.tipo_id) {
+      toast.error('Elegí el tipo de certificado.')
+      return
+    }
+    if (form.tipo_id === 'otro' && !form.tipo_nombre_custom.trim()) {
+      toast.error('Escribí el nombre del certificado.')
+      return
+    }
+    const alerta = validarAlertaDias(form.alerta_dias)
+    if (!alerta.ok) {
+      toast.error(alerta.error)
+      return
+    }
     setSaving(true)
-    setError('')
 
     const payload = {
       equipo_id: equipoId,
       // "otro" no es un UUID: el tipo custom va en tipo_nombre_custom
       tipo_id: form.tipo_id === 'otro' ? null : form.tipo_id || null,
-      tipo_nombre_custom: form.tipo_id === 'otro' ? form.tipo_nombre_custom : null,
+      tipo_nombre_custom: form.tipo_id === 'otro' ? form.tipo_nombre_custom.trim() : null,
       fecha_vencimiento: form.fecha_vencimiento || null,
       notas: form.notas || null,
-      alerta_dias: form.alerta_dias,
+      alerta_dias: alerta.valor,
     }
+    const sinVencimiento = form.fecha_vencimiento ? undefined : { description: AVISO_SIN_VENCIMIENTO }
 
     if (editingCert) {
+      const certId = editingCert
       const { data, error: err } = await supabase
         .from('certificados')
         .update({ ...payload, updated_at: new Date().toISOString() })
-        .eq('id', editingCert)
+        .eq('id', certId)
         .select('*, tipo:tipos_certificado(nombre)')
         .single()
 
-      if (err) {
-        setError('Error al guardar')
-        setSaving(false)
+      setSaving(false)
+      if (err || !data) {
+        toast.error(mensajeError(err, 'guardar el certificado')) // el form queda abierto con lo tipeado
         return
       }
 
+      // El update no trae los adjuntos: se conservan los que ya estaban (antes la
+      // fila se reemplazaba entera y los archivos "desaparecían" hasta recargar).
       setEquipos((prev) =>
         prev.map((eq) =>
           eq.id === equipoId
-            ? { ...eq, certificados: eq.certificados.map((c) => (c.id === editingCert ? data : c)) }
+            ? { ...eq, certificados: eq.certificados.map((c) => (c.id === certId ? { ...data, archivos: c.archivos } : c)) }
             : eq
         )
       )
-      setEditingCert(null)
+      toast.success('Certificado actualizado', sinVencimiento)
     } else {
       const { data, error: err } = await supabase
         .from('certificados')
@@ -233,86 +304,74 @@ export default function EquiposClient({
         .select('*, tipo:tipos_certificado(nombre)')
         .single()
 
-      if (err) {
-        setError('Error al guardar')
-        setSaving(false)
+      setSaving(false)
+      if (err || !data) {
+        toast.error(mensajeError(err, 'agregar el certificado'))
         return
       }
 
       setEquipos((prev) =>
         prev.map((eq) =>
-          eq.id === equipoId ? { ...eq, certificados: [...eq.certificados, data] } : eq
+          eq.id === equipoId ? { ...eq, certificados: [...eq.certificados, { ...data, archivos: [] }] } : eq
         )
       )
-      setAddingTo(null)
+      toast.success('Certificado agregado', sinVencimiento)
     }
 
-    setForm(FORM_EMPTY)
-    setSaving(false)
+    cancelarForm()
+    router.refresh()
   }
 
-  async function handleDelete(equipoId: string, certId: string) {
-    if (!confirm('¿Eliminar este certificado?')) return
+  async function handleDelete(equipoId: string, cert: CertEquipo) {
+    const n = cert.archivos?.length ?? 0
+    const adjuntos = n > 0 ? ` y ${n === 1 ? 'su archivo adjunto' : `sus ${n} archivos adjuntos`}` : ''
+    if (!confirm(`¿Eliminar el certificado "${cert.tipo?.nombre ?? cert.tipo_nombre_custom ?? 'Sin tipo'}"${adjuntos}? No se puede deshacer.`)) return
 
-    const { error: err } = await supabase.from('certificados').delete().eq('id', certId)
+    // .select() devuelve lo borrado: si la RLS no dejó borrar nada no hay error, pero tampoco filas.
+    const { data, error: err } = await supabase.from('certificados').delete().eq('id', cert.id).select('id')
 
-    if (err) {
-      setError('Error al eliminar')
+    if (err || !data?.length) {
+      toast.error(err ? mensajeError(err, 'eliminar el certificado') : 'No se pudo eliminar: el certificado ya no existe o no tenés permiso.')
       return
     }
 
     setEquipos((prev) =>
       prev.map((eq) =>
         eq.id === equipoId
-          ? { ...eq, certificados: eq.certificados.filter((c) => c.id !== certId) }
+          ? { ...eq, certificados: eq.certificados.filter((c) => c.id !== cert.id) }
           : eq
       )
     )
+    toast.success('Certificado eliminado')
+    router.refresh()
   }
 
-  async function handleUploadArchivo(equipoId: string, certId: string, files: FileList) {
+  async function handleUploadArchivo(equipoId: string, certId: string, files: File[]) {
     setUploadingCert(certId)
-    for (const file of Array.from(files)) {
-      try {
-        const archivo = await subirArchivo(file, certId, { empresaSlug })
-        setEquipos((prev) =>
-          prev.map((eq) =>
-            eq.id === equipoId
-              ? { ...eq, certificados: eq.certificados.map((c) => (c.id === certId ? { ...c, archivos: [...(c.archivos ?? []), archivo] } : c)) }
-              : eq
-          )
-        )
-      } catch (e) {
-        alert(e instanceof Error ? e.message : 'No se pudo subir el archivo.')
-      }
-    }
-    setUploadingCert(null)
-  }
-
-  async function verArchivo(path: string) {
-    const res = await fetch(`/api/archivo?path=${encodeURIComponent(path)}`)
-    if (res.ok) {
-      const { url } = await res.json()
-      if (url) window.open(url, '_blank')
-    } else {
-      alert('No se pudo abrir el archivo.')
-    }
-  }
-
-  async function handleDeleteArchivo(equipoId: string, certId: string, archivoId: string) {
-    if (!confirm('¿Eliminar este archivo?')) return
-    const res = await fetch(`/api/archivo?id=${archivoId}`, { method: 'DELETE' })
-    if (res.ok) {
+    const ok = await subirArchivosACertificado(files, certId, { empresaSlug }, (archivo) =>
       setEquipos((prev) =>
         prev.map((eq) =>
           eq.id === equipoId
-            ? { ...eq, certificados: eq.certificados.map((c) => (c.id === certId ? { ...c, archivos: (c.archivos ?? []).filter((a) => a.id !== archivoId) } : c)) }
+            ? { ...eq, certificados: eq.certificados.map((c) => (c.id === certId ? { ...c, archivos: [...(c.archivos ?? []), archivo] } : c)) }
             : eq
         )
       )
-    } else {
-      alert('No se pudo eliminar el archivo.')
-    }
+    )
+    setUploadingCert(null)
+    if (ok > 0) router.refresh()
+  }
+
+  async function handleDeleteArchivo(equipoId: string, certId: string, archivo: ArchivoCert) {
+    if (!confirm(`¿Eliminar el archivo "${archivo.nombre}"?`)) return
+    if (!(await borrarArchivo(archivo.id))) return
+    setEquipos((prev) =>
+      prev.map((eq) =>
+        eq.id === equipoId
+          ? { ...eq, certificados: eq.certificados.map((c) => (c.id === certId ? { ...c, archivos: (c.archivos ?? []).filter((a) => a.id !== archivo.id) } : c)) }
+          : eq
+      )
+    )
+    router.refresh()
   }
 
   function renderEquipoCard(eq: EquipoConCerts) {
@@ -342,7 +401,14 @@ export default function EquiposClient({
       .join(' · ')
 
     return (
-      <div key={eq.id} className="bg-card rounded-xl border border-border overflow-hidden">
+      <div
+        key={eq.id}
+        id={`equipo-${eq.id}`}
+        className={clsx(
+          'scroll-mt-6 bg-card rounded-xl border overflow-hidden',
+          abiertoInicial === eq.id ? 'border-primary/40' : 'border-border'
+        )}
+      >
         <div
           className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-accent transition-colors"
           onClick={() => setExpandedId(isOpen ? null : eq.id)}
@@ -424,7 +490,7 @@ export default function EquiposClient({
                               Editar
                             </button>
                             <button
-                              onClick={() => handleDelete(eq.id, cert.id)}
+                              onClick={() => handleDelete(eq.id, cert)}
                               className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
                             >
                               Eliminar
@@ -439,9 +505,9 @@ export default function EquiposClient({
                         <div className="flex flex-wrap items-center gap-2">
                           {(cert.archivos ?? []).map((a) => (
                             <span key={a.id} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
-                              <button type="button" onClick={() => verArchivo(a.path)} className="max-w-[160px] truncate text-left text-primary hover:underline">{a.nombre}</button>
+                              <button type="button" onClick={() => abrirArchivo(a.path)} className="max-w-[160px] truncate text-left text-primary hover:underline">{a.nombre}</button>
                               {canEdit && (
-                                <button onClick={() => handleDeleteArchivo(eq.id, cert.id, a.id)} className="text-muted-foreground hover:text-red-500" aria-label="Eliminar archivo">×</button>
+                                <button onClick={() => handleDeleteArchivo(eq.id, cert.id, a)} className="text-muted-foreground hover:text-red-500" aria-label="Eliminar archivo">×</button>
                               )}
                             </span>
                           ))}
@@ -451,10 +517,13 @@ export default function EquiposClient({
                           {canEdit && (
                             <label className="inline-flex cursor-pointer items-center rounded-md border border-input px-2 py-1 text-xs text-muted-foreground hover:bg-accent">
                               {uploadingCert === cert.id ? 'Subiendo…' : '+ Adjuntar'}
-                              <input type="file" accept="application/pdf,image/*" className="hidden" disabled={uploadingCert === cert.id}
+                              <input type="file" multiple accept="application/pdf,image/*" className="hidden" disabled={uploadingCert === cert.id}
                                 onChange={(e) => {
-                                  if (e.target.files?.length) handleUploadArchivo(eq.id, cert.id, e.target.files)
+                                  // Copiar la lista ANTES de vaciar el input (FileList es una vista
+                                  // viva). Vaciarlo permite volver a elegir el mismo archivo tras un error.
+                                  const files = Array.from(e.target.files ?? [])
                                   e.target.value = ''
+                                  if (files.length) handleUploadArchivo(eq.id, cert.id, files)
                                 }} />
                             </label>
                           )}
@@ -462,65 +531,22 @@ export default function EquiposClient({
                       </div>
                     )}
 
-                    {isEditing && (
-                      <div className="px-4 py-4">
-                        {renderFormFields()}
-                        <div className="flex gap-2 mt-3">
-                          <button
-                            onClick={() => handleSave(eq.id)}
-                            disabled={saving || !form.tipo_id}
-                            className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
-                          >
-                            {saving ? 'Guardando...' : 'Guardar'}
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditingCert(null)
-                              setForm(FORM_EMPTY)
-                            }}
-                            className="text-xs text-muted-foreground px-3 py-2"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                        {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-                      </div>
-                    )}
+                    {isEditing && renderForm(eq.id, 'Guardar', 'px-4 py-4')}
                   </div>
                 )
               })}
             </div>
 
             {isAddingHere && canEdit && (
-              <div className="bg-card rounded-lg border border-primary/30 p-4">
-                <p className="text-sm font-medium text-foreground mb-3">Nuevo certificado</p>
-                {renderFormFields()}
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() => handleSave(eq.id)}
-                    disabled={saving || !form.tipo_id}
-                    className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
-                  >
-                    {saving ? 'Guardando...' : 'Agregar'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAddingTo(null)
-                      setForm(FORM_EMPTY)
-                    }}
-                    className="text-xs text-muted-foreground px-3 py-2"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-                {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+              <div className="bg-card rounded-lg border border-primary/30">
+                {renderForm(eq.id, 'Agregar', 'p-4', 'Nuevo certificado')}
               </div>
             )}
 
             {canEdit && (
               <div className="mt-3 text-right">
                 <button
-                  onClick={() => handleDeleteEquipo(eq.id)}
+                  onClick={() => handleDeleteEquipo(eq)}
                   className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
                 >
                   Eliminar ítem
@@ -555,7 +581,11 @@ export default function EquiposClient({
 
             <div className="space-y-3">
               {agregandoAca && canEdit && (
-                <div className="bg-card rounded-xl border border-primary/30 p-4">
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleCrearItem() }}
+                  onKeyDown={escCancela(cerrarAltaItem)}
+                  className="bg-card rounded-xl border border-primary/30 p-4"
+                >
                   <p className="text-sm font-medium text-foreground mb-3">Nuevo ítem en {nombre}</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
@@ -564,8 +594,7 @@ export default function EquiposClient({
                         type="text"
                         value={itemForm.nombre}
                         onChange={(e) => setItemForm((f) => ({ ...f, nombre: e.target.value }))}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleCrearItem() }}
-                        className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        className={inputCls}
                         placeholder="Ej: Matafuego ABC 5kg — Galpón"
                         autoFocus
                       />
@@ -576,7 +605,7 @@ export default function EquiposClient({
                         type="text"
                         value={itemForm.tipo}
                         onChange={(e) => setItemForm((f) => ({ ...f, tipo: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        className={inputCls}
                         placeholder="Ej: ABC / CO2 (opcional)"
                       />
                     </div>
@@ -586,31 +615,24 @@ export default function EquiposClient({
                         type="text"
                         value={itemForm.numero_serie}
                         onChange={(e) => setItemForm((f) => ({ ...f, numero_serie: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        className={inputCls}
                         placeholder="Opcional"
                       />
                     </div>
                   </div>
                   <div className="flex gap-2 mt-3">
                     <button
-                      onClick={handleCrearItem}
+                      type="submit"
                       disabled={savingItem || !itemForm.nombre.trim()}
                       className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
                     >
                       {savingItem ? 'Creando...' : 'Crear ítem'}
                     </button>
-                    <button
-                      onClick={() => {
-                        setCreandoItemEn(null)
-                        setItemForm(ITEM_EMPTY)
-                      }}
-                      className="text-xs text-muted-foreground px-3 py-2"
-                    >
+                    <button type="button" onClick={cerrarAltaItem} className="text-xs text-muted-foreground px-3 py-2">
                       Cancelar
                     </button>
                   </div>
-                  {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-                </div>
+                </form>
               )}
 
               {items.map((eq) => renderEquipoCard(eq))}
@@ -638,7 +660,11 @@ export default function EquiposClient({
 
       {canEdit && (
         nuevaSeccionOpen ? (
-          <div className="bg-card rounded-xl border border-primary/30 p-4">
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleCrearSeccion() }}
+            onKeyDown={escCancela(() => { setNuevaSeccionOpen(false); setNombreSeccion('') })}
+            className="bg-card rounded-xl border border-primary/30 p-4"
+          >
             <p className="text-sm font-medium text-foreground mb-3">Nueva sección</p>
             <div className="flex flex-wrap items-end gap-2">
               <div className="flex-1 min-w-[220px]">
@@ -648,8 +674,7 @@ export default function EquiposClient({
                   list="secciones-sugeridas"
                   value={nombreSeccion}
                   onChange={(e) => setNombreSeccion(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleCrearSeccion() }}
-                  className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className={inputCls}
                   placeholder="Ej: Matafuegos"
                   autoFocus
                 />
@@ -660,28 +685,27 @@ export default function EquiposClient({
                 </datalist>
               </div>
               <button
-                onClick={handleCrearSeccion}
+                type="submit"
                 disabled={savingSeccion || !nombreSeccion.trim()}
                 className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
               >
                 {savingSeccion ? 'Creando...' : 'Crear sección'}
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setNuevaSeccionOpen(false)
                   setNombreSeccion('')
-                  setError('')
                 }}
                 className="text-xs text-muted-foreground px-3 py-2"
               >
                 Cancelar
               </button>
             </div>
-            {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-          </div>
+          </form>
         ) : (
           <button
-            onClick={() => { setNuevaSeccionOpen(true); setError('') }}
+            onClick={() => setNuevaSeccionOpen(true)}
             className="w-full rounded-xl border border-dashed border-border px-5 py-3 text-sm font-medium text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
           >
             + Nueva sección (ej: Matafuegos, Herramientas…)
@@ -691,72 +715,94 @@ export default function EquiposClient({
     </div>
   )
 
-  function renderFormFields() {
+  function renderForm(equipoId: string, textoBoton: string, className: string, titulo?: string) {
     return (
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <label className="block text-xs font-medium text-foreground mb-1">Tipo de certificado</label>
-          <select
-            value={form.tipo_id}
-            onChange={(e) => setForm((f) => ({ ...f, tipo_id: e.target.value }))}
-            className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">Seleccionar...</option>
-            {tiposCertificado.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nombre}
-              </option>
-            ))}
-            <option value="otro">Otro (especificar)</option>
-          </select>
-        </div>
-
-        {form.tipo_id === 'otro' && (
+      <form
+        ref={formRef}
+        onSubmit={(e) => { e.preventDefault(); handleSave(equipoId) }}
+        onKeyDown={escCancela(cancelarForm)}
+        className={clsx('scroll-mt-6', className)}
+      >
+        {titulo && <p className="text-sm font-medium text-foreground mb-3">{titulo}</p>}
+        <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2">
-            <label className="block text-xs font-medium text-foreground mb-1">Nombre del certificado</label>
+            <label className="block text-xs font-medium text-foreground mb-1">Tipo de certificado</label>
+            <select
+              value={form.tipo_id}
+              onChange={(e) => setForm((f) => ({ ...f, tipo_id: e.target.value }))}
+              className={inputCls}
+            >
+              <option value="">Seleccionar...</option>
+              {tiposCertificado.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nombre}
+                </option>
+              ))}
+              <option value="otro">Otro (especificar)</option>
+            </select>
+          </div>
+
+          {form.tipo_id === 'otro' && (
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-foreground mb-1">Nombre del certificado</label>
+              <input
+                type="text"
+                value={form.tipo_nombre_custom}
+                onChange={(e) => setForm((f) => ({ ...f, tipo_nombre_custom: e.target.value }))}
+                className={inputCls}
+                placeholder="Ej: Recarga anual"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1">Vencimiento</label>
             <input
-              type="text"
-              value={form.tipo_nombre_custom}
-              onChange={(e) => setForm((f) => ({ ...f, tipo_nombre_custom: e.target.value }))}
-              className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="Ej: Recarga anual"
+              type="date"
+              value={form.fecha_vencimiento}
+              onChange={(e) => setForm((f) => ({ ...f, fecha_vencimiento: e.target.value }))}
+              className={inputCls}
+            />
+            {!form.fecha_vencimiento && <p className="mt-1 text-[11px] text-warning">{AVISO_SIN_VENCIMIENTO}</p>}
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1">Alerta, días antes</label>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={ALERTA_DIAS_MAX}
+              value={form.alerta_dias}
+              onChange={(e) => setForm((f) => ({ ...f, alerta_dias: e.target.value }))}
+              className={inputCls}
             />
           </div>
-        )}
 
-        <div>
-          <label className="block text-xs font-medium text-foreground mb-1">Vencimiento</label>
-          <input
-            type="date"
-            value={form.fecha_vencimiento}
-            onChange={(e) => setForm((f) => ({ ...f, fecha_vencimiento: e.target.value }))}
-            className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+          <div className="col-span-2">
+            <label className="block text-xs font-medium text-foreground mb-1">Notas</label>
+            <input
+              type="text"
+              value={form.notas}
+              onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))}
+              className={inputCls}
+              placeholder="Información adicional..."
+            />
+          </div>
         </div>
-
-        <div>
-          <label className="block text-xs font-medium text-foreground mb-1">Alerta, días antes</label>
-          <input
-            type="number"
-            min={1}
-            max={365}
-            value={form.alerta_dias}
-            onChange={(e) => setForm((f) => ({ ...f, alerta_dias: parseInt(e.target.value) || 30 }))}
-            className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+        <div className="flex gap-2 mt-3">
+          <button
+            type="submit"
+            disabled={saving || !form.tipo_id}
+            className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
+          >
+            {saving ? 'Guardando...' : textoBoton}
+          </button>
+          <button type="button" onClick={cancelarForm} className="text-xs text-muted-foreground px-3 py-2">
+            Cancelar
+          </button>
         </div>
-
-        <div className="col-span-2">
-          <label className="block text-xs font-medium text-foreground mb-1">Notas</label>
-          <input
-            type="text"
-            value={form.notas}
-            onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))}
-            className="w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="Información adicional..."
-          />
-        </div>
-      </div>
+      </form>
     )
   }
 }

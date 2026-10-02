@@ -52,7 +52,7 @@ export default async function EmpresaPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ vista?: string; tab?: string }>
+  searchParams: Promise<{ vista?: string; tab?: string; veh?: string; equipo?: string }>
 }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams])
   const supabase = await createClient()
@@ -139,21 +139,27 @@ export default async function EmpresaPage({
           categoria="programa_seguridad"
         />
 
+        {/* key: un link profundo a OTRO vehículo/ítem en la misma página remonta el
+            client para que lo abra (el estado inicial solo se lee al montar). */}
         <VehiculosClient
+          key={`veh-${sp.veh ?? ''}`}
           vehiculos={vehiculos ?? []}
           tiposCertificado={tiposVehiculo ?? []}
           canEdit={canEdit}
           empresaSlug={slug}
           empresaId={empresa.id}
+          abiertoInicial={sp.veh ?? null}
         />
 
         <EquiposClient
+          key={`equipo-${sp.equipo ?? ''}`}
           equipos={equipos ?? []}
           secciones={secciones ?? []}
           tiposCertificado={tiposEquipo ?? []}
           canEdit={canEdit}
           empresaSlug={slug}
           empresaId={empresa.id}
+          abiertoInicial={sp.equipo ?? null}
         />
       </div>
     )
@@ -218,7 +224,8 @@ export default async function EmpresaPage({
         id: c.id,
         nombre: nombreCompleto,
         detalle: c.tipo?.nombre ?? c.tipo_nombre_custom ?? 'Certificado',
-        href: `/legajo/${emp.id}`,
+        // Link profundo: el legajo abre ESE certificado (no hay que buscarlo en la lista).
+        href: `/legajo/${emp.id}?cert=${c.id}`,
         sector: emp.sector,
       })
     }
@@ -230,7 +237,7 @@ export default async function EmpresaPage({
         id: c.id,
         nombre: `Vehículo ${v.patente}`,
         detalle: c.tipo?.nombre ?? c.tipo_nombre_custom ?? 'Certificado',
-        href: `/empresa/${slug}?vista=documentacion`,
+        href: `/empresa/${slug}?vista=documentacion&veh=${v.id}`,
       })
     }
   }
@@ -241,7 +248,7 @@ export default async function EmpresaPage({
         id: c.id,
         nombre: eq.nombre,
         detalle: c.tipo?.nombre ?? c.tipo_nombre_custom ?? 'Certificado',
-        href: `/empresa/${slug}?vista=documentacion`,
+        href: `/empresa/${slug}?vista=documentacion&equipo=${eq.id}`,
       })
     }
   }

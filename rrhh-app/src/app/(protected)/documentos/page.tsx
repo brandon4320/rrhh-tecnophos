@@ -2,16 +2,16 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getSesion } from '@/lib/auth/session'
 import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
-import { anioMesAR, empleadosConReciboPorPeriodo } from '@/modules/documentos/reglas'
+import { DOC_COLUMNAS, anioMesAR, empleadosConReciboPorPeriodo } from '@/modules/documentos/reglas'
+import { traerTodo } from '@/lib/paginar'
 import DocumentosClient from './DocumentosClient'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * Documentación mensual por empresa (?empresa=slug&anio=2026), igual que /stock.
- * Se carga el año completo: 12 meses × 6 carpetas es poco volumen y así el
- * cambio de mes es instantáneo. La RLS de documentos_mensuales limita a las
- * empresas que el usuario ve.
+ * Se carga el año completo (paginado) y así el cambio de mes es instantáneo.
+ * La RLS de documentos_mensuales limita a las empresas que el usuario ve.
  */
 export default async function DocumentosPage({
   searchParams,
@@ -57,24 +57,38 @@ export default async function DocumentosPage({
   // Tres consultas en paralelo. La de recibos filtra por la empresa a través del
   // empleado (join interno) y solo cuenta empleados ACTIVOS, el mismo universo que
   // el denominador: así "X de Y empleados" nunca supera Y.
+  // Los documentos del año se paginan: PostgREST corta en 1000 filas sin avisar y
+  // tecnophos-bb ya tenía 661 en nueve meses (el mes de diciembre "desaparecía").
+  // Solo las columnas que usa la pantalla (DOC_COLUMNAS) y orden estable con id.
   const [docsRes, empRes, recRes] = await Promise.all([
-    supabase
-      .from('documentos_mensuales')
-      .select('*')
-      .eq('empresa_id', empresaSel.id)
-      .gte('periodo', desde)
-      .lte('periodo', hasta)
-      .order('carpeta')
-      .order('created_at', { ascending: false }),
+    traerTodo((d, h) =>
+      supabase
+        .from('documentos_mensuales')
+        .select(DOC_COLUMNAS)
+        .eq('empresa_id', empresaSel.id)
+        .gte('periodo', desde)
+        .lte('periodo', hasta)
+        .order('carpeta')
+        .order('created_at', { ascending: false })
+        .order('id')
+        .range(d, h)
+    ),
     supabase.from('empleados').select('id', { count: 'exact', head: true }).eq('empresa_id', empresaSel.id).eq('activo', true),
-    supabase
-      .from('recibos_sueldo')
-      .select('periodo, empleado_id, empleados!inner(empresa_id, activo)')
-      .eq('empleados.empresa_id', empresaSel.id)
-      .eq('empleados.activo', true)
-      .eq('tipo', 'mensual')
-      .gte('periodo', desde)
-      .lte('periodo', hasta),
+    // Un recibo mensual por empleado activo y mes: con ~90 empleados el año pasa de
+    // 1000 filas, así que también se pagina (si no, los últimos meses "no tenían" recibos).
+    traerTodo((d, h) =>
+      supabase
+        .from('recibos_sueldo')
+        .select('periodo, empleado_id, empleados!inner(empresa_id, activo)')
+        .eq('empleados.empresa_id', empresaSel.id)
+        .eq('empleados.activo', true)
+        .eq('tipo', 'mensual')
+        .gte('periodo', desde)
+        .lte('periodo', hasta)
+        .order('periodo')
+        .order('id')
+        .range(d, h)
+    ),
   ])
 
   // Nunca tragarse un error de Supabase (AGENTS.md §10): si la tabla no existe

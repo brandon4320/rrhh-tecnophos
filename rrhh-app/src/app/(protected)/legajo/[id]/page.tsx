@@ -4,8 +4,14 @@ import { getSesion } from '@/lib/auth/session'
 import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import LegajoClient from './LegajoClient'
 
-export default async function LegajoPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function LegajoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ cert?: string; nuevo?: string }>
+}) {
+  const [{ id }, sp] = await Promise.all([params, searchParams])
   const supabase = await createClient()
 
   // Todo en UN solo batch: ninguna query depende del fetch del empleado
@@ -40,8 +46,17 @@ export default async function LegajoPage({ params }: { params: Promise<{ id: str
 
   if (!empleado) notFound()
 
+  // ?cert=<id>: link profundo desde el dashboard/vencimientos (abre esa tarjeta).
+  // Solo si el certificado es de este legajo; si no, se ignora.
+  const certInicial = sp.cert && (certificados ?? []).some((c) => c.id === sp.cert) ? sp.cert : null
+
   return (
     <LegajoClient
+      // Un link profundo a OTRO certificado del mismo legajo remonta el client
+      // (la tarjeta abierta inicial solo se lee al montar).
+      key={`${id}-${certInicial ?? ''}`}
+      certInicial={certInicial}
+      abrirAlta={sp.nuevo === '1'}
       empleado={empleado}
       certificados={certificados ?? []}
       tiposCertificado={tiposCert ?? []}
