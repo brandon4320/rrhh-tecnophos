@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { parseCantidad, deltaDe, calcularStock, estadoStock, comprasDelMes, categoriasDe, normalizarNombre, sumarStock, mesClave, hoyClave, partirVariante, compararItems, agruparCatalogo, SIN_CATEGORIA } from './reglas'
+import type { EstadoVencimiento } from '@/types'
+import {
+  parseCantidad, deltaDe, calcularStock, estadoStock, comprasDelMes, categoriasDe, normalizarNombre, sumarStock, mesClave,
+  hoyClave, partirVariante, compararItems, SIN_CATEGORIA, categoriaDe, claveBase, partirTalleSinMarcador, agruparPrendas,
+  matricesDePrendas, compararTalle, ordenarPorUrgencia, textoMinimo, ultimoMovimientoPorItem, describirMovimiento,
+  contraparteDe, compararMovimientosDesc, destinatariosFrecuentes, filtrarMovimientos, rangoMesActual, rangoMesAnterior,
+  prepararLineas, excedenStock,
+} from './reglas'
 
 describe('parseCantidad', () => {
   it('acepta formatos AR y punto decimal', () => {
@@ -137,46 +144,241 @@ describe('compararItems', () => {
   })
 })
 
-describe('agruparCatalogo', () => {
-  const items = [
-    { nombre: 'Camisa ADC T 42', categoria: 'Ropa ADC' },
-    { nombre: 'Camisa ADC T 36', categoria: 'Ropa ADC' },
-    { nombre: 'Campera ADC T L', categoria: 'Ropa ADC' }, // familia de UNO
-    { nombre: 'Antiparras', categoria: 'EPP' },
-    { nombre: 'Botas', categoria: 'EPP' },
-    { nombre: 'Trapo', categoria: '  ' }, // sin categoría
-  ]
-  const todoOk = () => 'vigente' as const
+describe('claveBase y partirTalleSinMarcador', () => {
+  it('compara bases sin acentos, mayúsculas ni "de"', () => {
+    expect(claveBase('BOTINES DE SEGURIDAD')).toBe(claveBase('Botines seguridad'))
+    expect(claveBase('Pantalón ADC')).toBe(claveBase('pantalon adc'))
+    expect(claveBase('Buzo Tecno + ADC')).not.toBe(claveBase('Buzo ADC'))
+  })
+  it('dos cifras al final sin marcador es candidato', () => {
+    expect(partirTalleSinMarcador('BOTINES SEGURIDAD 39')).toEqual({ base: 'BOTINES SEGURIDAD', variante: '39' })
+    expect(partirTalleSinMarcador('Bidón 5')).toBeNull() // una sola cifra
+    expect(partirTalleSinMarcador('Filtro F600')).toBeNull() // pegado, no es talle
+    expect(partirTalleSinMarcador('Casco')).toBeNull()
+  })
+})
 
-  it('agrupa por categoría, alfabético y con "Sin categoría" al final', () => {
-    expect(agruparCatalogo(items, todoOk).map((g) => g.categoria)).toEqual(['EPP', 'Ropa ADC', SIN_CATEGORIA])
+describe('agruparPrendas', () => {
+  const nombres = (xs: { nombre: string }[]) => xs.map((x) => x.nombre)
+
+  it('arma la prenda con sus talles en orden real (S, M, L / números)', () => {
+    const { prendas, sueltos } = agruparPrendas([
+      { nombre: 'Buzo ADC T XL' }, { nombre: 'Buzo ADC T M' }, { nombre: 'Buzo ADC Talle XXL' },
+      { nombre: 'Camisa ADC T 44' }, { nombre: 'Camisa ADC T 36' }, { nombre: 'Camisa ADC Talle 50' },
+      { nombre: 'Antiparras' },
+    ])
+    expect(prendas.map((p) => p.base)).toEqual(['Buzo ADC', 'Camisa ADC'])
+    expect(prendas[0]).toMatchObject({ sistema: 'letras' })
+    expect(prendas[0].talles.map((t) => t.talle)).toEqual(['M', 'XL', 'XXL'])
+    expect(prendas[1]).toMatchObject({ sistema: 'numeros' })
+    expect(prendas[1].talles.map((t) => t.talle)).toEqual(['36', '44', '50'])
+    expect(nombres(sueltos)).toEqual(['Antiparras'])
   })
 
-  it('una familia con varias variantes se agrupa y se ordena por talle', () => {
-    const ropa = agruparCatalogo(items, todoOk).find((g) => g.categoria === 'Ropa ADC')!
-    expect(ropa.total).toBe(3)
-    const familia = ropa.entradas.find((e) => e.tipo === 'familia')
-    expect(familia).toMatchObject({ tipo: 'familia', base: 'Camisa ADC' })
-    expect(familia!.tipo === 'familia' && familia!.variantes.map((v) => v.variante)).toEqual(['36', '42'])
+  it('cada celda es el ítem real (mismo objeto, con su id): se rotula, no se fusiona', () => {
+    const a = { id: 'a', nombre: 'Camisa T 40' }, b = { id: 'b', nombre: 'Camisa T 42' }
+    const { prendas } = agruparPrendas([a, b])
+    expect(prendas[0].talles.map((t) => t.item)).toEqual([a, b])
+    expect(prendas[0].talles[0].item).toBe(a)
   })
 
-  it('una familia de un solo miembro NO genera rótulo: va como ítem suelto', () => {
-    const ropa = agruparCatalogo(items, todoOk).find((g) => g.categoria === 'Ropa ADC')!
-    const campera = ropa.entradas.find((e) => e.tipo === 'item' && e.item.nombre === 'Campera ADC T L')
-    expect(campera).toBeDefined()
+  it('agrupa los botines de Rosario: sin "T" y con y sin "DE"', () => {
+    const items = [
+      'BOTINES DE SEGURIDAD 40', 'BOTINES DE SEGURIDAD 41', 'BOTINES DE SEGURIDAD 42', 'BOTINES DE SEGURIDAD 43',
+      'BOTINES DE SEGURIDAD 44', 'BOTINES DE SEGURIDAD 45', 'BOTINES SEGURIDAD 39', 'CASCO SEGURIDAD AMARILLOS',
+    ].map((nombre) => ({ nombre }))
+    const { prendas, sueltos } = agruparPrendas(items)
+    expect(prendas).toHaveLength(1)
+    expect(prendas[0].base).toBe('BOTINES DE SEGURIDAD') // la escritura más usada
+    expect(prendas[0].talles.map((t) => t.talle)).toEqual(['39', '40', '41', '42', '43', '44', '45'])
+    expect(nombres(prendas[0].talles.map((t) => t.item))).toContain('BOTINES SEGURIDAD 39')
+    expect(nombres(sueltos)).toEqual(['CASCO SEGURIDAD AMARILLOS'])
   })
 
-  it('los subtotales por categoría cuentan cada estado', () => {
-    const estadoDe = (i: { nombre: string }) =>
-      i.nombre === 'Antiparras' ? ('vencido' as const) : i.nombre === 'Botas' ? ('proximo' as const) : ('vigente' as const)
-    const epp = agruparCatalogo(items, estadoDe).find((g) => g.categoria === 'EPP')!
-    expect(epp).toMatchObject({ total: 2, sinStock: 1, bajoMinimo: 1 })
+  it('sin marcador, dos no alcanzan: "Bidón 10" y "Bidón 20" no son talles', () => {
+    const { prendas, sueltos } = agruparPrendas([{ nombre: 'Bidón 10' }, { nombre: 'Bidón 20' }])
+    expect(prendas).toHaveLength(0)
+    expect(nombres(sueltos).sort()).toEqual(['Bidón 10', 'Bidón 20'])
+  })
+
+  it('con marcador alcanza con dos; una prenda de un solo talle va a la tabla plana', () => {
+    const { prendas, sueltos } = agruparPrendas([
+      { nombre: 'Campera ADC T L' }, { nombre: 'Campera ADC T M' }, { nombre: 'Chaleco T XL' },
+    ])
+    expect(prendas.map((p) => p.base)).toEqual(['Campera ADC'])
+    expect(nombres(sueltos)).toEqual(['Chaleco T XL'])
+  })
+
+  it('dos ítems con el mismo talle: el segundo va a la tabla plana (no se pisan ni se suman)', () => {
+    const { prendas, sueltos } = agruparPrendas([
+      { nombre: 'Camisa ADC T 44' }, { nombre: 'camisa adc talle 44' }, { nombre: 'Camisa ADC T 46' },
+    ])
+    expect(prendas).toHaveLength(1)
+    expect(prendas[0].talles.map((t) => t.talle)).toEqual(['44', '46'])
+    expect(sueltos).toHaveLength(1)
+  })
+
+  it('no confunde unidades de medida con talles', () => {
+    const { prendas } = agruparPrendas([{ nombre: 'Bidón 20 L' }, { nombre: 'Lavandina 5 L' }, { nombre: 'Cable T USB' }])
+    expect(prendas).toHaveLength(0)
   })
 
   it('todo ítem aparece exactamente una vez', () => {
-    const vistos = agruparCatalogo(items, todoOk).flatMap((g) =>
-      g.entradas.flatMap((e) => (e.tipo === 'familia' ? e.variantes.map((v) => v.item.nombre) : [e.item.nombre]))
-    )
+    const items = [
+      'Camisa ADC T 36', 'Camisa ADC T 38', 'camisa adc talle 38', 'Buzo T M', 'Buzo T L', 'Guantes', 'Bidón 10', 'Bidón 20',
+      'BOTINES 40', 'BOTINES DE 41', 'Botines 42', 'Chaleco T XL',
+    ].map((nombre) => ({ nombre }))
+    const { prendas, sueltos } = agruparPrendas(items)
+    const vistos = [...prendas.flatMap((p) => p.talles.map((t) => t.item.nombre)), ...nombres(sueltos)]
     expect(vistos.sort()).toEqual(items.map((i) => i.nombre).sort())
+  })
+})
+
+describe('matricesDePrendas', () => {
+  it('una matriz por sistema, con la unión de talles en orden', () => {
+    const { prendas } = agruparPrendas([
+      { nombre: 'Camisa T 36' }, { nombre: 'Camisa T 44' }, { nombre: 'Pantalon T 40' }, { nombre: 'Pantalon T 56' },
+      { nombre: 'Buzo T XL' }, { nombre: 'Buzo T S' },
+    ])
+    const m = matricesDePrendas(prendas)
+    expect(m.map((x) => x.sistema)).toEqual(['letras', 'numeros'])
+    expect(m[0].talles).toEqual(['S', 'XL'])
+    expect(m[1].talles).toEqual(['36', '40', '44', '56'])
+    expect(m[1].prendas.map((p) => p.base)).toEqual(['Camisa', 'Pantalon'])
+  })
+  it('sin prendas no hay matrices', () => {
+    expect(matricesDePrendas([])).toEqual([])
+  })
+})
+
+describe('compararTalle', () => {
+  it('letras en orden real, números como números, letras antes que números', () => {
+    expect(['XL', 'S', 'XXXL', 'M'].sort(compararTalle)).toEqual(['S', 'M', 'XL', 'XXXL'])
+    expect(['8', '46', '36'].sort(compararTalle)).toEqual(['8', '36', '46'])
+    expect(['40', 'M'].sort(compararTalle)).toEqual(['M', '40'])
+  })
+})
+
+describe('ordenarPorUrgencia y textoMinimo', () => {
+  it('rojo, después naranja, después alfabético', () => {
+    const estados: Record<string, EstadoVencimiento> = { Casco: 'vigente', Antiparras: 'vigente', Lentes: 'vencido', Botas: 'proximo', Filtro: 'sin_fecha' }
+    const items = Object.keys(estados).map((nombre) => ({ nombre }))
+    expect(ordenarPorUrgencia(items, (i) => estados[i.nombre]).map((i) => i.nombre)).toEqual(['Lentes', 'Botas', 'Antiparras', 'Casco', 'Filtro'])
+  })
+  it('el mínimo 1 (criterio general) no se muestra', () => {
+    expect(textoMinimo(1)).toBeNull()
+    expect(textoMinimo(0)).toBe('sin mínimo')
+    expect(textoMinimo(null)).toBe('sin mínimo')
+    expect(textoMinimo(5, 'par')).toBe('mín. 5 par')
+  })
+})
+
+describe('movimientos: último, descripción y contraparte', () => {
+  const movs = [
+    { item_id: 'a', tipo: 'compra', fecha: '2026-09-16', proveedor: 'Soluciones Integrales', notas: null, created_at: '2026-09-16T10:00:00Z' },
+    { item_id: 'a', tipo: 'consumo', fecha: '2026-09-24', proveedor: null, notas: 'Nicolas Fernandez', created_at: '2026-09-24T10:00:00Z' },
+    { item_id: 'a', tipo: 'consumo', fecha: '2026-09-24', proveedor: null, notas: 'Matias Alonso', created_at: '2026-09-24T09:00:00Z' },
+    { item_id: 'b', tipo: 'ajuste', fecha: '2026-09-22', proveedor: null, notas: 'Libus · Conteo: 2 unidad (había 0 unidad)', created_at: null },
+  ]
+  it('el último por ítem desempata por created_at', () => {
+    const u = ultimoMovimientoPorItem(movs)
+    expect(u.get('a')!.notas).toBe('Nicolas Fernandez')
+    expect(u.get('b')!.tipo).toBe('ajuste')
+    expect(ultimoMovimientoPorItem([...movs].reverse()).get('a')!.notas).toBe('Nicolas Fernandez')
+  })
+  it('describe cada tipo en palabras', () => {
+    expect(describirMovimiento(movs[1])).toBe('entregado a Nicolas Fernandez')
+    expect(describirMovimiento({ tipo: 'consumo', notas: null })).toBe('entregado')
+    expect(describirMovimiento(movs[0])).toBe('Soluciones Integrales')
+    expect(describirMovimiento({ tipo: 'compra', notas: 'Devolucion Tobias', proveedor: null })).toBe('ingreso · Devolucion Tobias')
+    expect(describirMovimiento({ tipo: 'ajuste', notas: 'Stock inicial' })).toBe('stock inicial')
+    expect(describirMovimiento(movs[3])).toBe('ajuste · Libus')
+    expect(describirMovimiento({ tipo: 'ajuste', notas: 'Conteo: 3 unidad (había -1 unidad)' })).toBe('ajuste por conteo')
+  })
+  it('contraparte: proveedor en ingresos, destinatario en entregas', () => {
+    expect(contraparteDe(movs[0])).toEqual({ principal: 'Soluciones Integrales', detalle: null })
+    expect(contraparteDe({ tipo: 'compra', proveedor: 'LTM', notas: 'parcial' })).toEqual({ principal: 'LTM', detalle: 'parcial' })
+    expect(contraparteDe(movs[1])).toEqual({ principal: 'Nicolas Fernandez', detalle: null })
+    expect(contraparteDe(movs[3]).principal).toBe('Libus')
+  })
+  it('compararMovimientosDesc: más reciente primero', () => {
+    expect([...movs].sort(compararMovimientosDesc).map((m) => m.notas ?? m.proveedor)).toEqual([
+      'Nicolas Fernandez', 'Matias Alonso', 'Libus · Conteo: 2 unidad (había 0 unidad)', 'Soluciones Integrales',
+    ])
+  })
+  it('destinatarios: el más reciente primero, sin duplicados por mayúsculas/acentos', () => {
+    const r = destinatariosFrecuentes([
+      ...movs,
+      { item_id: 'c', tipo: 'consumo', fecha: '2026-09-01', notas: 'nicolás fernández ', created_at: null },
+      { item_id: 'c', tipo: 'consumo', fecha: '2026-09-02', notas: '  ', created_at: null },
+    ])
+    expect(r).toEqual(['Nicolas Fernandez', 'Matias Alonso'])
+  })
+})
+
+describe('filtrarMovimientos', () => {
+  const items: Record<string, string> = { a: 'Camisa ADC T 44', b: 'Antiparras' }
+  const movs = [
+    { id: '1', item_id: 'a', tipo: 'consumo', fecha: '2026-10-01', notas: 'Nicolás Fernández' },
+    { id: '2', item_id: 'b', tipo: 'consumo', fecha: '2026-09-24', notas: 'Nicolas Fernandez' },
+    { id: '3', item_id: 'b', tipo: 'compra', fecha: '2026-10-02', notas: null },
+  ]
+  const campos = (m: (typeof movs)[number]) => [items[m.item_id], m.notas]
+  const mes = rangoMesActual('2026-10-02')
+
+  it('busca en las notas por palabras y sin acentos, y avisa lo que quedó fuera del rango', () => {
+    const r = filtrarMovimientos(movs, { tipo: null, ...mes, busqueda: 'fernandez nicolas' }, campos)
+    expect(r.visibles.map((m) => m.id)).toEqual(['1'])
+    expect(r.fueraDeRango).toBe(1)
+  })
+  it('sin rango ve todo; por tipo filtra', () => {
+    expect(filtrarMovimientos(movs, { tipo: null, desde: '', hasta: '', busqueda: 'nicolas' }, campos).visibles).toHaveLength(2)
+    expect(filtrarMovimientos(movs, { tipo: 'compra', desde: '', hasta: '', busqueda: '' }, campos).visibles.map((m) => m.id)).toEqual(['3'])
+  })
+  it('también busca por el ítem', () => {
+    expect(filtrarMovimientos(movs, { tipo: null, desde: '', hasta: '', busqueda: 'camisa 44' }, campos).visibles.map((m) => m.id)).toEqual(['1'])
+  })
+  it('rangos de mes', () => {
+    expect(rangoMesActual('2026-10-02')).toEqual({ desde: '2026-10-01', hasta: '2026-10-02' })
+    expect(rangoMesAnterior('2026-10-02')).toEqual({ desde: '2026-09-01', hasta: '2026-09-30' })
+    expect(rangoMesAnterior('2026-01-15')).toEqual({ desde: '2025-12-01', hasta: '2025-12-31' })
+    expect(rangoMesAnterior('2028-03-10')).toEqual({ desde: '2028-02-01', hasta: '2028-02-29' })
+  })
+})
+
+describe('prepararLineas y excedenStock', () => {
+  it('ignora las líneas vacías y parsea cantidades y precios', () => {
+    const r = prepararLineas([
+      { item_id: 'a', cantidad: '2' },
+      { item_id: '', cantidad: '' },
+      { item_id: 'b', cantidad: '1,5', precio: '1.500' },
+    ], true)
+    expect(r).toEqual({ ok: true, lineas: [
+      { item_id: 'a', cantidad: 2, precio_unitario: null },
+      { item_id: 'b', cantidad: 1.5, precio_unitario: 1500 },
+    ] })
+  })
+  it('sin precio en entregas aunque venga tipeado', () => {
+    const r = prepararLineas([{ item_id: 'a', cantidad: '1', precio: '99' }], false)
+    expect(r.ok && r.lineas[0].precio_unitario).toBeNull()
+  })
+  it('errores con el número de línea', () => {
+    expect(prepararLineas([{ item_id: '', cantidad: '3' }], false)).toMatchObject({ ok: false, indice: 0 })
+    expect(prepararLineas([{ item_id: 'a', cantidad: '1' }, { item_id: 'b', cantidad: '0' }], false)).toMatchObject({ ok: false, indice: 1, error: expect.stringContaining('línea 2') })
+    expect(prepararLineas([{ item_id: 'a', cantidad: '1', precio: 'mucho' }], true)).toMatchObject({ ok: false })
+    expect(prepararLineas([{ item_id: '', cantidad: '' }], false)).toMatchObject({ ok: false, error: 'Agregá al menos un ítem.' })
+  })
+  it('suma las líneas del mismo ítem contra su stock', () => {
+    const stock: Record<string, number> = { a: 2, b: 5 }
+    expect(excedenStock([{ item_id: 'a', cantidad: 1 }, { item_id: 'a', cantidad: 2 }, { item_id: 'b', cantidad: 5 }], (id) => stock[id]))
+      .toEqual([{ item_id: 'a', pedido: 3, stock: 2 }])
+  })
+})
+
+describe('categoriaDe', () => {
+  it('la vacía cuenta como "Sin categoría"', () => {
+    expect(categoriaDe({ categoria: ' EPP ' })).toBe('EPP')
+    expect(categoriaDe({ categoria: null })).toBe(SIN_CATEGORIA)
+    expect(categoriaDe({ categoria: '  ' })).toBe(SIN_CATEGORIA)
   })
 })
