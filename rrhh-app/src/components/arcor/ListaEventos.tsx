@@ -1,7 +1,7 @@
 import { IconoEvento } from './IconoEvento'
 import { EstadoPill } from '@/components/ui/estado-pill'
 import type { EventoRow } from '@/modules/arcor/tipos'
-import { labelOrigen, severidadAEstado } from '@/modules/arcor/reglas'
+import { labelOrigen, severidadAEstado, tituloEvento } from '@/modules/arcor/reglas'
 import { diaClaveAR, etiquetaDiaAR, fmtHoraAR } from '@/lib/fechas-ar'
 import { cn } from '@/lib/utils'
 
@@ -33,7 +33,7 @@ function Fila({ e }: { e: EventoRow }) {
         <IconoEvento tipo={e.tipo} className="size-3.5" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">{e.titulo}</p>
+        <p className="truncate text-sm font-medium text-foreground">{tituloEvento(e)}</p>
         {subtitulo(e) && <p className="truncate text-xs text-muted-foreground">{subtitulo(e)}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-2">

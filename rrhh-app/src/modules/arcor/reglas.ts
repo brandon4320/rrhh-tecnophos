@@ -247,3 +247,277 @@ export function tituloLugar(lugar: string): string {
   if (especiales[lugar]) return especiales[lugar]
   return lugar.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase())
 }
+
+// ── Contenedores: título de actividad y fusión de reportes ────────────────
+
+/**
+ * Título del evento de actividad de un contenedor. Lo usa el ingest al registrar
+ * y ListaEventos al mostrar (tituloEvento): así los eventos viejos, grabados como
+ * "Buenos aires" / "Cordoba", se ven igual que los nuevos.
+ */
+export function tituloContenedor(c: { contenedor: string; lugar: string; estado: EstadoContenedor; publicado: boolean }): string {
+  const lugar = tituloLugar(c.lugar)
+  switch (c.estado) {
+    case 'encontrado':
+      return `${c.contenedor} · ${lugar} · cargado${c.publicado ? ' y publicado' : ''}`
+    case 'pendiente_arcor':
+      return `${c.contenedor} · ${lugar} · pendiente ARCOR`
+    case 'revisar_foto':
+      return `Lectura dudosa · ${lugar} · ${c.contenedor}`
+    default:
+      return `${c.contenedor} · descartado`
+  }
+}
+
+/** Tipo de evento que genera el ingest para cada estado de contenedor. */
+export const TIPO_EVENTO_CONTENEDOR: Record<EstadoContenedor, string> = {
+  encontrado: 'contenedor_cargado',
+  pendiente_arcor: 'contenedor_pendiente',
+  revisar_foto: 'lectura_dudosa',
+  descartado: 'contenedor_descartado',
+}
+
+const ESTADO_POR_TIPO_EVENTO: Record<string, EstadoContenedor> = Object.fromEntries(
+  Object.entries(TIPO_EVENTO_CONTENEDOR).map(([estado, tipo]) => [tipo, estado as EstadoContenedor])
+)
+
+/**
+ * Título a mostrar de un evento. Los de contenedor que generó el ingest (traen
+ * `detalle.accion`) se rearman con tituloContenedor; el resto se muestra tal cual.
+ */
+export function tituloEvento(e: Pick<EventoRow, 'tipo' | 'titulo' | 'detalle'>): string {
+  const estado = ESTADO_POR_TIPO_EVENTO[e.tipo]
+  const d = e.detalle ?? {}
+  if (!estado || typeof d.accion !== 'string') return e.titulo
+  if (typeof d.contenedor !== 'string' || !d.contenedor || typeof d.lugar !== 'string' || !d.lugar) return e.titulo
+  return tituloContenedor({ contenedor: d.contenedor, lugar: d.lugar, estado, publicado: d.publicado === true })
+}
+
+// Estados que NO pueden pisar a un contenedor ya `encontrado`. Además de los obvios,
+// `descartado`: el sistema ARCOR lo manda al limpiar la galería de fotos dudosas, y esa
+// lectura puede coincidir con un contenedor que se cargó bien por otra foto (pasó el
+// 26/08/2026 con TXGU4517978 / TYGU4517978). Limpiar una foto nunca puede borrar del
+// tablero un certificado que ARCOR tiene cargado.
+export const DEGRADANTES: readonly EstadoContenedor[] = ['pendiente_arcor', 'revisar_foto', 'descartado']
+
+export interface ContenedorPrevio {
+  estado: EstadoContenedor
+  fecha: string | null
+  lugar: string | null
+  publicado: boolean | null
+  booking: string | null
+  oe: string | null
+  hash_imagen: string | null
+  observaciones: string | null
+}
+
+export interface ContenedorReportado {
+  estado: EstadoContenedor
+  fecha: string
+  lugar: string
+  publicado: boolean
+  booking: string | null
+  oe: string | null
+  hash_imagen: string | null
+  observaciones: string | null
+}
+
+/**
+ * Cómo queda un contenedor ya conocido después de un reporte nuevo.
+ *  - Un reporte con MENOS datos no borra lo que ya se sabía (booking/OE/hash y
+ *    observaciones vacías se conservan — trampa #17 del sistema ARCOR).
+ *  - `publicado` nunca vuelve a false.
+ *  - Un `encontrado` no se degrada (`degrada`: solo se fusionan los datos sueltos).
+ *  - `cambia` es false si el reporte no movió nada visible (estado, publicado,
+ *    booking, OE, lugar, fecha): un re-envío idéntico no genera actividad.
+ */
+export function fusionarContenedor(prev: ContenedorPrevio, nuevo: ContenedorReportado) {
+  const degrada = prev.estado === 'encontrado' && DEGRADANTES.includes(nuevo.estado)
+  const datos = {
+    booking: nuevo.booking ?? prev.booking ?? null,
+    oe: nuevo.oe ?? prev.oe ?? null,
+    hash_imagen: nuevo.hash_imagen ?? prev.hash_imagen ?? null,
+    observaciones: nuevo.observaciones ?? prev.observaciones ?? null,
+    publicado: Boolean(prev.publicado) || nuevo.publicado,
+  }
+  const cambia =
+    !degrada &&
+    (nuevo.estado !== prev.estado ||
+      nuevo.fecha !== prev.fecha ||
+      nuevo.lugar !== prev.lugar ||
+      datos.publicado !== Boolean(prev.publicado) ||
+      datos.booking !== (prev.booking ?? null) ||
+      datos.oe !== (prev.oe ?? null))
+  return { degrada, cambia, datos }
+}
+
+// ── Colas abiertas (pendiente ARCOR / revisar foto), de TODOS los meses ───
+
+/** Estados que esperan a alguien: no se cierran solos al cambiar de mes. */
+export const ESTADOS_ABIERTOS = ['pendiente_arcor', 'revisar_foto'] as const
+export type EstadoAbierto = (typeof ESTADOS_ABIERTOS)[number]
+
+export interface ColaAbierta {
+  total: number
+  /** Con mes = el de referencia. */
+  delMes: number
+  /** De meses anteriores al de referencia (el arrastre que el mes en curso no muestra). */
+  anteriores: number
+  /** Fecha del certificado más viejo que sigue esperando ('YYYY-MM-DD'). */
+  masViejo: string | null
+}
+
+export function resumirAbiertos(
+  filas: { estado: string; fecha: string; mes: string }[],
+  mes: string
+): Record<EstadoAbierto, ColaAbierta> {
+  const ref = claveMes(mes)
+  const cola = (estado: EstadoAbierto): ColaAbierta => {
+    const propias = filas.filter((f) => f.estado === estado)
+    const fechas = propias.map((f) => f.fecha).filter(Boolean).sort()
+    return {
+      total: propias.length,
+      delMes: propias.filter((f) => f.mes === mes).length,
+      anteriores: propias.filter((f) => claveMes(f.mes) < ref).length,
+      masViejo: fechas[0] ?? null,
+    }
+  }
+  return { pendiente_arcor: cola('pendiente_arcor'), revisar_foto: cola('revisar_foto') }
+}
+
+/** Días enteros entre la fecha de un certificado y hoy (ambos 'YYYY-MM-DD', hoy en hora AR). */
+export function diasDesde(fecha: string, hoy: string): number {
+  const a = Date.UTC(Number(fecha.slice(0, 4)), Number(fecha.slice(5, 7)) - 1, Number(fecha.slice(8, 10)))
+  const b = Date.UTC(Number(hoy.slice(0, 4)), Number(hoy.slice(5, 7)) - 1, Number(hoy.slice(8, 10)))
+  return Math.round((b - a) / 86400000)
+}
+
+/** Más de estos días esperando y la fila se resalta (pendiente ARCOR / revisar foto). */
+export const DIAS_DEMORA = 3
+
+export function etiquetaDias(dias: number): string {
+  if (dias <= 0) return 'hoy'
+  return dias === 1 ? '1 día' : `${dias} días`
+}
+
+// ── Resumen del mes y comparación con el anterior ─────────────────────────
+
+export interface ResumenMes {
+  mes: string
+  total: number          // sin descartados
+  encontrados: number
+  pendientes: number
+  revisar: number
+  publicados: number
+  porLugar: ReturnType<typeof resumenPorLugar>
+}
+
+export function resumirMes(mes: string, items: { lugar: string; estado: string; publicado: boolean }[]): ResumenMes {
+  const vivos = items.filter((i) => i.estado !== 'descartado')
+  return {
+    mes,
+    total: vivos.length,
+    encontrados: vivos.filter((i) => i.estado === 'encontrado').length,
+    pendientes: vivos.filter((i) => i.estado === 'pendiente_arcor').length,
+    revisar: vivos.filter((i) => i.estado === 'revisar_foto').length,
+    publicados: vivos.filter((i) => i.publicado).length,
+    porLugar: resumenPorLugar(items),
+  }
+}
+
+/**
+ * Contenedores (sin descartados) con fecha hasta el día `dia` inclusive. Para
+ * comparar el mes en curso con el anterior "a esta altura": el 2 de octubre,
+ * 3 contra los 158 de septiembre entero no dice nada; contra los del 1 y 2 de
+ * septiembre, sí.
+ */
+export function totalHastaDia(items: { estado: string; fecha: string }[], dia: number): number {
+  return items.filter((i) => i.estado !== 'descartado' && Number(i.fecha.slice(8, 10)) <= dia).length
+}
+
+// ── Selector de meses ─────────────────────────────────────────────────────
+
+/** Meses de `desde` a `hasta` inclusive, del más reciente al más viejo. */
+export function mesesEntre(desde: string, hasta: string): string[] {
+  const tope = claveMes(desde)
+  const out: string[] = []
+  let m = hasta
+  // 600 = 50 años: corta cualquier dato basura sin colgar el render.
+  for (let i = 0; i < 600 && claveMes(m) >= tope; i++) {
+    out.push(m)
+    m = mesAnterior(m)
+  }
+  return out.length ? out : [hasta]
+}
+
+/** 'SEPTIEMBRE 2026' → 'Septiembre 2026'. */
+export function tituloMes(mes: string): string {
+  return mes.charAt(0) + mes.slice(1).toLowerCase()
+}
+
+/** Cantidad de días del mes: 'SEPTIEMBRE 2026' → 30, 'FEBRERO 2028' → 29. */
+export function diasDelMes(mes: string): number {
+  const [nombre, anio] = mes.split(' ')
+  const idx = MESES.indexOf(nombre as (typeof MESES)[number])
+  if (idx < 0) return 31
+  return new Date(Date.UTC(Number(anio), idx + 1, 0)).getUTCDate()
+}
+
+// ── Actividad: ruido y paginación ─────────────────────────────────────────
+
+/**
+ * Tipos que no le dicen nada a una persona: fotos que no son certificados
+ * (`imagen_ignorada`) y la lectura con Claude (`ocr_claude`), que duplica el
+ * evento del contenedor que llega en el mismo instante. Eran el 65 % del log.
+ */
+export const TIPOS_RUIDO = ['imagen_ignorada', 'ocr_claude'] as const
+
+/** Movimientos de contenedores (los que genera el ingest al recibir un contenedor). */
+export const TIPOS_MOVIMIENTO: readonly string[] = Object.values(TIPO_EVENTO_CONTENEDOR)
+
+export interface CursorEventos {
+  ts: string
+  id: string | null
+}
+
+const RE_TS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/
+const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * `?antes=<ts>` o `?antes=<ts>,<id>` → cursor validado (o null). El id desempata
+ * los eventos del mismo instante (un lote del ingest graba todos con el mismo ts).
+ * El formato estricto importa: el valor termina dentro de un filtro `or=(...)`.
+ */
+export function parseCursor(raw: unknown): CursorEventos | null {
+  if (typeof raw !== 'string') return null
+  const [ts, id, ...resto] = raw.split(',')
+  if (resto.length || !RE_TS.test(ts) || Number.isNaN(Date.parse(ts))) return null
+  if (id !== undefined && !RE_UUID.test(id)) return null
+  return { ts, id: id ?? null }
+}
+
+export function cursorDe(e: { ts: string; id: string }): string {
+  return `${e.ts},${e.id}`
+}
+
+// ── Búsqueda de contenedores ──────────────────────────────────────────────
+
+/**
+ * Texto del buscador → patrón ilike de PostgREST (`*` es el comodín), o null.
+ * Solo letras, números, guion y barra: nada que rompa la sintaxis de `or=(...)`.
+ * Los espacios pasan a comodín: "MRSU 939" encuentra "MRSU9390570".
+ */
+export function patronBusqueda(q: unknown): string | null {
+  if (typeof q !== 'string') return null
+  const limpio = sinAcentos(q).replace(/[^A-Za-z0-9/ -]/g, ' ').trim().replace(/\s+/g, '*').slice(0, 40)
+  return limpio ? `*${limpio}*` : null
+}
+
+// ── Publicaciones Colabora ────────────────────────────────────────────────
+
+/** 'sin_tarea' → 'Sin tarea'. */
+export function labelEstadoPublicacion(estado: string | null | undefined): string {
+  if (!estado) return '—'
+  const s = estado.replace(/_/g, ' ').trim()
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '—'
+}

@@ -16,15 +16,17 @@
 // El heartbeat (arcor_estado.heartbeat) se toca solo si se procesó al menos un
 // item: una request que falla entera NO cuenta como "el sistema está vivo".
 // Idempotente: reintentar el mismo payload no duplica contenedores ni alertas
-// (los "(ilegible)" sin hash se clavean por fecha+lugar+observaciones).
+// (los "(ilegible)" sin hash se clavean por fecha+lugar+observaciones), y un
+// contenedor re-enviado sin cambios responde accion 'sin_cambios' sin sumar un
+// evento de actividad.
 // ============================================================
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { adbAdmin } from '@/modules/arcor/db'
 import {
-  ESTADOS_CONTENEDOR, ORIGENES, SEVERIDADES, esMesValido, mesDeFecha,
-  normalizarLugar, parseFechaFlexible,
-  type EstadoContenedor, type Origen, type Severidad,
+  ESTADOS_CONTENEDOR, ORIGENES, SEVERIDADES, TIPO_EVENTO_CONTENEDOR, esMesValido, fusionarContenedor, mesDeFecha,
+  normalizarLugar, parseFechaFlexible, tituloContenedor,
+  type ContenedorPrevio, type EstadoContenedor, type Origen, type Severidad,
 } from '@/modules/arcor/reglas'
 
 export const dynamic = 'force-dynamic'
@@ -73,41 +75,14 @@ function esUniqueViolation(error: { code?: string; message?: string } | null | u
   return !!error && (error.code === '23505' || String(error.message ?? '').includes('duplicate key'))
 }
 
-function tituloContenedor(c: { contenedor: string; lugar: string; estado: EstadoContenedor; publicado: boolean }) {
-  const lugar = c.lugar.charAt(0) + c.lugar.slice(1).toLowerCase()
-  switch (c.estado) {
-    case 'encontrado':
-      return `${c.contenedor} · ${lugar} · cargado${c.publicado ? ' y publicado' : ''}`
-    case 'pendiente_arcor':
-      return `${c.contenedor} · ${lugar} · pendiente ARCOR`
-    case 'revisar_foto':
-      return `Lectura dudosa · ${lugar} · ${c.contenedor}`
-    default:
-      return `${c.contenedor} · descartado`
-  }
-}
-
-// Estados que NO pueden pisar a un contenedor ya `encontrado`. Además de los obvios,
-// `descartado`: el sistema ARCOR lo manda al limpiar la galería de fotos dudosas, y esa
-// lectura puede coincidir con un contenedor que se cargó bien por otra foto (pasó el
-// 26/08/2026 con TXGU4517978 / TYGU4517978). Limpiar una foto nunca puede borrar del
-// tablero un certificado que ARCOR tiene cargado.
-const DEGRADANTES: readonly EstadoContenedor[] = ['pendiente_arcor', 'revisar_foto', 'descartado']
-
-interface ContenedorExistente {
+interface ContenedorExistente extends ContenedorPrevio {
   id: string
-  publicado: boolean | null
-  observaciones: string | null
-  estado: EstadoContenedor
-  booking: string | null
-  oe: string | null
-  hash_imagen: string | null
 }
 
 async function buscarContenedor(admin: Admin, contenedor: string, mes: string): Promise<ContenedorExistente | null> {
   const { data, error } = await admin
     .from('arcor_contenedores')
-    .select('id, publicado, observaciones, estado, booking, oe, hash_imagen')
+    .select('id, publicado, observaciones, estado, booking, oe, hash_imagen, fecha, lugar')
     .eq('contenedor', contenedor)
     .eq('mes', mes)
     .maybeSingle()
@@ -170,35 +145,27 @@ async function procesarContenedor(admin: Admin, it: Record<string, unknown>, ori
   }
 
   if (existente) {
-    // Un reporte posterior con MENOS datos no puede borrar lo que ya se sabía:
-    //  - Trampa #17 del sistema ARCOR: observaciones vacías no pisan las existentes.
-    //  - Booking/OE/hash: el productor los omite cuando no los tiene → se conservan.
-    //  - Un contenedor ya ENCONTRADO no vuelve a "pendiente", "revisar foto" ni
-    //    "descartado" por una foto re-enviada, una fila vieja del NO ENCONTRADOS
-    //    (backfill) o una limpieza de la galería que apunta al mismo número.
-    const degrada = existente.estado === 'encontrado' && DEGRADANTES.includes(estado)
+    // Reglas de la fusión en fusionarContenedor (reglas.ts, con tests): un reporte con
+    // MENOS datos no borra lo que ya se sabía (trampa #17), un ENCONTRADO no vuelve a
+    // "pendiente"/"revisar foto"/"descartado" por una foto re-enviada, una fila vieja del
+    // NO ENCONTRADOS o una limpieza de la galería, y un re-envío idéntico (mismo estado,
+    // publicado, booking, OE, lugar y fecha) queda `sin_cambios`: sin evento de actividad
+    // (antes cada re-envío sumaba una fila "descartado" o "pendiente" repetida al feed).
+    const { degrada, cambia, datos } = fusionarContenedor(existente, {
+      estado, fecha, lugar, publicado, observaciones,
+      booking: entrante.booking, oe: entrante.oe, hash_imagen: entrante.hash_imagen,
+    })
     const { error } = await admin
       .from('arcor_contenedores')
-      .update({
-        ...(degrada ? { updated_at: ahora } : entrante),
-        booking: entrante.booking ?? existente.booking ?? null,
-        oe: entrante.oe ?? existente.oe ?? null,
-        hash_imagen: entrante.hash_imagen ?? existente.hash_imagen ?? null,
-        observaciones: observaciones ?? existente.observaciones ?? null,
-        publicado: Boolean(existente.publicado) || publicado,
-      })
+      .update({ ...(degrada ? { updated_at: ahora } : entrante), ...datos })
       .eq('id', existente.id)
     if (error) throw new ItemError(`update: ${error.message}`)
-    accion = degrada ? 'sin_cambios' : 'actualizado'
+    accion = cambia ? 'actualizado' : 'sin_cambios'
   }
 
   // Sin evento para el backfill (sin_evento) ni para un reporte que no cambió nada.
   if (it.sin_evento !== true && accion !== 'sin_cambios') {
-    const tipo =
-      estado === 'encontrado' ? 'contenedor_cargado'
-      : estado === 'pendiente_arcor' ? 'contenedor_pendiente'
-      : estado === 'revisar_foto' ? 'lectura_dudosa'
-      : 'contenedor_descartado'
+    const tipo = TIPO_EVENTO_CONTENEDOR[estado]
     const severidad: Severidad = estado === 'revisar_foto' ? 'warning' : 'info'
     const { error } = await admin.from('arcor_eventos').insert({
       ts: ahora,

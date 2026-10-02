@@ -363,7 +363,17 @@ solo muestra lo que ese sistema le reporta.
   `fecha|lugar|observaciones` (backfill idempotente). Las alertas abiertas se refrescan también en
   `severidad`/`titulo` (warning → critical se ve). Las lecturas (`queries.ts`) **lanzan** si
   Supabase falla y `arcor/error.tsx` lo muestra: en observabilidad, "no pude leer" nunca puede
-  parecer "todo en cero".
+  parecer "todo en cero". Un contenedor re-enviado sin cambios (mismo estado, publicado, booking,
+  OE, lugar y fecha — `fusionarContenedor`) responde `accion: 'sin_cambios'` y **no suma evento**.
+- **Lectura del tablero (2026-10-02):** "Pendiente ARCOR" y "Revisar foto" son **colas de todos
+  los meses** (`getColasAbiertas`: un pendiente del 30/09 sigue esperando el 1/10) y el tile de
+  Revisar foto muestra el mismo número que el botón "Revisar dudosas". El total del mes se compara
+  con el mes anterior **hasta el mismo día**. La actividad oculta por defecto `TIPOS_RUIDO`
+  (`imagen_ignorada`, `ocr_claude`: eran el 65 % del log; opción "Todo"), cuenta con
+  `count: 'exact', head: true` y pagina con cursor `?antes=<ts>,<id>` (el id desempata: un lote
+  del ingest graba todos los eventos con el mismo ts). Contenedores: `?q=` busca en todos los
+  meses, `?mes=todos` saca el filtro de mes, los descartados solo se ven con su filtro o buscando.
+  `AutoRefresh` refresca las pantallas cada 2 min y al volver a la pestaña.
 - **Acceso:** `puedeVerArcor(sesion)` (rol RRHH + `empresaAcceso == null`) es el ÚNICO guard
   válido; `puedeAccederModulo(rol, 'arcor')` es más laxo (solo rol) y no alcanza. El hub filtra
   ARCOR con `puedeVerArcor` antes de decidir la redirección directa.
