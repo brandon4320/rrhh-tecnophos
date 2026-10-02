@@ -249,7 +249,11 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
       recordarQuien()
       borrar(claveBorrador)
       const detalle: string[] = []
-      if (json.novedades > 0) detalle.push(`Se ${json.novedades === 1 ? 'abrió 1 novedad' : `abrieron ${json.novedades} novedades`} para que tu encargado las revise.`)
+      if (json.novedades > 0) {
+        detalle.push(json.novedades === 1
+          ? 'Se abrió 1 novedad para que tu encargado la revise.'
+          : `Se abrieron ${json.novedades} novedades para que tu encargado las revise.`)
+      }
       if (json.resultado === 'no_apto') detalle.push('Ya le avisamos a tu encargado. No la uses hasta que la revisen.')
       if (json.kmInconsistente) detalle.push('El kilometraje no coincide con el último registro: lo va a revisar tu encargado.')
       setResultado({
