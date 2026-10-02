@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { resumirVehiculo, mensajeResumenDiario, type DatosVehiculo } from './resumen'
 
-const HOY = '2026-10-05' // lunes
+const HOY = '2026-10-05' // lunes: quincena del 1 al 14, ya pasada la gracia (1 al 3)
 
 const base = (extra: Partial<DatosVehiculo> = {}): DatosVehiculo => ({
   id: 'v1',
@@ -10,8 +10,8 @@ const base = (extra: Partial<DatosVehiculo> = {}): DatosVehiculo => ({
   checklist_cada_dias: 15,
   checklist_activo: true,
   checklists: [
-    { created_at: '2026-09-30T10:00:00-03:00', km: 86_000, km_inconsistente: false, resultado: 'ok' },
-    { created_at: '2026-09-15T10:00:00-03:00', km: 83_000, km_inconsistente: false, resultado: 'ok' },
+    { created_at: '2026-10-01T10:00:00-03:00', km: 86_000, km_inconsistente: false, resultado: 'ok' },
+    { created_at: '2026-09-16T10:00:00-03:00', km: 83_000, km_inconsistente: false, resultado: 'ok' },
   ],
   plan: [{ tipo: 'service', cada_km: 10_000, cada_meses: 12 }],
   services: [{ tipo: 'service', fecha: '2026-08-01', km: 82_000 }],
@@ -28,12 +28,46 @@ describe('resumen del vehículo', () => {
     expect(r.kmDia).toBe(200)
   })
 
-  it('el último checklist no apto la pone en rojo', () => {
+  it('una novedad grave abierta la deja no apta y en rojo', () => {
     const r = resumirVehiculo(base({
-      checklists: [{ created_at: '2026-10-03T10:00:00-03:00', km: 86_100, km_inconsistente: false, resultado: 'no_apto' }],
+      novedades: [{ gravedad: 'alta', titulo: 'Luces de freno', created_at: '2026-10-01T10:00:00-03:00' }],
     }), HOY)
+    expect(r.noApta).toBe(true)
     expect(r.semaforo).toBe('rojo')
-    expect(r.motivos[0]).toMatch(/No apta/)
+    expect(r.motivos[0]).toBe('No apta para circular: 1 novedad grave abierta')
+  })
+
+  it('no apta sale de las novedades abiertas, no del último checklist: se limpia al resolverlas', () => {
+    const r = resumirVehiculo(base({
+      checklists: [
+        { created_at: '2026-10-03T10:00:00-03:00', km: 86_100, km_inconsistente: false, resultado: 'no_apto' },
+        { created_at: '2026-09-16T10:00:00-03:00', km: 83_000, km_inconsistente: false, resultado: 'ok' },
+      ],
+      novedades: [], // la oficina ya resolvió las graves
+    }), HOY)
+    expect(r.noApta).toBe(false)
+    expect(r.semaforo).toBe('verde')
+  })
+
+  it('una novedad no grave no la deja no apta', () => {
+    const r = resumirVehiculo(base({
+      novedades: [{ gravedad: 'media', titulo: 'Bocina', created_at: '2026-10-01T10:00:00-03:00' }],
+    }), HOY)
+    expect(r.noApta).toBe(false)
+    expect(r.semaforo).toBe('amarillo')
+  })
+
+  it('checklist: al empezar la quincena toca hacerlo (amarillo); pasada la gracia, vencido (rojo)', () => {
+    const anterior = base({
+      checklists: [{ created_at: '2026-09-16T10:00:00-03:00', km: 83_000, km_inconsistente: false, resultado: 'ok' }],
+    })
+    const enGracia = resumirVehiculo(anterior, '2026-10-02')
+    expect(enGracia.checklist.estado).toBe('vence_pronto')
+    expect(enGracia.semaforo).toBe('amarillo')
+    expect(enGracia.motivos).toContain('Toca hacer el checklist (hasta mañana)')
+    const vencido = resumirVehiculo(anterior, HOY)
+    expect(vencido.semaforo).toBe('rojo')
+    expect(vencido.motivos).toContain('Checklist vencido hace 2 días')
   })
 
   it('un km marcado como inconsistente no entra en la proyección', () => {
@@ -83,9 +117,30 @@ describe('mensaje del resumen diario', () => {
       { patente: 'AE169KB', checklistActivo: true, r: nuevo },
     ], HOY, 'https://gestion.test')!
     expect(msg).toContain('Flota Tecnophos Bahía Blanca')
-    expect(msg).toContain('• Vencido: AD113UY (hace 5 días)')
+    expect(msg).toContain('• Vencido: AD113UY (hace 2 días)')
     expect(msg).toContain('• Sin hacer todavía: AE169KB')
     expect(msg).toContain('https://gestion.test/flota?empresa=tecnophos-bb')
+  })
+
+  it('en los días de gracia avisa que toca hacerlo, con hasta cuándo', () => {
+    const hoy = '2026-10-01'
+    const r = resumirVehiculo(base({
+      checklists: [{ created_at: '2026-09-16T10:00:00-03:00', km: 83_000, km_inconsistente: false, resultado: 'ok' }],
+    }), hoy)
+    const msg = mensajeResumenDiario(empresa, [{ patente: 'AD113UY', checklistActivo: true, r }], hoy, 'https://x')!
+    expect(msg).toContain('• Toca hacerlo: AD113UY (hasta el 03/10)')
+  })
+
+  it('las no aptas salen de las novedades graves abiertas, en un solo bloque', () => {
+    const r = resumirVehiculo(base({
+      novedades: [
+        { gravedad: 'alta', titulo: 'Luces de freno', created_at: '2026-10-01T10:00:00-03:00' },
+        { gravedad: 'alta', titulo: 'Frenos', created_at: '2026-10-01T10:00:00-03:00' },
+      ],
+    }), HOY)
+    const msg = mensajeResumenDiario(empresa, [{ patente: 'AD113UY', checklistActivo: true, r }], HOY, 'https://x')!
+    expect(msg).toContain('*No aptas para circular*\n• AD113UY (2 novedades graves sin resolver)')
+    expect(msg).not.toContain('Novedades graves sin resolver')
   })
 
   it('un vehículo con el checklist desactivado no aparece por el checklist', () => {

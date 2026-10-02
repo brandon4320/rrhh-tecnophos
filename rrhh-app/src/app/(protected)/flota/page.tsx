@@ -5,8 +5,8 @@ import { getSesion } from '@/lib/auth/session'
 import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import { EstadoPill } from '@/components/ui/estado-pill'
 import { cargarFlota } from '@/modules/flota/queries'
-import { resumirVehiculo, type Semaforo } from '@/modules/flota/resumen'
-import { ESTADO_CHECKLIST_LABEL } from '@/modules/flota/reglas'
+import { resumirVehiculo, type ResumenVehiculo, type Semaforo } from '@/modules/flota/resumen'
+import { ESTADO_CHECKLIST_LABEL, fmtDia } from '@/modules/flota/reglas'
 import type { EstadoVencimiento } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +18,14 @@ const SEMAFORO: Record<Semaforo, { estado: EstadoVencimiento; label: string; ord
 }
 
 const CHECKLIST_PILL = { al_dia: 'vigente', vence_pronto: 'proximo', vencido: 'vencido', nunca: 'sin_fecha' } as const
+
+/** Debajo del estado del checklist: cuándo se hizo o hasta cuándo hay tiempo. */
+function detalleChecklist(c: ResumenVehiculo['checklist']): string {
+  if (c.estado === 'nunca') return 'nunca se hizo'
+  if (c.estado === 'vence_pronto') return c.venceEn === 0 ? 'hoy es el último día' : `hay tiempo hasta el ${fmtDia(c.limite!)}`
+  if (c.estado === 'vencido') return `venció el ${fmtDia(c.limite!)}`
+  return c.diasDesde === 0 ? 'hecho hoy' : `hecho hace ${c.diasDesde} ${c.diasDesde === 1 ? 'día' : 'días'}`
+}
 
 /**
  * Flota de una empresa (?empresa=slug) o de TODAS (sin el parámetro): la misma
@@ -167,9 +175,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                       {v.checklist_activo ? (
                         <>
                           <EstadoPill estado={CHECKLIST_PILL[r.checklist.estado]} label={ESTADO_CHECKLIST_LABEL[r.checklist.estado]} />
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {r.checklist.diasDesde == null ? 'nunca se hizo' : r.checklist.diasDesde === 0 ? 'hecho hoy' : `hace ${r.checklist.diasDesde} ${r.checklist.diasDesde === 1 ? 'día' : 'días'}`}
-                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{detalleChecklist(r.checklist)}</p>
                         </>
                       ) : (
                         <span className="text-xs text-muted-foreground">Desactivado</span>
@@ -182,7 +188,9 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                     <td className="px-3 py-3">
                       {service ? (
                         <p className={service.estado === 'vencido' ? 'font-medium text-danger' : service.estado === 'proximo' ? 'font-medium text-warning' : ''}>
-                          {service.estado === 'sin_dato' ? <span className="text-muted-foreground">Sin último service</span> : service.motivo}
+                          {service.estado === 'sin_dato'
+                            ? <span className="text-muted-foreground">{v.services.some((s) => s.tipo === service.tipo) ? service.motivo : 'Sin último service'}</span>
+                            : service.motivo}
                         </p>
                       ) : <span className="text-muted-foreground">—</span>}
                     </td>
@@ -197,7 +205,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-right">
                       {emp && (
-                        <Link href={`/flota/qr?empresa=${emp.slug}&vehiculo=${v.id}&imprimir=1`} title={`Imprimir el QR de ${v.patente}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
+                        <Link href={`/flota/qr?empresa=${emp.slug}&vehiculo=${v.id}&imprimir=1`} prefetch={false} title={`Imprimir el QR de ${v.patente}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
                           <Printer className="size-3.5" strokeWidth={1.75} />
                           QR
                         </Link>

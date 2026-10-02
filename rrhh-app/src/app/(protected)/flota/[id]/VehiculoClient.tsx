@@ -11,11 +11,13 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { EstadoPill } from '@/components/ui/estado-pill'
 import { fmtFechaAR, fmtFechaHoraAR, diaClaveAR } from '@/lib/fechas-ar'
+import { mensajeError } from '@/lib/errores'
 import type { EstadoVencimiento } from '@/types'
 import type { ResumenVehiculo, Semaforo } from '@/modules/flota/resumen'
 import {
-  FOTOS_CHECKLIST, RESULTADO_LABEL, SECCIONES_CHECKLIST, TIPOS_MANTENIMIENTO, itemPorId, nombreMantenimiento,
-  type EstadoMantenimiento, type Resultado,
+  ESTADO_CHECKLIST_LABEL, FOTOS_CHECKLIST, RESULTADO_LABEL, SECCIONES_CHECKLIST, TIPOS_MANTENIMIENTO,
+  GRACIA_CHECKLIST_DIAS, checklistMensual, frecuenciaChecklist, itemPorId, nombreMantenimiento,
+  type EstadoChecklist, type EstadoMantenimiento, type Resultado,
 } from '@/modules/flota/reglas'
 
 interface Checklist {
@@ -52,6 +54,7 @@ const SEMAFORO: Record<Semaforo, { estado: EstadoVencimiento; label: string }> =
   verde: { estado: 'vigente', label: 'En orden' },
 }
 const RESULTADO_PILL: Record<Resultado, EstadoVencimiento> = { ok: 'vigente', observaciones: 'proximo', no_apto: 'vencido' }
+const CHECKLIST_PILL: Record<EstadoChecklist, EstadoVencimiento> = { al_dia: 'vigente', vence_pronto: 'proximo', vencido: 'vencido', nunca: 'sin_fecha' }
 const MANT_PILL: Record<EstadoMantenimiento, EstadoVencimiento> = { ok: 'vigente', proximo: 'proximo', vencido: 'vencido', sin_dato: 'sin_fecha' }
 const MANT_LABEL: Record<EstadoMantenimiento, string> = { ok: 'Al día', proximo: 'Próximo', vencido: 'Vencido', sin_dato: 'Sin datos' }
 const GRAVEDAD: Record<string, { label: string; cls: string }> = {
@@ -89,7 +92,7 @@ function FotoR2({ path, label }: { path: string; label?: string }) {
         className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={label ?? ''} className="h-full w-full object-cover" />
+          <img src={url} alt={label ?? ''} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : error ? (
           <ImageOff className="size-5 text-muted-foreground" />
         ) : (
@@ -134,7 +137,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
       resuelta_por: await usuarioId(),
     }).eq('id', n.id)
     setSaving(false)
-    if (error) return toast.error(`No se pudo guardar. ${error.message}`)
+    if (error) return toast.error(mensajeError(error, 'guardar'))
     toast.success(estado === 'resuelta' ? 'Novedad resuelta.' : 'Novedad descartada.')
     setResolviendo(null)
     setResForm({ resolucion: '', costo: '' })
@@ -150,7 +153,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
       km: vehiculo.kmActual,
     })
     setSaving(false)
-    if (error) return toast.error(`No se pudo crear. ${error.message}`)
+    if (error) return toast.error(mensajeError(error, 'cargar la novedad'))
     setNuevaNov(null)
     toast.success('Novedad cargada.')
     router.refresh()
@@ -175,12 +178,19 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
       vehiculo_id: vehiculo.id, empresa_id: vehiculo.empresaId, tipo: servForm.tipo, fecha: servForm.fecha,
       km, taller: servForm.taller.trim() || null, costo, notas: servForm.notas.trim() || null,
     })
+    let errorKm: unknown = null
     if (!error && km != null && (vehiculo.kmActual == null || km > vehiculo.kmActual)) {
-      // El km del taller también es una lectura del odómetro.
-      await supabase.from('vehiculos').update({ km_actual: km, km_actualizado_at: new Date().toISOString() }).eq('id', vehiculo.id)
+      // El km del taller también es una lectura del odómetro, tomada el día del
+      // service (no hoy): si no, el control de km del próximo checklist mediría
+      // el salto contra una fecha equivocada.
+      const { error: e } = await supabase.from('vehiculos')
+        .update({ km_actual: km, km_actualizado_at: `${servForm.fecha}T12:00:00-03:00` })
+        .eq('id', vehiculo.id)
+      errorKm = e
     }
     setSaving(false)
-    if (error) return toast.error(`No se pudo registrar. ${error.message}`)
+    if (error) return toast.error(mensajeError(error, 'registrar el service'))
+    if (errorKm) toast.error(`El service quedó registrado, pero no se actualizaron los km del vehículo. ${mensajeError(errorKm, 'actualizar los km')}`)
     setServForm(null)
     toast.success(`${nombreMantenimiento(servForm.tipo)} registrado.`)
     router.refresh()
@@ -196,7 +206,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
       return toast.error('Los intervalos tienen que ser números enteros mayores a cero.')
     }
     const { error } = await supabase.from('vehiculo_mantenimiento_plan').update({ cada_km, cada_meses }).eq('id', p.id)
-    if (error) return toast.error(`No se pudo guardar. ${error.message}`)
+    if (error) return toast.error(mensajeError(error, 'guardar'))
     setEditPlan((prev) => { const c = { ...prev }; delete c[p.id]; return c })
     router.refresh()
   }
@@ -206,7 +216,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
     const { error } = await supabase.from('vehiculo_mantenimiento_plan').insert({
       vehiculo_id: vehiculo.id, empresa_id: vehiculo.empresaId, tipo: nuevoTipo, cada_km: nuevoTipo === 'distribucion' ? 60000 : 20000, cada_meses: null,
     })
-    if (error) return toast.error(error.code === '23505' ? 'Ese mantenimiento ya está en el plan.' : `No se pudo agregar. ${error.message}`)
+    if (error) return toast.error(error.code === '23505' ? 'Ese mantenimiento ya está en el plan.' : mensajeError(error, 'agregarlo al plan'))
     setNuevoTipo('')
     router.refresh()
   }
@@ -214,7 +224,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
   async function quitarTipo(p: Plan) {
     if (!confirm(`¿Sacar "${nombreMantenimiento(p.tipo)}" del plan? El historial de services se conserva.`)) return
     const { error } = await supabase.from('vehiculo_mantenimiento_plan').delete().eq('id', p.id)
-    if (error) return toast.error(`No se pudo quitar. ${error.message}`)
+    if (error) return toast.error(mensajeError(error, 'quitarlo del plan'))
     router.refresh()
   }
 
@@ -243,7 +253,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
       ...(kmCambio ? { km_actual: km, km_actualizado_at: new Date().toISOString() } : {}),
     }).eq('id', vehiculo.id)
     setSaving(false)
-    if (error) return toast.error(`No se pudo guardar. ${error.message}`)
+    if (error) return toast.error(mensajeError(error, 'guardar'))
     toast.success('Datos guardados.')
     router.refresh()
   }
@@ -255,7 +265,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
     crypto.getRandomValues(bytes)
     const token = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
     const { error } = await supabase.from('vehiculos').update({ checklist_token: token }).eq('id', vehiculo.id)
-    if (error) return toast.error(`No se pudo generar. ${error.message}`)
+    if (error) return toast.error(mensajeError(error, 'generar el QR nuevo'))
     toast.success('QR nuevo generado. Imprimilo y reemplazá el de la camioneta.')
     router.refresh()
   }
@@ -402,9 +412,15 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
           <section className={card}>
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
               <div>
-                <h2 className="text-lg font-semibold tracking-tight">Checklists</h2>
+                <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold tracking-tight">
+                  Checklists
+                  {vehiculo.checklistActivo && (
+                    <EstadoPill estado={CHECKLIST_PILL[resumen.checklist.estado]} label={ESTADO_CHECKLIST_LABEL[resumen.checklist.estado]} />
+                  )}
+                </h2>
                 <p className="text-sm text-muted-foreground">
-                  {checklists.length === 0 ? 'Todavía no se hizo ninguno' : `Cada ${vehiculo.checklistCadaDias} días · ${checklists.length} registrados`}
+                  {!vehiculo.checklistActivo ? 'Desactivado' : frecuenciaChecklist(vehiculo.checklistCadaDias)}
+                  {checklists.length === 0 ? ' · todavía no se hizo ninguno' : ` · ${checklists.length} registrados`}
                 </p>
               </div>
               {checklists.length > 1 && (
@@ -606,6 +622,14 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
                 <input id="d-cada" value={datos.cada} onChange={(e) => setDatos({ ...datos, cada: e.target.value })} inputMode="numeric" disabled={!canEdit || !datos.activo} className={cn(input, 'w-16')} />
                 <span className="text-sm text-muted-foreground">días</span>
               </div>
+              {datos.activo && (
+                <p className="text-xs text-muted-foreground">
+                  {num(datos.cada) != null && checklistMensual(num(datos.cada)!)
+                    ? 'Mensual: toca el día 1 de cada mes (con menos de 28 días pasa a quincenal).'
+                    : 'Quincenal: toca los días 1 y 15 (con 28 días o más pasa a mensual).'}{' '}
+                  Hay {GRACIA_CHECKLIST_DIAS} días para hacerlo antes de que quede vencido.
+                </p>
+              )}
               {vehiculo.kmActualizadoAt && <p className="text-xs text-muted-foreground">Km actualizados el {fmtFechaAR(vehiculo.kmActualizadoAt)}</p>}
               {canEdit && (
                 <button type="submit" disabled={!datosCambiaron || saving} className={btnPrimario}>Guardar datos</button>

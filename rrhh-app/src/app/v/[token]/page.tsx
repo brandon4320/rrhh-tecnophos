@@ -78,6 +78,7 @@ export default async function ChecklistQRPage({ params }: { params: Promise<{ to
         detalle: [vehiculo.marca, vehiculo.modelo].filter(Boolean).join(' ') || vehiculo.descripcion,
         empresa: vehiculo.empresa.nombre,
         kmActual: vehiculo.km_actual,
+        kmActualizadoAt: vehiculo.km_actualizado_at,
         cadaDias: vehiculo.checklist_cada_dias,
       }}
       empleados={(empleados ?? []).map((e) => ({ id: e.id, nombre: [e.nombre, e.apellido].filter(Boolean).join(' ') }))}
