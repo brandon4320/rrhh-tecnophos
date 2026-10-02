@@ -200,6 +200,7 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           { key: 'documentacion', label: 'Documentación', href: `/empresa/${activa.slug}?vista=documentacion`, active: enEmpresa && enDocumentacion },
           { key: 'documentos', label: 'Doc. mensual', href: `/documentos?empresa=${activa.slug}`, active: pathname.startsWith('/documentos') },
           { key: 'stock', label: 'Stock', href: `/stock?empresa=${activa.slug}`, active: pathname.startsWith('/stock') },
+          { key: 'flota', label: 'Flota', href: `/flota?empresa=${activa.slug}`, active: pathname.startsWith('/flota') },
         ]
 
   const sectores = activa && activa.tipo === 'empresa' ? activa.sectores : []
@@ -214,9 +215,9 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
     )
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
+    <div className="flex h-dvh overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
       {/* ── Sidebar única (clara) ── */}
-      <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card">
+      <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card print:hidden">
         <div className="px-5 pb-2 pt-5">
           <p className="text-base font-semibold tracking-tight">Gestión</p>
           <p className="text-xs text-muted-foreground">Tecnophos · ADC · Serviwhite</p>
@@ -370,7 +371,7 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-y-auto print:overflow-visible">{children}</main>
     </div>
   )
 }

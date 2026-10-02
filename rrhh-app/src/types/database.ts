@@ -1126,28 +1126,55 @@ export type Database = {
       vehiculos: {
         Row: {
           activo: boolean | null
+          anio: number | null
+          checklist_activo: boolean
+          checklist_cada_dias: number
+          checklist_token: string
+          conductor_id: string | null
           created_at: string | null
           descripcion: string | null
           empresa_id: string | null
           id: string
+          km_actual: number | null
+          km_actualizado_at: string | null
+          marca: string | null
+          modelo: string | null
           patente: string
           updated_at: string | null
         }
         Insert: {
           activo?: boolean | null
+          anio?: number | null
+          checklist_activo?: boolean
+          checklist_cada_dias?: number
+          checklist_token?: string
+          conductor_id?: string | null
           created_at?: string | null
           descripcion?: string | null
           empresa_id?: string | null
           id?: string
+          km_actual?: number | null
+          km_actualizado_at?: string | null
+          marca?: string | null
+          modelo?: string | null
           patente: string
           updated_at?: string | null
         }
         Update: {
           activo?: boolean | null
+          anio?: number | null
+          checklist_activo?: boolean
+          checklist_cada_dias?: number
+          checklist_token?: string
+          conductor_id?: string | null
           created_at?: string | null
           descripcion?: string | null
           empresa_id?: string | null
           id?: string
+          km_actual?: number | null
+          km_actualizado_at?: string | null
+          marca?: string | null
+          modelo?: string | null
           patente?: string
           updated_at?: string | null
         }
@@ -1157,6 +1184,337 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehiculos_conductor_id_fkey"
+            columns: ["conductor_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehiculo_checklists: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          fotos: Json
+          id: string
+          km: number | null
+          km_inconsistente: boolean
+          notas_items: Json
+          observaciones: string | null
+          origen: string
+          realizado_por: string | null
+          realizado_por_nombre: string
+          respuestas: Json
+          resultado: string
+          vehiculo_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          fotos?: Json
+          id?: string
+          km?: number | null
+          km_inconsistente?: boolean
+          notas_items?: Json
+          observaciones?: string | null
+          origen?: string
+          realizado_por?: string | null
+          realizado_por_nombre: string
+          respuestas?: Json
+          resultado: string
+          vehiculo_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          fotos?: Json
+          id?: string
+          km?: number | null
+          km_inconsistente?: boolean
+          notas_items?: Json
+          observaciones?: string | null
+          origen?: string
+          realizado_por?: string | null
+          realizado_por_nombre?: string
+          respuestas?: Json
+          resultado?: string
+          vehiculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehiculo_checklists_vehiculo_fkey"
+            columns: ["vehiculo_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
+            referencedColumns: ["id", "empresa_id"]
+          },
+          {
+            foreignKeyName: "vehiculo_checklists_realizado_por_fkey"
+            columns: ["realizado_por"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehiculo_novedades: {
+        Row: {
+          checklist_id: string | null
+          costo: number | null
+          created_at: string
+          descripcion: string | null
+          empresa_id: string
+          estado: string
+          fotos: Json
+          gravedad: string
+          id: string
+          item: string | null
+          km: number | null
+          origen: string
+          reportado_por_nombre: string | null
+          resolucion: string | null
+          resuelta_at: string | null
+          resuelta_por: string | null
+          titulo: string
+          updated_at: string
+          vehiculo_id: string
+        }
+        Insert: {
+          checklist_id?: string | null
+          costo?: number | null
+          created_at?: string
+          descripcion?: string | null
+          empresa_id: string
+          estado?: string
+          fotos?: Json
+          gravedad?: string
+          id?: string
+          item?: string | null
+          km?: number | null
+          origen?: string
+          reportado_por_nombre?: string | null
+          resolucion?: string | null
+          resuelta_at?: string | null
+          resuelta_por?: string | null
+          titulo: string
+          updated_at?: string
+          vehiculo_id: string
+        }
+        Update: {
+          checklist_id?: string | null
+          costo?: number | null
+          created_at?: string
+          descripcion?: string | null
+          empresa_id?: string
+          estado?: string
+          fotos?: Json
+          gravedad?: string
+          id?: string
+          item?: string | null
+          km?: number | null
+          origen?: string
+          reportado_por_nombre?: string | null
+          resolucion?: string | null
+          resuelta_at?: string | null
+          resuelta_por?: string | null
+          titulo?: string
+          updated_at?: string
+          vehiculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehiculo_novedades_vehiculo_fkey"
+            columns: ["vehiculo_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
+            referencedColumns: ["id", "empresa_id"]
+          },
+          {
+            foreignKeyName: "vehiculo_novedades_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculo_checklists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehiculo_mantenimiento_plan: {
+        Row: {
+          cada_km: number | null
+          cada_meses: number | null
+          created_at: string
+          empresa_id: string
+          id: string
+          tipo: string
+          vehiculo_id: string
+        }
+        Insert: {
+          cada_km?: number | null
+          cada_meses?: number | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          tipo: string
+          vehiculo_id: string
+        }
+        Update: {
+          cada_km?: number | null
+          cada_meses?: number | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          tipo?: string
+          vehiculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vmp_vehiculo_fkey"
+            columns: ["vehiculo_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
+            referencedColumns: ["id", "empresa_id"]
+          },
+        ]
+      }
+      vehiculo_services: {
+        Row: {
+          costo: number | null
+          created_at: string
+          created_by: string | null
+          empresa_id: string
+          fecha: string
+          id: string
+          km: number | null
+          notas: string | null
+          taller: string | null
+          tipo: string
+          vehiculo_id: string
+        }
+        Insert: {
+          costo?: number | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id: string
+          fecha: string
+          id?: string
+          km?: number | null
+          notas?: string | null
+          taller?: string | null
+          tipo: string
+          vehiculo_id: string
+        }
+        Update: {
+          costo?: number | null
+          created_at?: string
+          created_by?: string | null
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          km?: number | null
+          notas?: string | null
+          taller?: string | null
+          tipo?: string
+          vehiculo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehiculo_services_vehiculo_fkey"
+            columns: ["vehiculo_id", "empresa_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
+            referencedColumns: ["id", "empresa_id"]
+          },
+        ]
+      }
+      flota_encargados: {
+        Row: {
+          activo: boolean
+          created_at: string
+          empresa_id: string
+          id: string
+          nombre: string
+          telefono: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nombre: string
+          telefono: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nombre?: string
+          telefono?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flota_encargados_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flota_avisos: {
+        Row: {
+          clave: string
+          created_at: string
+          destinatarios: number
+          empresa_id: string
+          error: string | null
+          estado: string
+          id: string
+          mensaje: string
+          tipo: string
+          vehiculo_id: string | null
+        }
+        Insert: {
+          clave: string
+          created_at?: string
+          destinatarios?: number
+          empresa_id: string
+          error?: string | null
+          estado?: string
+          id?: string
+          mensaje: string
+          tipo: string
+          vehiculo_id?: string | null
+        }
+        Update: {
+          clave?: string
+          created_at?: string
+          destinatarios?: number
+          empresa_id?: string
+          error?: string | null
+          estado?: string
+          id?: string
+          mensaje?: string
+          tipo?: string
+          vehiculo_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flota_avisos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flota_avisos_vehiculo_id_fkey"
+            columns: ["vehiculo_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
             referencedColumns: ["id"]
           },
         ]

@@ -12,7 +12,11 @@ import { env } from '@/lib/env'
 // en el dispositivo): los iPads la abren sin sesión del portal.
 // /api/arcor/ingest lo llama el servidor de ARCOR (máquina a máquina): no hay
 // sesión de navegador, la ruta valida su propio token (ver el route handler).
-const PUBLIC_PATHS = ['/login', '/control-plagas.html', '/api/arcor/ingest']
+// /v/<token> y /api/v/<token>: el checklist de flota que se abre con el QR
+// pegado en cada camioneta. Lo completa quien maneja, sin cuenta en el sistema;
+// la autorización es el token del vehículo (ver modules/flota/servidor.ts).
+// /api/cron/*: los llama Vercel; cada ruta valida CRON_SECRET.
+const PUBLIC_PATHS = ['/login', '/control-plagas.html', '/api/arcor/ingest', '/v', '/api/v', '/api/cron']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })

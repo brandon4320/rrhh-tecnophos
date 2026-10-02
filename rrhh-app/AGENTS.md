@@ -81,6 +81,7 @@ rrhh-app/src/
 │   │   ├── empleados/  legajo/[id]/  vencimientos/  admin/
 │   │   ├── documentos/             # Documentación mensual por empresa: DocumentosClient (año → mes → carpetas)
 │   │   ├── stock/                  # Stock por empresa: StockClient (CRUD ítems + movimientos)
+│   │   ├── flota/                  # Flota: semáforo, ficha del vehículo, QR imprimibles (ver §6)
 │   │   └── arcor/                  # ═══ TECNOPHOS - ARCOR (observabilidad) ═══ ver §8b
 │   ├── operaciones/                # ═══ MÓDULO OPERACIONES ═══
 │   ├── comercial/                  # ═══ MÓDULO COMERCIAL ═══
@@ -212,6 +213,37 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
 - **En los `<select>` de tipo de certificado, la opción "Otro" usa el valor
   `'otro'`, que NO es un UUID**: al guardar va `tipo_id: null` +
   `tipo_nombre_custom`. Ese bug ya se arregló una vez — no lo reintroduzcas.
+- **Flota** (migración 20, 02/10/2026): checklist quincenal por QR, kilómetros, novedades y
+  mantenimiento. Cada vehículo tiene un `checklist_token` (24 hex) y un QR impreso dentro de la
+  camioneta que abre **`/v/<token>`: página PÚBLICA, sin login** (la completa quien maneja). Todo lo
+  que escribe pasa por `/api/v/<token>` y `/api/v/<token>/foto` con **service role, después de
+  validar el token** (`modules/flota/servidor.ts`); las tablas no tienen policies para anon. Las tres
+  rutas, más `/api/cron`, están en `PUBLIC_PATHS` del proxy.
+  - Tablas: `vehiculo_checklists` (respuestas/notas/fotos en jsonb por id de ítem),
+    `vehiculo_novedades` (lo que hay que arreglar: nace de cada ítem "Mal", de un reporte suelto
+    por QR o de Gestión), `vehiculo_mantenimiento_plan` + `vehiculo_services` (el próximo service se
+    CALCULA: último service del tipo + intervalo, proyectado con los km/día de los checklists),
+    `flota_encargados` (celulares que reciben los avisos) y `flota_avisos` (registro; `clave` única
+    = no se manda dos veces lo mismo). Todas con `empresa_id` denormalizado y FK compuesta a
+    `vehiculos(id, empresa_id)`, como stock.
+  - **El contenido del checklist vive en código** (`modules/flota/reglas.ts`: `FOTOS_CHECKLIST`,
+    `SECCIONES_CHECKLIST`, con tests). Sumar o sacar un ítem es editar la lista; las respuestas se
+    guardan por id, así que **no le cambies el id a un ítem existente**. "Mal" en un ítem `critico`
+    deja la camioneta como **no apta** y avisa al instante.
+  - Un km que no cuadra (menor al último, o un salto imposible) **se guarda igual** marcado
+    `km_inconsistente`, no pisa `vehiculos.km_actual` y abre una novedad "Revisar el kilometraje":
+    quien está en la camioneta no puede corregir el pasado.
+  - Fotos: se comprimen en el celular (1600 px, JPEG) y suben por el server, así que **no dependen
+    del CORS de R2**. Viven en `flota/<vehiculo_id>/<mes>/…` y `/api/archivo` las autoriza por la
+    visibilidad del vehículo. `flota` es slug de empresa reservado.
+  - Avisos: cron de Vercel (`vercel.json`, lunes a viernes 11:00 UTC = 08:00 AR) en
+    `/api/cron/flota`, firmado con `CRON_SECRET`. Arma el resumen del día por empresa
+    (`mensajeResumenDiario`, la misma cuenta que ve `/flota`) y lo manda por WhatsApp
+    (`lib/whatsapp.ts`, WAHA). **Sin las variables `WHATSAPP_WAHA_*` no se manda nada**: el aviso
+    queda registrado como "sin canal" y se ve en la pantalla de flota.
+  - Pantallas: `/flota?empresa=slug` (semáforo por vehículo + encargados + avisos),
+    `/flota/<id>` (ficha: checklists con fotos y comparación con el anterior, novedades,
+    mantenimiento, datos, QR y rotación del token) y `/flota/qr` (hoja imprimible, 4 por A4).
 
 ---
 
@@ -404,6 +436,6 @@ Argentina. Patrones obligatorios:
 - **"Hoy" siempre en hora AR**: `diaClaveAR(new Date())` / `anioMesAR()` / `hoyClave()` /
   `mesActualInput()`. NUNCA `new Date().toISOString().slice(0,10)` ni `getMonth()` a secas
   para decidir un mes o una fecha por defecto (a las 21:00 AR ya es "mañana" en UTC).
-- Slugs de empresa reservados: `recibos`, `documentos`, `docs` (migración 18 lo impone).
+- Slugs de empresa reservados: `recibos`, `documentos`, `docs`, `flota` (migraciones 18 y 20 lo imponen).
 - `AppShell` recuerda la "empresa activa" solo entre EMPRESAS; el portal ARCOR nunca queda
   como preferido (si no, /dashboard mostraba la sidebar de ARCOR).

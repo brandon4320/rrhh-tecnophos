@@ -15,12 +15,22 @@ export async function GET(request: NextRequest) {
   // sería un IDOR sobre todo el bucket. Cada tabla con archivos en R2 tiene su
   // prefijo de clave (ver /api/upload-url), así que alcanza con UNA consulta a
   // la tabla dueña; todas tienen RLS por empresa: maybeSingle vacío = sin permiso.
-  // OJO: por eso `recibos` y `documentos` son slugs de empresa reservados.
-  const tabla = path.startsWith('recibos/') ? 'recibos_sueldo'
-    : path.startsWith('documentos/') ? 'documentos_mensuales'
-    : 'archivos'
-  const { data: fila } = await supabase.from(tabla).select('id').eq('path', path).maybeSingle()
-  if (!fila) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  // OJO: por eso `recibos`, `documentos` y `flota` son slugs de empresa reservados.
+  if (path.startsWith('flota/')) {
+    // Fotos del checklist de flota: `flota/<vehiculo_id>/<mes>/<archivo>`. Las
+    // sube el formulario del QR (sin sesión), así que no hay fila por archivo:
+    // se autoriza por el vehículo. Si la RLS deja ver el vehículo, deja ver sus fotos.
+    const m = /^flota\/([0-9a-f-]{36})\/\d{4}-\d{2}\/[0-9a-f-]{36}-[a-z_]+\.(jpg|png|webp)$/.exec(path)
+    if (!m) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    const { data: vehiculo } = await supabase.from('vehiculos').select('id').eq('id', m[1]).maybeSingle()
+    if (!vehiculo) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  } else {
+    const tabla = path.startsWith('recibos/') ? 'recibos_sueldo'
+      : path.startsWith('documentos/') ? 'documentos_mensuales'
+      : 'archivos'
+    const { data: fila } = await supabase.from(tabla).select('id').eq('path', path).maybeSingle()
+    if (!fila) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  }
 
   const url = await getSignedDownloadUrl(path, 120)
   return NextResponse.json({ url })
