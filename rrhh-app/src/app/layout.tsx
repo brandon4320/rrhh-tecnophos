@@ -10,9 +10,11 @@ const geistSans = Geist({
   variable: '--font-geist-sans',
 })
 
+// La mono solo se usa en patentes/códigos: no se precarga en todas las páginas.
 const geistMono = Geist_Mono({
   subsets: ['latin'],
   variable: '--font-geist-mono',
+  preload: false,
 })
 
 export const metadata: Metadata = {

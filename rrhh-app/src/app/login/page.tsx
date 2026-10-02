@@ -14,21 +14,30 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 
+/** Solo rutas internas ("/algo", nunca "//otro-sitio" ni URLs absolutas). */
+function destinoSeguro(v: unknown): string {
+  const d = typeof v === 'string' ? v : ''
+  return d.startsWith('/') && !d.startsWith('//') && !d.startsWith('/\\') ? d : ''
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ error?: string }>
+  searchParams?: Promise<{ error?: string; next?: string }>
 }) {
   const params = (await searchParams) ?? {}
+  const next = destinoSeguro(params.next)
 
   async function loginAction(formData: FormData) {
     'use server'
 
     const rawIdentifier = String(formData.get('identifier') ?? '').trim()
     const password = String(formData.get('password') ?? '').trim()
+    const volverA = destinoSeguro(formData.get('next'))
+    const conNext = volverA ? `&next=${encodeURIComponent(volverA)}` : ''
 
     if (!rawIdentifier || !password) {
-      redirect('/login?error=missing')
+      redirect(`/login?error=missing${conNext}`)
     }
 
     let email = rawIdentifier.toLowerCase()
@@ -58,10 +67,10 @@ export default async function LoginPage({
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      redirect('/login?error=invalid')
+      redirect(`/login?error=invalid${conNext}`)
     }
 
-    redirect('/')
+    redirect(volverA || '/')
   }
 
   const errorMessage =
@@ -89,6 +98,7 @@ export default async function LoginPage({
           </CardHeader>
           <CardContent>
             <form action={loginAction} className="grid gap-4">
+              {next && <input type="hidden" name="next" value={next} />}
               <div className="grid gap-2">
                 <Label htmlFor="identifier">Usuario o email</Label>
                 <Input

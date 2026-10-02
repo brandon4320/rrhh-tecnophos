@@ -6,6 +6,7 @@ import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { SUPABASE_JWKS } from '@/lib/supabase/jwks'
 import { type Rol, tieneRol } from './roles'
 import { puedeAccederModulo, type ModuloKey } from '@/config/modules'
 
@@ -20,11 +21,10 @@ export interface Sesion {
 /** Sesión actual (o null). Cacheada por request para no repetir queries. */
 export const getSesion = cache(async (): Promise<Sesion | null> => {
   const supabase = await createClient()
-  // getClaims() verifica la FIRMA del JWT. Con signing keys asimétricas
-  // (dashboard de Supabase → JWT Keys) la verificación es local (JWKS cacheado,
-  // sin round-trip a Auth); con HS256 cae a validar contra el servidor, igual
-  // que getUser(). Nunca confía en la cookie sin verificar.
-  const { data } = await supabase.auth.getClaims()
+  // getClaims() verifica la FIRMA del JWT. Con la clave pública fija
+  // (lib/supabase/jwks.ts) la verificación es local, sin round-trip a Auth.
+  // Nunca confía en la cookie sin verificar.
+  const { data } = await supabase.auth.getClaims(undefined, { jwks: SUPABASE_JWKS })
   const claims = data?.claims
   if (!claims) return null
 

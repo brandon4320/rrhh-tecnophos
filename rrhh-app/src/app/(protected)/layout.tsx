@@ -8,14 +8,14 @@ import { puedeVerArcor } from '@/modules/arcor/acceso'
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
 
-  // Las 3 lecturas en paralelo (1 solo round-trip serial). El scope por
-  // empresa_acceso lo aplica la RLS (empresas_rrhh_select / empleados_rrhh_all
-  // usan app_ve_empresa — migración 02), así que las queries no dependen de
-  // la sesión: sin sesión o rol no-RRHH devuelven vacío y se redirige igual.
-  const [sesion, { data: empresas }, { data: empleados }] = await Promise.all([
+  // Sesión y empresas en paralelo (1 solo round-trip serial). El scope por
+  // empresa_acceso lo aplica la RLS, así que la query no depende de la sesión:
+  // sin sesión o rol no-RRHH devuelve vacío y se redirige igual. El conteo de
+  // empleados activos viene embebido (también filtrado por la RLS de empleados)
+  // en vez de traer todas las filas para contarlas acá.
+  const [sesion, { data: empresas }] = await Promise.all([
     getSesion(),
-    supabase.from('empresas').select('id, nombre, slug').order('nombre'),
-    supabase.from('empleados').select('empresa_id').eq('activo', true),
+    supabase.from('empresas').select('id, nombre, slug, empleados(count)').eq('empleados.activo', true).order('nombre'),
   ])
 
   if (!sesion) redirect('/login')
@@ -25,15 +25,11 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   if (!tieneRol(sesion.rol, RRHH_ROLES)) redirect('/')
 
   // Empleados activos por empresa, para el selector del panel lateral.
-  const porEmpresa = new Map<string, number>()
-  for (const emp of empleados ?? []) {
-    if (emp.empresa_id) porEmpresa.set(emp.empresa_id, (porEmpresa.get(emp.empresa_id) ?? 0) + 1)
-  }
   const nav: EmpresaNav[] = (empresas ?? []).map((e) => ({
     id: e.id,
     nombre: e.nombre,
     slug: e.slug,
-    total: porEmpresa.get(e.id) ?? 0,
+    total: (e.empleados as { count: number }[] | null)?.[0]?.count ?? 0,
   }))
 
   return (

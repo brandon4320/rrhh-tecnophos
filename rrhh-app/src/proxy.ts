@@ -7,6 +7,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { env } from '@/lib/env'
+import { SUPABASE_JWKS } from '@/lib/supabase/jwks'
 
 // /control-plagas.html es la app de registro para operarios (estática, datos
 // en el dispositivo): los iPads la abren sin sesión del portal.
@@ -37,10 +38,9 @@ export async function proxy(request: NextRequest) {
   })
 
   // IMPORTANTE: getClaims() verifica la firma del token — no confía en la cookie
-  // sola. Con signing keys asimétricas la verificación es LOCAL (JWKS cacheado):
-  // saca el round-trip a Supabase Auth del camino de cada navegación/prefetch.
-  // Con HS256 valida contra el servidor, igual que el getUser() anterior.
-  const { data } = await supabase.auth.getClaims()
+  // sola. Con la clave pública fija (lib/supabase/jwks.ts) la verificación es
+  // local, sin bajar el JWKS: cero round-trips a Supabase Auth por navegación.
+  const { data } = await supabase.auth.getClaims(undefined, { jwks: SUPABASE_JWKS })
   const user = data?.claims ?? null
 
   const { pathname } = request.nextUrl
@@ -49,6 +49,8 @@ export async function proxy(request: NextRequest) {
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    // Volver adonde iba después de entrar (links de avisos, marcadores).
+    url.search = pathname !== '/' ? `?next=${encodeURIComponent(pathname + request.nextUrl.search)}` : ''
     return NextResponse.redirect(url)
   }
 
@@ -62,8 +64,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Corre en todo menos assets estáticos e imágenes.
+  // Corre en todo menos assets estáticos, imágenes y las rutas públicas de
+  // máquinas y choferes (QR de flota, cron, ingest de ARCOR, control de plagas):
+  // no tienen sesión de navegador y validan su propio token. /login queda adentro.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|v/|api/v/|api/cron/|api/arcor/ingest|control-plagas\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }

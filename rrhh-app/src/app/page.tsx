@@ -32,7 +32,13 @@ function nombreSede(nombreEmpresa: string) {
 }
 
 export default async function HubPage() {
-  const sesion = await requireSesion()
+  // Sesión y empresas en paralelo: la RLS ya limita las empresas a las que cada
+  // uno ve (empresa_acceso), así que la query no necesita esperar a la sesión.
+  const supabase = await createClient()
+  const [sesion, { data: empresas }] = await Promise.all([
+    requireSesion(),
+    supabase.from('empresas').select('id, nombre, slug').order('nombre'),
+  ])
   const puedeArcor = puedeVerArcor(sesion)
   // ARCOR exige además ver todas las empresas (puedeVerArcor espeja la RLS): para un
   // usuario con empresa_acceso no cuenta como módulo disponible.
@@ -43,11 +49,6 @@ export default async function HubPage() {
 
   const puedeRrhh = modulos.some((m) => m.key === 'rrhh')
   const puedeComercial = modulos.some((m) => m.key === 'comercial')
-
-  const supabase = await createClient()
-  const empresasQuery = supabase.from('empresas').select('id, nombre, slug').order('nombre')
-  if (sesion.empresaAcceso) empresasQuery.eq('id', sesion.empresaAcceso)
-  const { data: empresas } = await empresasQuery
 
   const marcas = MARCAS.map((m) => ({
     ...m,

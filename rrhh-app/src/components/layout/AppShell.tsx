@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { createClient } from '@/lib/supabase/client'
+import { cerrarSesion } from '@/app/actions/sesion'
 import { cn } from '@/lib/utils'
 import { Monograma } from '@/components/ui/monograma'
 import {
@@ -127,7 +127,6 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
   const searchParams = useSearchParams()
   const empresaEnQuery = searchParams.get('empresa')
   const router = useRouter()
-  const supabase = createClient()
   const { resolvedTheme, setTheme } = useTheme()
   const [montado, setMontado] = useState(false)
   const [selectorOpen, setSelectorOpen] = useState(false)
@@ -138,7 +137,9 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
   // destino o superada por otro click) se suelta el override — así ARCOR nunca
   // queda pegado como activa fuera de /arcor.
   const [pendiente, setPendiente] = useState<{ slug: string; desde: string } | null>(null)
-  const [, startTransition] = useTransition()
+  // `navegando`: el cambio de portal está en curso (la pantalla vieja sigue hasta
+  // que llega la nueva): se atenúa y aparece una barra arriba para que se note.
+  const [navegando, startTransition] = useTransition()
   const urlActual = `${pathname}?${searchParams.toString()}`
 
   useEffect(() => setMontado(true), [])
@@ -213,18 +214,25 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
     return portalTodas ?? portales.find((e) => e.tipo === 'empresa') ?? portales[0] ?? null
   }, [pendiente, slugEnPath, empresaEnQuery, enRutaGlobal, portalTodas, preferida, portales])
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
+  function handleLogout() {
+    startTransition(() => cerrarSesion())
+  }
+
+  /** La URL actual con otra empresa (o sin empresa = todas), conservando los filtros. */
+  function conEmpresa(slug: string | null): string {
+    const sp = new URLSearchParams(searchParams.toString())
+    sp.delete('empresa')
+    if (slug) sp.set('empresa', slug)
+    const q = sp.toString()
+    return q ? `${pathname}?${q}` : pathname
   }
 
   /** A dónde ir al elegir un portal: la MISMA pantalla, si existe para el destino. */
   function destino(p: Portal): string {
     if (p.tipo === 'extra') return p.href
     const enDocumentacion = pathname.startsWith('/empresa/') && searchParams.get('vista') === 'documentacion'
-    if (p.tipo === 'todas') return RUTAS_GLOBALES.includes(pathname) ? pathname : '/dashboard'
-    if (RUTAS_POR_EMPRESA.includes(pathname)) return `${pathname}?empresa=${p.slug}`
+    if (p.tipo === 'todas') return RUTAS_GLOBALES.includes(pathname) ? conEmpresa(null) : '/dashboard'
+    if (RUTAS_POR_EMPRESA.includes(pathname)) return conEmpresa(p.slug)
     if (enDocumentacion) return `/empresa/${p.slug}?vista=documentacion`
     return `/empresa/${p.slug}`
   }
@@ -466,7 +474,17 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto print:overflow-visible">{children}</main>
+      <main
+        aria-busy={navegando}
+        className={cn('relative flex-1 overflow-y-auto transition-opacity print:overflow-visible', navegando && 'opacity-60')}
+      >
+        {navegando && (
+          <div className="pointer-events-none sticky top-0 z-40 h-0.5 w-full overflow-hidden bg-primary/15" role="progressbar" aria-label="Cargando">
+            <div className="h-full w-1/3 animate-[navegando_1s_ease-in-out_infinite] bg-primary" />
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   )
 }
