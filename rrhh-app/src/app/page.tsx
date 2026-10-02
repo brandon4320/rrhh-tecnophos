@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard, Bug, ExternalLink, Container } from 'lucide-react'
+import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard, Bug, ExternalLink, Container, Boxes } from 'lucide-react'
 import { requireSesion } from '@/lib/auth/session'
 import { modulosPara } from '@/config/modules'
 import { puedeVerArcor } from '@/modules/arcor/acceso'
@@ -23,6 +23,9 @@ const MARCAS = [
 
 // Sistema del servicio de limpieza para UNIPAR (deploy propio, fuera de este repo).
 const UNIPAR_APP_URL = 'https://unipar-app.vercel.app/'
+// ERP de Serviwhite (alquiler y venta de módulos): otro repo, con su propio login.
+// La raíz redirige sola al login si no hay sesión.
+const SERVIWHITE_ERP_URL = 'https://gestion.serviwhite.com/'
 
 function nombreSede(nombreEmpresa: string) {
   return nombreEmpresa.replace(/^Tecnophos\s+/i, '')
@@ -104,7 +107,7 @@ export default async function HubPage() {
               className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <LayoutDashboard className="size-4" strokeWidth={1.75} />
-              Dashboard general
+              Resumen general
             </Link>
           )}
         </div>
@@ -156,6 +159,14 @@ export default async function HubPage() {
                     <a href="/control-plagas.html" target="_blank" rel="noopener noreferrer" className={filaCls}>
                       <Bug className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
                       <span className="min-w-0 flex-1 truncate">Control de Plagas</span>
+                      <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
+                    </a>
+                  )}
+
+                  {marca.key === 'serviwhite' && (
+                    <a href={SERVIWHITE_ERP_URL} target="_blank" rel="noopener noreferrer" className={filaCls}>
+                      <Boxes className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <span className="min-w-0 flex-1 truncate">Sistema de gestión</span>
                       <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                     </a>
                   )}
