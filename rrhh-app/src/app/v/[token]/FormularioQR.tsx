@@ -254,7 +254,7 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
           ? 'Se abrió 1 novedad para que tu encargado la revise.'
           : `Se abrieron ${json.novedades} novedades para que tu encargado las revise.`)
       }
-      if (json.resultado === 'no_apto') detalle.push('Ya le avisamos a tu encargado. No la uses hasta que la revisen.')
+      if (json.resultado === 'no_apto') detalle.push('Tu encargado ya lo puede ver en el sistema. No la uses hasta que la revisen.')
       if (json.kmInconsistente) detalle.push('El kilometraje no coincide con el último registro: lo va a revisar tu encargado.')
       setResultado({
         titulo: json.resultadoLabel ?? 'Checklist enviado',
@@ -292,7 +292,7 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
         return
       }
       recordarQuien()
-      setResultado({ titulo: 'Novedad enviada', detalle: ['Ya le avisamos a tu encargado.'], tono: nov.gravedad === 'alta' ? 'grave' : 'ok' })
+      setResultado({ titulo: 'Novedad enviada', detalle: ['Tu encargado ya la puede ver en el sistema.'], tono: nov.gravedad === 'alta' ? 'grave' : 'ok' })
       setNov({ titulo: '', descripcion: '', gravedad: 'media', km: '', fotos: [] })
       setModo('listo')
     } catch {
