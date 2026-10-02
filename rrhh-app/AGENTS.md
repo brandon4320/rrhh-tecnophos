@@ -138,6 +138,17 @@ seteado = solo esa — ej. Soledad solo ve Tecnophos Rosario).
 > `certificados` o `archivos`, actualizá también esas policies (nos pasó con
 > `equipos`: migración 10).
 
+> ★ **Velocidad de la RLS (migración 21, 2026-10-02):** las funciones de permisos son
+> SECURITY DEFINER y Postgres las evalúa FILA POR FILA si se llaman sueltas. Escribí
+> las policies así (se calculan una vez por consulta):
+> `(select app_es_rrhh()) and ((select app_ve_todas_empresas()) or empresa_id = (select app_empresa_acceso()))`
+> y `id = (select auth.uid())`. NO uses `app_ve_empresa(empresa_id)` en policies nuevas
+> (las migraciones 02/05/08/12 tienen la forma lenta: copiá la lógica, no la forma).
+> Antes de la 21, certificados tardaba 130-360 ms; después, 4-35 ms.
+>
+> **`perfiles` es de solo lectura para los usuarios** (migración 22): se escribe SOLO con
+> el cliente admin (service role). Antes cualquiera podía hacerse admin con un PATCH.
+
 Roles de Operaciones (`admin_adc`, `supervisor`, `operario`, `admin_unipar`) **no
 pueden ver RRHH** (la RLS lo garantiza). El vendedor comercial solo ve/edita lo
 propio (`responsable_id = auth.uid()`), gestión ve todo.
@@ -397,7 +408,11 @@ Argentina. Patrones obligatorios:
 - Mutaciones desde client components: patrón `fetch` a una API route +
   `router.refresh()` + `toast` de sonner (nada de `window.location.reload()`).
 - Errores al usuario: en RRHH conviven `alert()` viejos y toasts; para código nuevo,
-  **toast siempre**, y jamás tragarse un error de Supabase en silencio.
+  **toast siempre**, y jamás tragarse un error de Supabase en silencio. El texto sale de
+  `mensajeError(e, 'guardar')` (`src/lib/errores.ts`), nunca el mensaje crudo de Postgres;
+  en lecturas del server usá `leer(res)` para que un fallo lance en vez de mostrar "Todo al día".
+- Búsquedas en listas: `coincide(busqueda, ...campos)` de `src/lib/texto.ts` (por palabras,
+  sin acentos, en cualquier orden).
 - Español rioplatense en la UI (vos/agregá/podés).
 
 ---

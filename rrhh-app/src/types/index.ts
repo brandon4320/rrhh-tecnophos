@@ -4,6 +4,7 @@
 // Las relaciones anidadas se agregan encima como opcionales.
 // ============================================================
 import type { Tables } from './database'
+import { diaClaveAR } from '@/lib/fechas-ar'
 
 export type { Rol } from '@/lib/auth/roles'
 
@@ -56,9 +57,10 @@ export type EstadoVencimiento = 'vencido' | 'proximo' | 'vigente' | 'sin_fecha'
  *  local para evitar el corrimiento de un día en UTC-3 (Argentina). Negativo
  *  = ya venció. Acepta 'YYYY-MM-DD' o timestamps ISO (toma los primeros 10). */
 export function diasHastaVencimiento(fecha: string): number {
-  const venc = new Date(fecha.slice(0, 10) + 'T12:00:00')
-  const hoy = new Date()
-  hoy.setHours(12, 0, 0, 0)
+  // "Hoy" es el día de Argentina, no el del servidor (Vercel corre en UTC: desde
+  // las 21:00 AR ya era mañana y lo que vencía hoy salía "Vencido").
+  const venc = new Date(fecha.slice(0, 10) + 'T12:00:00Z')
+  const hoy = new Date(diaClaveAR(new Date()) + 'T12:00:00Z')
   return Math.round((venc.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
 }
 
