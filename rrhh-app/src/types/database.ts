@@ -803,6 +803,7 @@ export type Database = {
           id: string
           nombre: string | null
           rol: string | null
+          ve_recibos: boolean
         }
         Insert: {
           created_at?: string | null
@@ -810,6 +811,7 @@ export type Database = {
           id: string
           nombre?: string | null
           rol?: string | null
+          ve_recibos?: boolean
         }
         Update: {
           created_at?: string | null
@@ -817,6 +819,7 @@ export type Database = {
           id?: string
           nombre?: string | null
           rol?: string | null
+          ve_recibos?: boolean
         }
         Relationships: [
           {

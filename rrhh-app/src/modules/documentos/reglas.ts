@@ -103,6 +103,17 @@ export function raizCarpeta(v: unknown): string {
 }
 
 /**
+ * ¿La ruta cae dentro de los recibos de sueldo? Espeja la RLS (migración 23): raíz sin
+ * mayúsculas que empieza con "recibo". Solo la ven quienes tienen `perfiles.ve_recibos`.
+ */
+export function esCarpetaRecibos(v: unknown): boolean {
+  const raiz = typeof v === 'string' ? (v.split(/[/\\]+/)[0] ?? '') : ''
+  return raiz.trim().toLowerCase().startsWith('recibo')
+}
+
+export const SIN_PERMISO_RECIBOS = 'Los recibos de sueldo son de acceso restringido.'
+
+/**
  * Carpetas con archivos que NO están en la lista de la empresa, ordenadas (nunca
  * la raíz). Solo el primer nivel. El filtro va contra `fijas` y no contra
  * `esCarpetaFija`: en Necochea, F931 no es una carpeta de la empresa pero SÍ es

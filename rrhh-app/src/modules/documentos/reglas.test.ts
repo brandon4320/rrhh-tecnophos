@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   CARPETAS_FIJAS, agruparPorCarpeta, anioMesAR, carpetasDelMes, carpetasExtra, completitudMes, empleadosConReciboPorPeriodo,
   arbolCarpetas, carpetasFijasDe, esCarpetaFija, estadoMes, excedeNiveles, normalizarCarpeta, periodoActual, periodoAnterior, periodoDe, raizCarpeta,
-  rutasConArchivos, sanitizarNombreArchivo,
+  rutasConArchivos, sanitizarNombreArchivo, esCarpetaRecibos,
   slugCarpeta, validarArchivoDocumento,
 } from './reglas'
 import { labelPeriodo } from '@/lib/recibos'
@@ -317,5 +317,19 @@ describe('estadoMes sin carpetas que completar', () => {
     expect(estadoMes('2026-08-01', c, 0, HOY)).toBe('vencido')
     expect(estadoMes('2026-12-01', c, 0, HOY)).toBe('sin_fecha')
     expect(estadoMes('2026-08-01', c, 3, HOY)).toBe('proximo')
+  })
+})
+
+describe('esCarpetaRecibos (espeja la RLS de la migración 23)', () => {
+  it('detecta la carpeta de recibos y sus subcarpetas, sin importar mayúsculas', () => {
+    expect(esCarpetaRecibos('Recibos de sueldos')).toBe(true)
+    expect(esCarpetaRecibos('Recibos de sueldos/Limpieza/Aguinaldo')).toBe(true)
+    expect(esCarpetaRecibos('RECIBOS DE SUELDO')).toBe(true)
+  })
+  it('no confunde otras carpetas', () => {
+    expect(esCarpetaRecibos('ART')).toBe(false)
+    expect(esCarpetaRecibos('')).toBe(false)
+    expect(esCarpetaRecibos('Pagos/Recibos de sueldos')).toBe(false)
+    expect(esCarpetaRecibos(null)).toBe(false)
   })
 })

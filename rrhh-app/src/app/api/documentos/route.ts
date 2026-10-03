@@ -3,7 +3,7 @@ import { deleteFromR2, uploadToR2 } from '@/lib/r2/operations'
 import { sesionApi } from '@/lib/auth/session'
 import { LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import { esPeriodoFuturo, periodoDesdeMes } from '@/lib/recibos'
-import { normalizarCarpeta, pathDocumento, validarArchivoDocumento } from '@/modules/documentos/reglas'
+import { SIN_PERMISO_RECIBOS, esCarpetaRecibos, normalizarCarpeta, pathDocumento, validarArchivoDocumento } from '@/modules/documentos/reglas'
 
 /**
  * Documentación mensual por empresa (tabla documentos_mensuales).
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     const empresaId = String(body?.empresaId ?? '')
     const periodo = periodoDesdeMes(body?.periodo)
     const carpeta = normalizarCarpeta(body?.carpeta)
+    if (esCarpetaRecibos(carpeta) && !sesion.veRecibos) return NextResponse.json({ error: SIN_PERMISO_RECIBOS }, { status: 403 })
     const path = String(body?.path ?? '')
     const nombre = String(body?.nombre ?? '').trim()
     const mimeType = typeof body?.mimeType === 'string' ? body.mimeType : ''
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
   const empresaId = String(fd.get('empresaId') ?? '')
   const periodo = periodoDesdeMes(fd.get('periodo'))
   const carpeta = normalizarCarpeta(fd.get('carpeta'))
+  if (esCarpetaRecibos(carpeta) && !sesion.veRecibos) return NextResponse.json({ error: SIN_PERMISO_RECIBOS }, { status: 403 })
   const notas = String(fd.get('notas') ?? '').trim() || null
   if (!file || !empresaId || !periodo) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
   if (esPeriodoFuturo(periodo)) return NextResponse.json({ error: 'El período no puede ser un mes futuro.' }, { status: 400 })

@@ -16,6 +16,7 @@ import {
   CARPETA_RAIZ, CARPETA_RECIBOS, ESTADO_MES_LABEL, LABEL_RAIZ, MESES_CORTOS, anioMesAR, arbolCarpetas,
   carpetasDelMes, carpetasFijasDe, completitudMes, estadoMes, excedeNiveles, fmtBytes, MAX_NIVELES_CARPETA, normalizarCarpeta,
   periodoActual, periodoAnterior, periodoDe, rutasConArchivos, validarArchivoDocumento, type NodoCarpeta,
+  esCarpetaRecibos, SIN_PERMISO_RECIBOS,
 } from '@/modules/documentos/reglas'
 import { fmtFechaAR } from '@/lib/fechas-ar'
 
@@ -33,6 +34,8 @@ interface Props {
   recibosPorPeriodo: Record<string, number>
   empleadosActivos: number
   canEdit: boolean
+  /** Puede ver los recibos de sueldo (perfiles.ve_recibos). Sin él, la carpeta no existe para esta persona. */
+  veRecibos: boolean
 }
 
 const OTRA = '__otra__'
@@ -56,15 +59,19 @@ const btnMini = 'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs fon
  * altas/bajas propias se reflejan al instante; lo que cargue otro usuario
  * aparece al cambiar de año/empresa o recargar.
  */
-export default function DocumentosClient({ empresa, anio, documentos, recibosPorPeriodo, empleadosActivos, canEdit }: Props) {
+export default function DocumentosClient({ empresa, anio, documentos, recibosPorPeriodo, empleadosActivos, canEdit, veRecibos }: Props) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLDivElement>(null)
   // Las carpetas fijas DE ESTA EMPRESA: Necochea maneja menos documentación que
   // las demás y no tiene sentido mostrarle cuatro carpetas que nunca va a llenar.
-  // La referencia es estable (sale de una constante del módulo), así que sirve
-  // como dependencia de los useMemo de abajo.
-  const fijas = carpetasFijasDe(empresa.slug)
+  // Memoizada para que sirva como dependencia estable de los useMemo de abajo.
+  // Sin permiso de recibos, "Recibos de sueldos" no es una carpeta para esta persona:
+  // ni se muestra ni cuenta como faltante en la completitud del mes.
+  const fijas = useMemo(() => {
+    const todas = carpetasFijasDe(empresa.slug)
+    return veRecibos ? todas : todas.filter((c) => c !== CARPETA_RECIBOS)
+  }, [empresa.slug, veRecibos])
   // "Hoy" fijo por montaje (y en hora AR): así el SSR en UTC y el browser coinciden
   // y el memo de meses tiene una dependencia estable.
   const [hoy] = useState(() => new Date())
@@ -170,6 +177,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
       return toast.error(`La ruta tiene demasiadas carpetas anidadas (el máximo es ${MAX_NIVELES_CARPETA}).`)
     }
     if (form.carpeta === OTRA && !carpeta) return toast.error('Escribí el nombre de la carpeta.')
+    if (!veRecibos && esCarpetaRecibos(carpeta)) return toast.error(SIN_PERMISO_RECIBOS)
     for (const a of form.archivos) {
       const invalido = validarArchivoDocumento(a)
       if (invalido) return toast.error(invalido)

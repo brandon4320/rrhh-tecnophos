@@ -16,6 +16,8 @@ export interface Sesion {
   nombre: string | null
   rol: Rol
   empresaAcceso: string | null
+  /** Puede ver los recibos de sueldo (perfiles.ve_recibos; la RLS de la migración 23 lo exige). */
+  veRecibos: boolean
 }
 
 /** Sesión actual (o null). Cacheada por request para no repetir queries. */
@@ -30,7 +32,7 @@ export const getSesion = cache(async (): Promise<Sesion | null> => {
 
   const { data: perfil } = await supabase
     .from('perfiles')
-    .select('nombre, rol, empresa_acceso')
+    .select('nombre, rol, empresa_acceso, ve_recibos')
     .eq('id', claims.sub)
     .single()
 
@@ -44,6 +46,7 @@ export const getSesion = cache(async (): Promise<Sesion | null> => {
     nombre: perfil.nombre ?? null,
     rol: perfil.rol as Rol,
     empresaAcceso: perfil.empresa_acceso ?? null,
+    veRecibos: perfil.ve_recibos === true,
   }
 })
 

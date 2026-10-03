@@ -3,6 +3,7 @@ import { deleteFromR2, uploadToR2 } from '@/lib/r2/operations'
 import { sesionApi } from '@/lib/auth/session'
 import { LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import { esPeriodoFuturo, esTipoRecibo, periodoDesdeMes, validarArchivoRecibo } from '@/lib/recibos'
+import { SIN_PERMISO_RECIBOS } from '@/modules/documentos/reglas'
 
 /**
  * Comprobantes de sueldo (tabla recibos_sueldo).
@@ -12,9 +13,16 @@ import { esPeriodoFuturo, esTipoRecibo, periodoDesdeMes, validarArchivoRecibo } 
  * Toda escritura pasa por el cliente de sesión: la RLS (recibos_rrhh_all) es la que decide.
  */
 
-/** Sesión + rol de escritura, vía getSesion() (AGENTS.md §5). */
-function sesionEscritura() {
-  return sesionApi(LEGAJO_ESCRITURA, 'No tenés permisos para cargar comprobantes.')
+/**
+ * Sesión + rol de escritura, vía getSesion() (AGENTS.md §5), y además permiso de recibos
+ * (perfiles.ve_recibos): la RLS de la migración 23 lo exige igual; acá se corta antes con
+ * un mensaje claro.
+ */
+async function sesionEscritura() {
+  const s = await sesionApi(LEGAJO_ESCRITURA, 'No tenés permisos para cargar comprobantes.')
+  if ('error' in s) return s
+  if (!s.sesion.veRecibos) return { error: NextResponse.json({ error: SIN_PERMISO_RECIBOS }, { status: 403 }) }
+  return s
 }
 
 function errorInsert(error: { code?: string; message: string }) {

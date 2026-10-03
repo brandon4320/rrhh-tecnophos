@@ -33,6 +33,8 @@ interface Props {
   tiposCertificado: TipoCertificado[]
   empresas: Empresa[]
   recibos: Recibo[]
+  /** Puede ver los recibos de sueldo (perfiles.ve_recibos). */
+  veRecibos: boolean
   isAdmin: boolean
   canEdit: boolean
   /** Certificado a abrir al entrar (?cert=<id>, desde el dashboard o vencimientos). */
@@ -61,6 +63,7 @@ export default function LegajoClient({
   tiposCertificado,
   empresas,
   recibos,
+  veRecibos,
   canEdit,
   certInicial = null,
   abrirAlta = false,
@@ -910,12 +913,14 @@ export default function LegajoClient({
         </form>
       )}
 
-      <RecibosSueldo
-        empleadoId={empleado.id}
-        empresaSlug={empleado.empresa?.slug ?? 'docs'}
-        recibos={recibos}
-        canEdit={canEdit}
-      />
+      {veRecibos && (
+        <RecibosSueldo
+          empleadoId={empleado.id}
+          empresaSlug={empleado.empresa?.slug ?? 'docs'}
+          recibos={recibos}
+          canEdit={canEdit}
+        />
+      )}
     </div>
   )
 }

@@ -148,6 +148,13 @@ seteado = solo esa — ej. Soledad solo ve Tecnophos Rosario).
 >
 > **`perfiles` es de solo lectura para los usuarios** (migración 22): se escribe SOLO con
 > el cliente admin (service role). Antes cualquiera podía hacerse admin con un PATCH.
+>
+> **Recibos de sueldo restringidos** (migración 23, 2026-10-03): solo los ve quien tiene
+> `perfiles.ve_recibos = true` (hoy Brandon y Mariano). Aplica a `recibos_sueldo` y a los
+> `documentos_mensuales` cuya carpeta raíz empieza con "recibo". `getSesion().veRecibos`
+> espeja la RLS en la UI (`esCarpetaRecibos()` en modules/documentos/reglas.ts) y las rutas
+> `/api/upload-url`, `/api/documentos` y `/api/recibos` cortan antes con 403. El permiso se
+> otorga por SQL o con el cliente admin (nadie se lo puede dar a sí mismo).
 
 Roles de Operaciones (`admin_adc`, `supervisor`, `operario`, `admin_unipar`) **no
 pueden ver RRHH** (la RLS lo garantiza). El vendedor comercial solo ve/edita lo

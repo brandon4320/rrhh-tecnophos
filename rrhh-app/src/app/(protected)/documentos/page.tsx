@@ -76,7 +76,8 @@ export default async function DocumentosPage({
     supabase.from('empleados').select('id', { count: 'exact', head: true }).eq('empresa_id', empresaSel.id).eq('activo', true),
     // Un recibo mensual por empleado activo y mes: con ~90 empleados el año pasa de
     // 1000 filas, así que también se pagina (si no, los últimos meses "no tenían" recibos).
-    traerTodo((d, h) =>
+    // Sin permiso de recibos (perfiles.ve_recibos) ni se consulta: la RLS devolvería vacío.
+    !sesion?.veRecibos ? Promise.resolve({ data: [], error: null }) : traerTodo((d, h) =>
       supabase
         .from('recibos_sueldo')
         .select('periodo, empleado_id, empleados!inner(empresa_id, activo)')
@@ -115,6 +116,7 @@ export default async function DocumentosPage({
       recibosPorPeriodo={Object.fromEntries(empleadosConReciboPorPeriodo(recRes.data ?? []))}
       empleadosActivos={empRes.count ?? 0}
       canEdit={tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)}
+      veRecibos={sesion?.veRecibos === true}
     />
   )
 }

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getSesion } from '@/lib/auth/session'
 import { createClient } from '@/lib/supabase/server'
 import { getSignedUploadUrl } from '@/lib/r2/operations'
 import { esPeriodoFuturo, esTipoRecibo, periodoDesdeMes, validarArchivoRecibo } from '@/lib/recibos'
-import { normalizarCarpeta, pathDocumento, sanitizarNombreArchivo, validarArchivoDocumento } from '@/modules/documentos/reglas'
+import { SIN_PERMISO_RECIBOS, esCarpetaRecibos, normalizarCarpeta, pathDocumento, sanitizarNombreArchivo, validarArchivoDocumento } from '@/modules/documentos/reglas'
 
 /** Extensión segura para la clave en R2 (el nombre viene del cliente). */
 function extensionDe(nombre: string): string {
@@ -17,19 +18,13 @@ function extensionDe(nombre: string): string {
  * rebotaban con 413 antes de llegar a la app).
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-
-  const { data: perfil } = await supabase
-    .from('perfiles')
-    .select('rol')
-    .eq('id', user.id)
-    .single()
-
-  if (!['admin', 'usuario'].includes(perfil?.rol ?? '')) {
+  // getSesion: firma verificada localmente + perfil, cacheada por request.
+  const sesion = await getSesion()
+  if (!sesion) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!['admin', 'usuario'].includes(sesion.rol)) {
     return NextResponse.json({ error: 'No tenés permisos para subir archivos.' }, { status: 403 })
   }
+  const supabase = await createClient()
 
   const body = await request.json().catch(() => null)
   const certId = (body?.certId as string) || ''
@@ -41,6 +36,7 @@ export async function POST(request: NextRequest) {
   // Comprobantes de sueldo: se cuelgan del EMPLEADO, no de un certificado.
   // Misma regla: solo se firma si el empleado es visible por RLS para este usuario.
   if (body?.recurso === 'recibo') {
+    if (!sesion.veRecibos) return NextResponse.json({ error: SIN_PERMISO_RECIBOS }, { status: 403 })
     const periodo = periodoDesdeMes(body?.periodo)
     const tipo = esTipoRecibo(body?.tipo) ? body.tipo : 'mensual'
     if (!empleadoId || !nombre || !periodo) {
@@ -81,7 +77,9 @@ export async function POST(request: NextRequest) {
     if (invalido) return NextResponse.json({ error: invalido }, { status: 400 })
     const { data: emp } = await supabase.from('empresas').select('id').eq('id', empresaId).maybeSingle()
     if (!emp) return NextResponse.json({ error: 'Empresa no encontrada o sin permiso.' }, { status: 403 })
-    const path = pathDocumento(empresaId, periodo, normalizarCarpeta(body?.carpeta), nombre)
+    const carpeta = normalizarCarpeta(body?.carpeta)
+    if (esCarpetaRecibos(carpeta) && !sesion.veRecibos) return NextResponse.json({ error: SIN_PERMISO_RECIBOS }, { status: 403 })
+    const path = pathDocumento(empresaId, periodo, carpeta, nombre)
     const url = await getSignedUploadUrl(path, mimeType, 300)
     return NextResponse.json({ url, path })
   }

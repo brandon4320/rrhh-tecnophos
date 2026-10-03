@@ -61,7 +61,10 @@ export default async function LegajoPage({
       certificados={certificados ?? []}
       tiposCertificado={tiposCert ?? []}
       empresas={empresas ?? []}
+      // Recibos de sueldo: solo con permiso (la RLS ya devuelve vacío sin él; esto
+      // además oculta la sección para no mostrar un "sin comprobantes" engañoso).
       recibos={recibos ?? []}
+      veRecibos={sesion?.veRecibos === true}
       isAdmin={sesion?.rol === 'admin'}
       canEdit={tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)}
     />
