@@ -18,6 +18,7 @@ import {
   Ellipsis,
   ExternalLink,
   FolderOpen,
+  FolderDown,
   Home,
   KeyRound,
   LayoutGrid,
@@ -69,7 +70,7 @@ const TODAS = 'todas'
 const RUTAS_GLOBALES = ['/dashboard', '/empleados', '/vencimientos', '/flota']
 
 /** Pantallas que existen por empresa con `?empresa=slug`: cambiar de empresa te deja en la misma. */
-const RUTAS_POR_EMPRESA = ['/empleados', '/vencimientos', '/flota', '/stock', '/documentos']
+const RUTAS_POR_EMPRESA = ['/empleados', '/vencimientos', '/flota', '/stock', '/documentos', '/carpeta']
 
 // Isologos por empresa (las 3 sedes Tecnophos comparten marca)
 const LOGO_EMPRESA: Record<string, string> = {
@@ -312,6 +313,8 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           { key: 'documentacion', label: 'Habilitaciones', href: `/empresa/${activa.slug}?vista=documentacion`, icon: ShieldCheck, active: enEmpresa && enDocumentacion },
           // Carpetas del mes: F931, ART, SVO, recibos…
           { key: 'documentos', label: 'Mensual', href: `/documentos?empresa=${activa.slug}`, icon: FolderOpen, active: pathname.startsWith('/documentos') },
+          // ZIP con la documentación elegida de personas, vehículos y empresa, para mandar a una planta.
+          { key: 'carpeta', label: 'Armar carpeta', href: `/carpeta?empresa=${activa.slug}`, icon: FolderDown, active: pathname.startsWith('/carpeta') },
         ],
       },
       {

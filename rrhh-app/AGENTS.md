@@ -463,6 +463,12 @@ Argentina. Patrones obligatorios:
   en lecturas del server usá `leer(res)` para que un fallo lance en vez de mostrar "Todo al día".
 - Búsquedas en listas: `coincide(busqueda, ...campos)` de `src/lib/texto.ts` (por palabras,
   sin acentos, en cualquier orden).
+- **Armar carpeta para planta** (`/carpeta?empresa=slug`, 2026-10-03): selección múltiple de la
+  documentación de personas (filtro por sector = planta en Rosario), vehículos, empresa y
+  mensual; el ZIP se arma en el NAVEGADOR (fflate, nivel 0) bajando cada archivo directo de R2
+  con URLs firmadas de `/api/carpeta` (solo lo que la RLS deja ver; recibos solo con permiso).
+  Plan B por archivo: `/api/carpeta/archivo` (pasa por el server, hasta ~4 MB). Nombres en
+  `modules/documentos/carpeta.ts` ("ART - vence 31-12-2026.pdf"). Depende del CORS de R2 (GET).
 - Helpers compartidos (2026-10-02): `lib/paginar.ts` (`traerTodo`: PostgREST corta en 1000
   filas sin avisar, paginá todo lo que pueda crecer), `lib/vencimientos.ts` (links profundos
   `/legajo/<id>?cert=` y `?vista=documentacion&veh=|equipo=`), `lib/archivos-client.ts`
