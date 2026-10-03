@@ -6,7 +6,7 @@ import { Search, Trash2 } from 'lucide-react'
 import type { StockItem, StockMovimiento } from '@/types'
 import { fmtFechaAR } from '@/lib/fechas-ar'
 import {
-  TIPO_MOVIMIENTO_LABEL, contraparteDe, deltaDe, filtrarMovimientos, fmtCantidad, hoyClave,
+  TIPO_MOVIMIENTO_LABEL, TIPO_MOVIMIENTO_PLURAL, contraparteDe, deltaDe, filtrarMovimientos, fmtCantidad, hoyClave,
   rangoMesActual, rangoMesAnterior, type TipoMovimiento,
 } from '@/modules/stock/reglas'
 import { inputCls, segBtn, thCls } from './estilos'
@@ -26,6 +26,7 @@ export function MovimientosTabla({
   tipoInicial,
   onEliminar,
   buscadorRef,
+  autores,
 }: {
   /** Ya ordenados, el más reciente primero (`compararMovimientosDesc`). */
   movimientos: StockMovimiento[]
@@ -34,6 +35,8 @@ export function MovimientosTabla({
   tipoInicial: TipoMovimiento | null
   onEliminar: (m: StockMovimiento) => void
   buscadorRef: RefObject<HTMLInputElement | null>
+  /** Nombre de quien cargó cada movimiento (perfiles por created_by; vacío en los anteriores al 03/10). */
+  autores: Record<string, string>
 }) {
   const [hoy] = useState(() => hoyClave())
   const mesActual = useMemo(() => rangoMesActual(hoy), [hoy])
@@ -57,7 +60,7 @@ export function MovimientosTabla({
     [movimientos, tipo, desde, hasta, busqueda, camposDe]
   )
   const resumen = useMemo(() => {
-    const r = { consumo: 0, compra: 0, ajuste: 0 }
+    const r = { consumo: 0, devolucion: 0, compra: 0, ajuste: 0 }
     for (const m of visibles) if (m.tipo in r) r[m.tipo as TipoMovimiento]++
     return r
   }, [visibles])
@@ -89,9 +92,9 @@ export function MovimientosTabla({
           />
         </div>
         <div className="inline-flex items-center gap-1 rounded-xl bg-muted p-1">
-          {([null, 'consumo', 'compra', 'ajuste'] as (TipoMovimiento | null)[]).map((t) => (
+          {([null, 'consumo', 'devolucion', 'compra', 'ajuste'] as (TipoMovimiento | null)[]).map((t) => (
             <button key={t ?? 'todos'} type="button" onClick={() => setTipo(t)} className={segBtn(tipo === t)}>
-              {t ? `${TIPO_MOVIMIENTO_LABEL[t]}s` : 'Todos'}
+              {t ? TIPO_MOVIMIENTO_PLURAL[t] : 'Todos'}
             </button>
           ))}
         </div>
@@ -120,6 +123,7 @@ export function MovimientosTabla({
             {' · '}
             {[
               resumen.consumo > 0 && `${resumen.consumo} ${resumen.consumo === 1 ? 'entrega' : 'entregas'}`,
+              resumen.devolucion > 0 && `${resumen.devolucion} ${resumen.devolucion === 1 ? 'devolución' : 'devoluciones'}`,
               resumen.compra > 0 && `${resumen.compra} ${resumen.compra === 1 ? 'ingreso' : 'ingresos'}`,
               resumen.ajuste > 0 && `${resumen.ajuste} ${resumen.ajuste === 1 ? 'ajuste' : 'ajustes'}`,
             ].filter(Boolean).join(' · ')}
@@ -150,6 +154,7 @@ export function MovimientosTabla({
                 <th className={clsx(thCls, 'w-[104px] text-right')}>Cant.</th>
                 <th className={clsx(thCls, 'text-left')}>Para / Proveedor</th>
                 <th className={clsx(thCls, 'w-[120px] text-left')}>Comprobante</th>
+                <th className={clsx(thCls, 'w-[110px] text-left')}>Cargó</th>
                 {canEdit && <th className={clsx(thCls, 'w-[44px]')} />}
               </tr>
             </thead>
@@ -181,6 +186,7 @@ export function MovimientosTabla({
                       </span>
                     </td>
                     <td className="truncate px-3 py-2 text-xs text-muted-foreground" title={m.comprobante ?? undefined}>{m.comprobante ?? ''}</td>
+                    <td className="truncate px-3 py-2 text-xs text-muted-foreground">{(m.created_by && autores[m.created_by]) || ''}</td>
                     {canEdit && (
                       <td className="px-2 py-2 text-right">
                         <button

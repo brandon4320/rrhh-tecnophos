@@ -155,6 +155,12 @@ seteado = solo esa — ej. Soledad solo ve Tecnophos Rosario).
 > espeja la RLS en la UI (`esCarpetaRecibos()` en modules/documentos/reglas.ts) y las rutas
 > `/api/upload-url`, `/api/documentos` y `/api/recibos` cortan antes con 403. El permiso se
 > otorga por SQL o con el cliente admin (nadie se lo puede dar a sí mismo).
+>
+> **Stock (migración 24, 2026-10-03):** `stock_movimientos.created_by` default `auth.uid()`
+> (columna "Cargó"; los nombres se resuelven en el server con el cliente admin porque
+> `perfiles` solo deja leer la fila propia), tipo `devolucion` (suma stock, no es compra) y
+> `empleado_id` opcional: si "Entregado a / Devuelto por" coincide exacto con un empleado
+> (`empleadoPorNombre`), la entrega queda en su legajo (sección "EPP y ropa entregada").
 
 Roles de Operaciones (`admin_adc`, `supervisor`, `operario`, `admin_unipar`) **no
 pueden ver RRHH** (la RLS lo garantiza). El vendedor comercial solo ve/edita lo

@@ -8,8 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import { mensajeError } from '@/lib/errores'
 import type { StockMovimiento } from '@/types'
 import {
-  TIPO_MOVIMIENTO_LABEL, excedenStock, fmtCantidad, fmtMoneda, hoyClave, normalizarNombre, parseCantidad, prepararLineas,
-  sumarStock, type TipoMovimiento,
+  TIPO_MOVIMIENTO_LABEL, empleadoPorNombre, esMovimientoConPersona, excedenStock, fmtCantidad, fmtMoneda, hoyClave,
+  normalizarNombre, parseCantidad, prepararLineas, sumarStock, type TipoMovimiento,
 } from '@/modules/stock/reglas'
 import { ItemPicker, type OpcionItem } from './ItemPicker'
 import { btnPrimary, inputCls, labelCls, segBtn } from './estilos'
@@ -36,8 +36,11 @@ function nuevaLinea(item_id = '', cantidad = ''): Linea {
   return { key: `l${secuencia}`, item_id, cantidad, precio: '' }
 }
 
-/** En una entrega lo normal es 1 por persona; en un ingreso la cantidad se tipea siempre. */
-const cantidadPorDefecto = (tipo: TipoMovimiento) => (tipo === 'consumo' ? '1' : '')
+/** En una entrega (o devolución) lo normal es 1 por persona; en un ingreso la cantidad se tipea siempre. */
+const cantidadPorDefecto = (tipo: TipoMovimiento) => (esMovimientoConPersona(tipo) ? '1' : '')
+
+/** Empleado activo de la empresa, para vincular entregas/devoluciones con su legajo. */
+export interface EmpleadoOpcion { id: string; nombre: string | null; apellido: string | null }
 
 /** Foco en la cantidad de una línea sin saltar de scroll (puede venir de un click en la matriz, más abajo). */
 function enfocar(refs: Map<string, HTMLInputElement>, key: string) {
@@ -53,12 +56,16 @@ function conLineaFinal(lineas: Linea[]): Linea[] {
   return lineas.length === 0 || lineas[lineas.length - 1].item_id ? [...lineas, nuevaLinea()] : lineas
 }
 
-const TITULO: Record<TipoMovimiento, string> = { consumo: 'Registrar entrega', compra: 'Registrar ingreso', ajuste: 'Contar stock' }
+const TITULO: Record<TipoMovimiento, string> = {
+  consumo: 'Registrar entrega', devolucion: 'Registrar devolución', compra: 'Registrar ingreso', ajuste: 'Contar stock',
+}
 
 interface Props {
   empresaId: string
   opciones: OpcionItem[]
   destinatarios: string[]
+  /** Empleados activos: si "Entregado a" coincide con uno, la entrega queda en su legajo. */
+  empleados: EmpleadoOpcion[]
   proveedores: string[]
   tipoInicial: TipoMovimiento
   itemInicial: string
@@ -77,7 +84,7 @@ interface Props {
  *   calculada con una lectura fresca de los movimientos del ítem.
  */
 function PanelMovimientoBase({
-  empresaId, opciones, destinatarios, proveedores, tipoInicial, itemInicial, controlRef, onRegistrados, onCerrar,
+  empresaId, opciones, destinatarios, empleados, proveedores, tipoInicial, itemInicial, controlRef, onRegistrados, onCerrar,
 }: Props) {
   const [supabase] = useState(() => createClient())
   const [tipo, setTipo] = useState<TipoMovimiento>(tipoInicial)
@@ -103,6 +110,12 @@ function PanelMovimientoBase({
   const contadoRef = useRef<HTMLInputElement>(null)
 
   const porId = useMemo(() => new Map(opciones.map((o) => [o.id, o])), [opciones])
+  // Sugerencias de "Entregado a": primero los empleados de la empresa, después lo que ya se usó.
+  const sugerencias = useMemo(() => {
+    const nombres = empleados.map((e) => [e.nombre, e.apellido].filter(Boolean).join(' ')).filter(Boolean)
+    return [...new Set([...nombres, ...destinatarios])]
+  }, [empleados, destinatarios])
+  const empleadoVinculado = useMemo(() => empleadoPorNombre(destinatario, empleados), [destinatario, empleados])
   const hoy = useMemo(() => hoyClave(), [])
 
   // Lo pedido por ítem sumando todas las líneas (dos líneas del mismo ítem cuentan juntas).
@@ -220,6 +233,8 @@ function PanelMovimientoBase({
     }
 
     const dest = normalizarNombre(destinatario)
+    const conPersona = esMovimientoConPersona(tipo)
+    const empleadoId = conPersona ? empleadoPorNombre(dest, empleados)?.id ?? null : null
     const filas = r.lineas.map((l) => ({
       item_id: l.item_id,
       empresa_id: empresaId,
@@ -229,15 +244,17 @@ function PanelMovimientoBase({
       proveedor: tipo === 'compra' ? normalizarNombre(proveedor) || null : null,
       precio_unitario: tipo === 'compra' ? l.precio_unitario : null,
       comprobante: tipo === 'compra' ? comprobante.trim() || null : null,
-      // El destinatario va en notas: así se cargó siempre y así lo encuentra la búsqueda.
-      notas: tipo === 'consumo' ? dest || null : notas.trim() || null,
+      // La persona va en notas (así se cargó siempre y así la encuentra la búsqueda) y,
+      // si coincide con un empleado, también en empleado_id: queda en su legajo.
+      notas: conPersona ? dest || null : notas.trim() || null,
+      empleado_id: empleadoId,
     }))
 
     setSaving(true)
     const { data, error } = await supabase.from('stock_movimientos').insert(filas).select()
     setSaving(false)
     if (error || !data) {
-      toast.error(mensajeError(error, tipo === 'consumo' ? 'registrar la entrega' : 'registrar el ingreso'))
+      toast.error(mensajeError(error, tipo === 'consumo' ? 'registrar la entrega' : tipo === 'devolucion' ? 'registrar la devolución' : 'registrar el ingreso'))
       return
     }
 
@@ -245,9 +262,15 @@ function PanelMovimientoBase({
     setCargados((n) => n + data.length)
     const n = data.length
     const items = `${n} ${n === 1 ? 'ítem' : 'ítems'}`
-    if (tipo === 'consumo') {
-      toast.success(`Entrega registrada: ${items}${dest ? ` a ${dest}` : ''}.`)
-      setUltima({ destinatario: dest, lineas: r.lineas.map((l) => ({ item_id: l.item_id, cantidad: String(l.cantidad) })) })
+    if (conPersona) {
+      const enLegajo = empleadoId ? ' (queda en su legajo)' : ''
+      if (tipo === 'consumo') {
+        toast.success(`Entrega registrada: ${items}${dest ? ` a ${dest}` : ''}${enLegajo}.`)
+        setUltima({ destinatario: dest, lineas: r.lineas.map((l) => ({ item_id: l.item_id, cantidad: String(l.cantidad) })) })
+      } else {
+        toast.success(`Devolución registrada: ${items}${dest ? ` de ${dest}` : ''}${enLegajo}.`)
+        setUltima(null)
+      }
       // La próxima entrega suele ser para otra persona: se limpia el destinatario
       // (no se le atribuye un kit a quien no corresponde) y se conserva la fecha.
       setDestinatario('')
@@ -337,7 +360,7 @@ function PanelMovimientoBase({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-medium text-foreground">{TITULO[tipo]}</p>
         <div className="inline-flex items-center gap-1 rounded-xl bg-muted p-1">
-          {(['consumo', 'compra', 'ajuste'] as TipoMovimiento[]).map((t) => (
+          {(['consumo', 'devolucion', 'compra', 'ajuste'] as TipoMovimiento[]).map((t) => (
             <button key={t} type="button" onClick={() => cambiarTipo(t)} className={segBtn(tipo === t)}>
               {TIPO_MOVIMIENTO_LABEL[t]}
             </button>
@@ -386,10 +409,10 @@ function PanelMovimientoBase({
       ) : (
         <>
           {/* Encabezado: se conserva para todas las líneas. */}
-          {tipo === 'consumo' ? (
+          {esMovimientoConPersona(tipo) ? (
             <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="sm:col-span-2">
-                <label className={labelCls}>Entregado a</label>
+                <label className={labelCls}>{tipo === 'devolucion' ? 'Devuelto por' : 'Entregado a'}</label>
                 <input
                   ref={encabezadoRef}
                   type="text"
@@ -397,10 +420,17 @@ function PanelMovimientoBase({
                   value={destinatario}
                   onChange={(e) => setDestinatario(e.target.value)}
                   className={inputCls}
-                  placeholder="Nombre y apellido, o destino (ej: Barco Port Alberni)"
+                  placeholder={tipo === 'devolucion' ? 'Nombre y apellido de quien devuelve' : 'Nombre y apellido, o destino (ej: Barco Port Alberni)'}
                   autoFocus={!itemInicial}
                 />
-                <datalist id="stock-destinatarios">{destinatarios.map((d) => <option key={d} value={d} />)}</datalist>
+                <datalist id="stock-destinatarios">{sugerencias.map((d) => <option key={d} value={d} />)}</datalist>
+                {destinatario.trim() && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {empleadoVinculado
+                      ? `Queda en el legajo de ${[empleadoVinculado.nombre, empleadoVinculado.apellido].filter(Boolean).join(' ')}.`
+                      : 'No coincide con un empleado: se guarda solo como texto.'}
+                  </p>
+                )}
               </div>
               <div>
                 <label className={labelCls}>Fecha *</label>

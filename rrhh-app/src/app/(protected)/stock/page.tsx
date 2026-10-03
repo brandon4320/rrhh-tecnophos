@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getSesion } from '@/lib/auth/session'
 import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import { mensajeError } from '@/lib/errores'
@@ -68,9 +69,10 @@ export default async function StockPage({
     }
   }
 
-  const [itemsRes, movsRes] = await Promise.all([
+  const [itemsRes, movsRes, empRes] = await Promise.all([
     supabase.from('stock_items').select('*').eq('empresa_id', empresaSel.id).order('nombre'),
     todosLosMovimientos(),
+    supabase.from('empleados').select('id, nombre, apellido').eq('empresa_id', empresaSel.id).eq('activo', true).order('apellido'),
   ])
 
   // Nunca tragarse un error de Supabase (AGENTS.md §10): un inventario "vacío" por
@@ -88,6 +90,17 @@ export default async function StockPage({
     )
   }
 
+  // "Cargó": nombres de quienes registraron movimientos. `perfiles` solo deja leer la
+  // fila propia, así que se resuelve en el server con el cliente admin y SOLO para los
+  // ids que aparecen en este libro (nombre y nada más).
+  const idsAutores = [...new Set((movsRes.data ?? []).map((m) => m.created_by).filter((x): x is string => !!x))]
+  const autores: Record<string, string> = {}
+  if (idsAutores.length > 0) {
+    const { data: perfiles } = await createAdminClient().from('perfiles').select('id, nombre').in('id', idsAutores)
+    for (const p of perfiles ?? []) if (p.nombre) autores[p.id] = p.nombre
+  }
+  if (sesion?.userId && sesion.nombre) autores[sesion.userId] = sesion.nombre
+
   return (
     <StockClient
       // Remonta al cambiar de empresa por ?empresa= (el estado local no se mezcla entre empresas).
@@ -97,6 +110,8 @@ export default async function StockPage({
       movimientos={movsRes.data ?? []}
       canEdit={tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)}
       pestanaInicial={tab === 'movimientos' ? 'movimientos' : 'inventario'}
+      empleados={empRes.data ?? []}
+      autores={autores}
     />
   )
 }

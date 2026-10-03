@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getEstadoVencimiento } from '@/types'
 import type { Empleado, TipoCertificado, Empresa, Archivo, Recibo } from '@/types'
 import RecibosSueldo from './RecibosSueldo'
+import EppEntregado, { type MovimientoEpp } from './EppEntregado'
 import type { Tables } from '@/types/database'
 import { Monograma } from '@/components/ui/monograma'
 import { EstadoPill } from '@/components/ui/estado-pill'
@@ -35,6 +36,8 @@ interface Props {
   recibos: Recibo[]
   /** Puede ver los recibos de sueldo (perfiles.ve_recibos). */
   veRecibos: boolean
+  /** EPP y ropa entregados desde Stock. */
+  epp: MovimientoEpp[]
   isAdmin: boolean
   canEdit: boolean
   /** Certificado a abrir al entrar (?cert=<id>, desde el dashboard o vencimientos). */
@@ -64,6 +67,7 @@ export default function LegajoClient({
   empresas,
   recibos,
   veRecibos,
+  epp,
   canEdit,
   certInicial = null,
   abrirAlta = false,
@@ -912,6 +916,8 @@ export default function LegajoClient({
           </div>
         </form>
       )}
+
+      <EppEntregado movimientos={epp} empresaSlug={empleado.empresa?.slug ?? null} />
 
       {veRecibos && (
         <RecibosSueldo

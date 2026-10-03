@@ -17,7 +17,7 @@ import {
 } from '@/modules/stock/reglas'
 import { fmtFechaAR } from '@/lib/fechas-ar'
 import type { OpcionItem } from './ItemPicker'
-import { PanelMovimiento, type ControlPanel } from './PanelMovimiento'
+import { PanelMovimiento, type ControlPanel, type EmpleadoOpcion } from './PanelMovimiento'
 import { PanelItem } from './PanelItem'
 import { MovimientosTabla } from './MovimientosTabla'
 import { MatrizTalles, TablaItems, type AccionesItem } from './Inventario'
@@ -31,6 +31,10 @@ interface Props {
   movimientos: StockMovimiento[]
   canEdit: boolean
   pestanaInicial: PestanaStock
+  /** Empleados activos de la empresa (para vincular entregas y devoluciones con su legajo). */
+  empleados: EmpleadoOpcion[]
+  /** Quién cargó cada movimiento: id de usuario → nombre. */
+  autores: Record<string, string>
 }
 
 /** Vista de la lista. Los tres estados de reposición son excluyentes con "archivados". */
@@ -53,7 +57,7 @@ type Panel =
  * Se hace UNA vez al cerrar el panel de movimientos (no por cada línea cargada), o
  * enseguida tras acciones sueltas (alta/edición de ítem, archivar, eliminar).
  */
-export default function StockClient({ empresa, items: initItems, movimientos: initMovs, canEdit, pestanaInicial }: Props) {
+export default function StockClient({ empresa, items: initItems, movimientos: initMovs, canEdit, pestanaInicial, empleados, autores }: Props) {
   const [supabase] = useState(() => createClient())
   const router = useRouter()
   const [items, setItems] = useState(initItems)
@@ -413,6 +417,7 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
             empresaId={empresa.id}
             opciones={opciones}
             destinatarios={destinatarios}
+            empleados={empleados}
             proveedores={proveedores}
             tipoInicial={panel.tipo}
             itemInicial={panel.itemId}
@@ -438,6 +443,7 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
           tipoInicial={tipoMovsInicial}
           onEliminar={acciones.eliminarMovimiento}
           buscadorRef={buscadorRef}
+          autores={autores}
         />
       ) : (
         <>

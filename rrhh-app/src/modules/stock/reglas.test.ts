@@ -382,3 +382,30 @@ describe('categoriaDe', () => {
     expect(categoriaDe({ categoria: '  ' })).toBe(SIN_CATEGORIA)
   })
 })
+
+describe('devoluciones y vínculo con empleados (migración 24)', () => {
+  it('una devolución suma stock y no cuenta como compra del mes', async () => {
+    const r = await import('./reglas')
+    expect(r.deltaDe({ tipo: 'devolucion', cantidad: 2 })).toBe(2)
+    const movs = [
+      { tipo: 'compra', cantidad: 5, fecha: '2026-10-02', precio_unitario: 100, item_id: 'a' },
+      { tipo: 'devolucion', cantidad: 1, fecha: '2026-10-02', precio_unitario: null, item_id: 'a' },
+    ]
+    expect(r.comprasDelMes(movs as never, '2026-10').compras).toBe(1)
+    expect(r.describirMovimiento({ tipo: 'devolucion', notas: 'Tobias' })).toBe('devuelto por Tobias')
+  })
+  it('vincula al empleado solo si el nombre coincide exacto con uno (sin acentos, cualquier orden)', async () => {
+    const { empleadoPorNombre } = await import('./reglas')
+    const emps = [
+      { id: '1', nombre: 'Nicolás', apellido: 'Fernández' },
+      { id: '2', nombre: 'JESUS DANIEL', apellido: 'MIÑO' },
+      { id: '3', nombre: 'Juan', apellido: 'Perez' },
+      { id: '4', nombre: 'Juan', apellido: 'Perez' },
+    ]
+    expect(empleadoPorNombre('nicolas fernandez', emps)?.id).toBe('1')
+    expect(empleadoPorNombre('Miño Jesus Daniel', emps)?.id).toBe('2')
+    expect(empleadoPorNombre('Nicolás', emps)).toBeNull()
+    expect(empleadoPorNombre('Juan Perez', emps)).toBeNull() // ambiguo
+    expect(empleadoPorNombre('Barco Port Alberni', emps)).toBeNull()
+  })
+})

@@ -1039,6 +1039,7 @@ export type Database = {
           comprobante: string | null
           created_at: string
           created_by: string | null
+          empleado_id: string | null
           empresa_id: string
           fecha: string
           id: string
@@ -1053,6 +1054,7 @@ export type Database = {
           comprobante?: string | null
           created_at?: string
           created_by?: string | null
+          empleado_id?: string | null
           empresa_id: string
           fecha?: string
           id?: string
@@ -1067,6 +1069,7 @@ export type Database = {
           comprobante?: string | null
           created_at?: string
           created_by?: string | null
+          empleado_id?: string | null
           empresa_id?: string
           fecha?: string
           id?: string
@@ -1077,6 +1080,13 @@ export type Database = {
           tipo?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "stock_movimientos_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stock_movimientos_empresa_id_fkey"
             columns: ["empresa_id"]

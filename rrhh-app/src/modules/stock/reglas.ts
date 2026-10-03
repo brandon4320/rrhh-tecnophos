@@ -7,18 +7,52 @@ import type { EstadoVencimiento } from '@/types'
 import { diaClaveAR } from '@/lib/fechas-ar'
 import { coincide, normalizarTexto } from '@/lib/texto'
 
-export const TIPOS_MOVIMIENTO = ['compra', 'consumo', 'ajuste'] as const
+export const TIPOS_MOVIMIENTO = ['compra', 'consumo', 'ajuste', 'devolucion'] as const
 export type TipoMovimiento = (typeof TIPOS_MOVIMIENTO)[number]
 
 /**
  * Cómo se llama cada tipo en pantalla. En la DB siguen siendo compra/consumo/ajuste,
  * pero el uso real es otro: casi todos los consumos son ENTREGAS de EPP y ropa a
- * empleados (3 por cada compra), y por "compra" también entran devoluciones.
+ * empleados (3 por cada compra). Las devoluciones tienen tipo propio desde la
+ * migración 24 (antes entraban como "compra" e inflaban las compras del mes).
  */
 export const TIPO_MOVIMIENTO_LABEL: Record<TipoMovimiento, string> = {
   compra: 'Ingreso',
   consumo: 'Entrega',
   ajuste: 'Ajuste',
+  devolucion: 'Devolución',
+}
+
+/** Plural para los filtros y resúmenes ("Entregas", "Devoluciones"). */
+export const TIPO_MOVIMIENTO_PLURAL: Record<TipoMovimiento, string> = {
+  compra: 'Ingresos',
+  consumo: 'Entregas',
+  ajuste: 'Ajustes',
+  devolucion: 'Devoluciones',
+}
+
+/** Tipos que se cargan con una persona en el encabezado (entrega o devolución). */
+export function esMovimientoConPersona(tipo: string): boolean {
+  return tipo === 'consumo' || tipo === 'devolucion'
+}
+
+/**
+ * El empleado cuyo nombre coincide EXACTO (sin acentos ni mayúsculas, en cualquier
+ * orden nombre/apellido) con lo escrito. Así una entrega queda en su legajo sin
+ * cambiar el campo de texto libre de siempre ("Entregado a"). Ambiguo o sin
+ * coincidencia → null (queda solo el texto).
+ */
+export function empleadoPorNombre<T extends { id: string; nombre: string | null; apellido: string | null }>(
+  texto: string, empleados: T[]
+): T | null {
+  const q = normalizarTexto(texto).replace(/\s+/g, ' ')
+  if (!q) return null
+  const hits = empleados.filter((e) => {
+    const a = normalizarTexto(`${e.nombre ?? ''} ${e.apellido ?? ''}`).replace(/\s+/g, ' ')
+    const b = normalizarTexto(`${e.apellido ?? ''} ${e.nombre ?? ''}`).replace(/\s+/g, ' ')
+    return q === a || q === b
+  })
+  return hits.length === 1 ? hits[0] : null
 }
 
 /** Sugerencias para el datalist; el campo acepta cualquier texto. */
@@ -64,7 +98,7 @@ export function parseCantidad(v: unknown): number | null {
 
 /** Efecto de un movimiento sobre el stock. */
 export function deltaDe(m: { tipo: string; cantidad: number }): number {
-  if (m.tipo === 'compra') return Math.abs(m.cantidad)
+  if (m.tipo === 'compra' || m.tipo === 'devolucion') return Math.abs(m.cantidad)
   if (m.tipo === 'consumo') return -Math.abs(m.cantidad)
   return m.cantidad // ajuste: con signo
 }
@@ -375,6 +409,7 @@ export function ultimoMovimientoPorItem<M extends MovimientoOrdenable & { item_i
 export function describirMovimiento(m: { tipo: string; notas?: string | null; proveedor?: string | null }): string {
   const notas = (m.notas ?? '').trim()
   if (m.tipo === 'consumo') return notas ? `entregado a ${notas}` : 'entregado'
+  if (m.tipo === 'devolucion') return notas ? `devuelto por ${notas}` : 'devolución'
   if (m.tipo === 'compra') {
     const proveedor = (m.proveedor ?? '').trim()
     if (proveedor) return proveedor
@@ -393,7 +428,7 @@ export function contraparteDe(m: { tipo: string; notas?: string | null; proveedo
   const notas = (m.notas ?? '').trim()
   const proveedor = (m.proveedor ?? '').trim()
   if (m.tipo === 'compra') return proveedor ? { principal: proveedor, detalle: notas || null } : { principal: notas, detalle: null }
-  if (m.tipo === 'consumo') return { principal: notas, detalle: null }
+  if (m.tipo === 'consumo' || m.tipo === 'devolucion') return { principal: notas, detalle: null }
   const d = describirMovimiento(m)
   return { principal: d.replace(/^ajuste · /, ''), detalle: null }
 }

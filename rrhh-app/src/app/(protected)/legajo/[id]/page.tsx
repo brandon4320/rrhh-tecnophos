@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { getSesion } from '@/lib/auth/session'
 import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import LegajoClient from './LegajoClient'
+import type { MovimientoEpp } from './EppEntregado'
 
 export default async function LegajoPage({
   params,
@@ -16,7 +17,7 @@ export default async function LegajoPage({
 
   // Todo en UN solo batch: ninguna query depende del fetch del empleado
   // (certificados filtra por empleado_id directo). notFound() se decide después.
-  const [{ data: empleado }, { data: certificados }, { data: tiposCert }, { data: empresas }, sesion, { data: recibos }] = await Promise.all([
+  const [{ data: empleado }, { data: certificados }, { data: tiposCert }, { data: empresas }, sesion, { data: recibos }, { data: epp }] = await Promise.all([
     supabase
       .from('empleados')
       .select('*, empresa:empresas(*)')
@@ -42,6 +43,14 @@ export default async function LegajoPage({
       .select('*')
       .eq('empleado_id', id)
       .order('periodo', { ascending: false }),
+    // EPP y ropa entregados desde Stock (migración 24: stock_movimientos.empleado_id).
+    supabase
+      .from('stock_movimientos')
+      .select('id, fecha, tipo, cantidad, item:stock_items(nombre, unidad)')
+      .eq('empleado_id', id)
+      .in('tipo', ['consumo', 'devolucion'])
+      .order('fecha', { ascending: false })
+      .limit(200),
   ])
 
   if (!empleado) notFound()
@@ -65,6 +74,7 @@ export default async function LegajoPage({
       // además oculta la sección para no mostrar un "sin comprobantes" engañoso).
       recibos={recibos ?? []}
       veRecibos={sesion?.veRecibos === true}
+      epp={(epp ?? []) as MovimientoEpp[]}
       isAdmin={sesion?.rol === 'admin'}
       canEdit={tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)}
     />
