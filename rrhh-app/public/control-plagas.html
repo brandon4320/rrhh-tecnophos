@@ -732,11 +732,19 @@ function migrar(db) {
   db.sectores.forEach(s => { if (!s.plantaId) s.plantaId = db.plantas[0].id; });
   // Plantas con certificado conocido: se crean si faltan y se les fija la
   // empresa que corresponde al certificado (ADC o Tecnophos).
+  // Cada planta se asocia al primer modelo que la nombra (igual que
+  // modeloPara), así "ADM Calado" no se confunde con "Bunge - Calado".
+  // Los ids salen de la clave del modelo y no de su posición, para que
+  // reordenar la lista nunca choque con ids ya guardados en la tablet.
   CERT_MODELOS.forEach((m, i) => {
-    const existente = db.plantas.find(p => m.match.some(k => normalizarTxt(p.nombre).indexOf(k) !== -1));
+    const clave = m.match[0].replace(/[^a-z0-9]/g, '');
+    const existente = db.plantas.find(p => indiceModelo(p.nombre) === i);
     if (existente) {
       existente.empresa = m.empresa;
-      if (!existente.mail && m.mail) existente.mail = m.mail;
+      // Casilla vacía, o la que venía precargada antes y cambió: se pone la
+      // vigente. Si el administrador escribió otra a mano, se respeta.
+      const previa = String(existente.mail || '').trim().toLowerCase();
+      if (m.mail && (!previa || (m.mailAnterior || []).some(x => x.toLowerCase() === previa))) existente.mail = m.mail;
       // Sector sembrado en una versión anterior con el nombre viejo: se
       // actualiza al nombre/estructura del certificado oficial (solo si el
       // administrador no lo tocó).
@@ -750,15 +758,15 @@ function migrar(db) {
       // se le agrega ahora la cebadera del certificado. Si el administrador
       // ya le cargó sectores a mano, no se toca nada.
       if (m.seed && m.seed.sector && !db.sectores.some(s => s.plantaId === existente.id)) {
-        const sec = { id: 'sm' + i, plantaId: existente.id, nombre: m.seed.sector, cebos: m.seed.cebos, uv: m.seed.uv };
+        const sec = { id: 'sm-' + clave, plantaId: existente.id, nombre: m.seed.sector, cebos: m.seed.cebos, uv: m.seed.uv };
         if (m.seed.grupos) sec.grupos = m.seed.grupos.map(g => ({ nombre: g.nombre, cebos: g.cebos }));
         db.sectores.push(sec);
       }
     } else if (m.seed) {
-      const id = 'pm' + i;
+      const id = 'pm-' + clave;
       db.plantas.push({ id, nombre: m.seed.nombre, mail: m.mail || '', empresa: m.empresa });
       if (m.seed.sector) { // plantas sin planilla conocida todavía se crean sin sectores
-        const sec = { id: 'sm' + i, plantaId: id, nombre: m.seed.sector, cebos: m.seed.cebos, uv: m.seed.uv };
+        const sec = { id: 'sm-' + clave, plantaId: id, nombre: m.seed.sector, cebos: m.seed.cebos, uv: m.seed.uv };
         if (m.seed.grupos) sec.grupos = m.seed.grupos.map(g => ({ nombre: g.nombre, cebos: g.cebos }));
         db.sectores.push(sec);
       }
@@ -1934,25 +1942,36 @@ const CERT_MODELOS = [
     mail: 'fcalvo@millagro.com.ar',
     producto: PRODUCTO_TECNOPHOS, firmaIzq: 'Personal MILLAGRO SA',
     seed: { nombre: 'Millagro S.A.', sector: 'Planta industrial', cebos: 34, uv: 0 } },
+  // ADM (clientes de Tecnophos): todos los reportes van a Agustín, que los
+  // reparte dentro de ADM. Van antes que Bunge para que "ADM Calado" no
+  // tome el modelo de "Bunge - Calado" (las dos contienen "calado").
+  // ADM Agro usa el mismo formato de certificado que Millagro, con su
+  // propia cebadera de 116 estaciones.
+  { match: ['adm agro'], paraEmpresa: 'ADM AGRO', empresa: 'TECNOPHOS',
+    mail: 'agustin@tecnophos.com.ar', mailAnterior: ['David.toffalo@adm.com'],
+    producto: PRODUCTO_TECNOPHOS, firmaIzq: 'Personal ADM AGRO',
+    seed: { nombre: 'ADM Agro', sector: 'Planta industrial', cebos: 116, uv: 0 } },
+  // ADM Calado: todavía sin planilla propia; se crea sin sectores.
+  { match: ['adm calado'], paraEmpresa: 'ADM AGRO', empresa: 'TECNOPHOS',
+    mail: 'agustin@tecnophos.com.ar',
+    titulo: 'DESRATIZACIÓN EN CALADO', producto: PRODUCTO_TECNOPHOS, firmaIzq: 'Personal ADM AGRO',
+    seed: { nombre: 'ADM Calado' } },
   { match: ['calado'], paraEmpresa: 'BUNGE SA', empresa: 'TECNOPHOS',
     titulo: 'DESRATIZACIÓN EN CALADO', producto: PRODUCTO_TECNOPHOS,
     seed: { nombre: 'Bunge - Calado', sector: 'Calado', cebos: 18, uv: 0 } },
   { match: ['galvan'], paraEmpresa: 'BUNGE SA', empresa: 'TECNOPHOS',
     titulo: 'DESRATIZACIÓN EN PUERTO GALVAN', producto: PRODUCTO_TECNOPHOS,
     seed: { nombre: 'Bunge - Puerto Galván', sector: 'Puerto Galván', cebos: 134, uv: 0 } },
-  // ADM Agro: cliente de Tecnophos. Usa el mismo formato de certificado que
-  // Millagro, con su propia cebadera de 116 estaciones.
-  { match: ['adm agro'], paraEmpresa: 'ADM AGRO', empresa: 'TECNOPHOS',
-    mail: 'David.toffalo@adm.com',
-    producto: PRODUCTO_TECNOPHOS, firmaIzq: 'Personal ADM AGRO',
-    seed: { nombre: 'ADM Agro', sector: 'Planta industrial', cebos: 116, uv: 0 } },
 ];
 function normalizarTxt(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
-function modeloPara(plantaNombre) {
+function indiceModelo(plantaNombre) {
   const n = normalizarTxt(plantaNombre);
-  const m = CERT_MODELOS.find(x => x.match.some(k => n.indexOf(k) !== -1)) || {};
+  return CERT_MODELOS.findIndex(x => x.match.some(k => n.indexOf(k) !== -1));
+}
+function modeloPara(plantaNombre) {
+  const m = CERT_MODELOS[indiceModelo(plantaNombre)] || {};
   return {
     titulo: m.titulo || 'DESRATIZACIÓN EN PLANTA INDUSTRIAL',
     paraEmpresa: m.paraEmpresa || String(plantaNombre || '').toUpperCase(),
