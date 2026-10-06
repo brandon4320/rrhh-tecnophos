@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard, Bug, ExternalLink, Container, Boxes, ListChecks } from 'lucide-react'
+import { LogOut, IdCard, ClipboardList, BriefcaseBusiness, ChevronRight, LayoutDashboard, Bug, ExternalLink, Container, Boxes, ListChecks, SprayCan } from 'lucide-react'
 import { requireSesion } from '@/lib/auth/session'
 import { modulosPara } from '@/config/modules'
 import { puedeVerArcor } from '@/modules/arcor/acceso'
@@ -31,6 +31,9 @@ const CHECKLIST_MAQUINARIA_URL = 'https://checklist.serviwhite.com/admin'
 // ERP de Serviwhite (alquiler y venta de módulos): otro repo, con su propio login.
 // La raíz redirige sola al login si no hay sesión.
 const SERVIWHITE_ERP_URL = 'https://gestion.serviwhite.com/'
+// Recorrido de limpieza de baños: vive en el ERP de Serviwhite (arma el recorrido
+// y el link del encargado). Se pide con el mismo login del ERP.
+const SERVIWHITE_LIMPIEZA_URL = 'https://gestion.serviwhite.com/limpieza'
 
 function nombreSede(nombreEmpresa: string) {
   return nombreEmpresa.replace(/^Tecnophos\s+/i, '')
@@ -181,6 +184,14 @@ export default async function HubPage() {
                     <a href={SERVIWHITE_ERP_URL} target="_blank" rel="noopener noreferrer" className={filaCls}>
                       <Boxes className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
                       <span className="min-w-0 flex-1 truncate">Sistema de gestión</span>
+                      <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
+                    </a>
+                  )}
+
+                  {marca.key === 'serviwhite' && (
+                    <a href={SERVIWHITE_LIMPIEZA_URL} target="_blank" rel="noopener noreferrer" className={filaCls}>
+                      <SprayCan className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <span className="min-w-0 flex-1 truncate">Recorrido de limpieza</span>
                       <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                     </a>
                   )}
