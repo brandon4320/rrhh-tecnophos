@@ -320,6 +320,12 @@ export interface ContenedorReportado {
   oe: string | null
   hash_imagen: string | null
   observaciones: string | null
+  /**
+   * Corrección deliberada: una persona confirmó que la carga era errónea (p. ej. el aviso de
+   * ARCOR del 08/10/2026: MRSU7429565 se había cargado contra una operación de 2025 y el
+   * certificado era de MRSU2129565). Solo habilita pasar un `encontrado` a `descartado`.
+   */
+  correccion?: boolean
 }
 
 /**
@@ -327,12 +333,14 @@ export interface ContenedorReportado {
  *  - Un reporte con MENOS datos no borra lo que ya se sabía (booking/OE/hash y
  *    observaciones vacías se conservan — trampa #17 del sistema ARCOR).
  *  - `publicado` nunca vuelve a false.
- *  - Un `encontrado` no se degrada (`degrada`: solo se fusionan los datos sueltos).
+ *  - Un `encontrado` no se degrada (`degrada`: solo se fusionan los datos sueltos), salvo
+ *    una corrección deliberada a `descartado` (`correccion: true`).
  *  - `cambia` es false si el reporte no movió nada visible (estado, publicado,
  *    booking, OE, lugar, fecha): un re-envío idéntico no genera actividad.
  */
 export function fusionarContenedor(prev: ContenedorPrevio, nuevo: ContenedorReportado) {
-  const degrada = prev.estado === 'encontrado' && DEGRADANTES.includes(nuevo.estado)
+  const corrige = nuevo.correccion === true && nuevo.estado === 'descartado'
+  const degrada = prev.estado === 'encontrado' && DEGRADANTES.includes(nuevo.estado) && !corrige
   const datos = {
     booking: nuevo.booking ?? prev.booking ?? null,
     oe: nuevo.oe ?? prev.oe ?? null,
