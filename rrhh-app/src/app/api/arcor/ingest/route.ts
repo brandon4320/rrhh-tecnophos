@@ -154,6 +154,7 @@ async function procesarContenedor(admin: Admin, it: Record<string, unknown>, ori
     const { degrada, cambia, datos } = fusionarContenedor(existente, {
       estado, fecha, lugar, publicado, observaciones,
       booking: entrante.booking, oe: entrante.oe, hash_imagen: entrante.hash_imagen,
+      correccion: it.correccion === true,
     })
     const { error } = await admin
       .from('arcor_contenedores')

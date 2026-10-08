@@ -191,6 +191,14 @@ describe('fusionarContenedor', () => {
     expect(r).toMatchObject({ degrada: true, cambia: false })
     expect(r.datos.oe).toBe('OE9') // los datos sueltos sí se fusionan
   })
+  it('una corrección deliberada sí descarta un encontrado', () => {
+    const r = fusionarContenedor({ ...prev, estado: 'encontrado' }, { ...igual, estado: 'descartado', correccion: true })
+    expect(r).toMatchObject({ degrada: false, cambia: true })
+  })
+  it('la marca de corrección no habilita volver a pendiente ni a revisar foto', () => {
+    expect(fusionarContenedor({ ...prev, estado: 'encontrado' }, { ...igual, estado: 'pendiente_arcor', correccion: true }).degrada).toBe(true)
+    expect(fusionarContenedor({ ...prev, estado: 'encontrado' }, { ...igual, estado: 'revisar_foto', correccion: true }).degrada).toBe(true)
+  })
 })
 
 describe('colas abiertas', () => {
