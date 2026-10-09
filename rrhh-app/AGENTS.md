@@ -150,7 +150,12 @@ seteado = solo esa — ej. Soledad solo ve Tecnophos Rosario).
 > el cliente admin (service role). Antes cualquiera podía hacerse admin con un PATCH.
 >
 > **Recibos de sueldo restringidos** (migración 23, 2026-10-03): solo los ve quien tiene
-> `perfiles.ve_recibos = true` (hoy Brandon y Mariano). Aplica a `recibos_sueldo` y a los
+> `perfiles.ve_recibos = true`. **Quién lo tiene NO vive en ningún archivo, solo en la tabla**:
+> al 2026-10-09 son Brandon, Mariano, Magali Villalba y Aylen Storm (las dos últimas las pidió
+> Agus para que pudieran cargar la documentación mensual). Esta línea se desactualiza sola:
+> el estado real sale de `select nombre, ve_recibos from perfiles order by nombre;`.
+> Ojo: el permiso es UNO solo y da subir **Y** leer todos los recibos de las cuatro empresas;
+> no hay forma de habilitar la carga sin habilitar la lectura. Aplica a `recibos_sueldo` y a los
 > `documentos_mensuales` cuya carpeta raíz empieza con "recibo". `getSesion().veRecibos`
 > espeja la RLS en la UI (`esCarpetaRecibos()` en modules/documentos/reglas.ts) y las rutas
 > `/api/upload-url`, `/api/documentos` y `/api/recibos` cortan antes con 403. El permiso se
