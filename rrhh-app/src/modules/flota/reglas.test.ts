@@ -228,3 +228,50 @@ describe('fechas', () => {
     expect(ultimoDiaDelMes('2026-04-30')).toBe(30)
   })
 })
+
+describe('checklist según el tipo de vehículo', () => {
+  it('deduce el tipo del modelo y de la patente de acoplado', async () => {
+    const { inferirTipo, tipoDe } = await import('./reglas')
+    expect(inferirTipo('Volkswagen', 'Amarok')).toBe('pickup')
+    expect(inferirTipo('Fiat', 'Strada')).toBe('pickup')
+    expect(inferirTipo('Peugeot', 'Partner')).toBe('utilitario')
+    expect(inferirTipo('Renault', 'Kangoo')).toBe('utilitario')
+    expect(inferirTipo('CITROEN', 'JUMPER')).toBe('furgon')
+    expect(inferirTipo('Trailer', '-')).toBe('trailer')
+    expect(inferirTipo(null, null, '101AG048TW')).toBe('trailer')
+    expect(tipoDe({ tipo: 'furgon', marca: 'Volkswagen', modelo: 'Amarok' })).toBe('furgon') // manda lo elegido
+    expect(tipoDe({ tipo: null, marca: 'Ford', modelo: 'Ranger' })).toBe('pickup')
+  })
+
+  it('al trailer no se le pide tablero, motor, cabina ni elementos de la camioneta', async () => {
+    const { fotosPara, itemsPara, seccionesPara, tieneMotor } = await import('./reglas')
+    expect(tieneMotor('trailer')).toBe(false)
+    expect(fotosPara('trailer').map((f) => f.slot)).not.toContain('tablero')
+    const obligatorias = fotosPara('trailer').filter((f) => f.obligatoria).map((f) => f.slot)
+    expect(obligatorias).toEqual(['frente', 'trasera', 'lateral_izq', 'lateral_der', 'cubierta_di', 'cubierta_dd'])
+    const ids = itemsPara('trailer').map((i) => i.id)
+    for (const id of ['aceite', 'testigos', 'frenos', 'cinturones', 'matafuegos', 'productos_fuera_cabina']) expect(ids).not.toContain(id)
+    for (const id of ['enganche_traba', 'cadena_seguridad', 'ficha_electrica', 'luces_freno', 'cubiertas_desgaste', 'seguro']) expect(ids).toContain(id)
+    expect(seccionesPara('trailer').map((s) => s.id)).not.toContain('motor')
+  })
+
+  it('utilitarios y furgones: compartimento de carga y separación de la cabina; pickups: caja', async () => {
+    const { fotosPara, itemsPara } = await import('./reglas')
+    expect(fotosPara('furgon').find((f) => f.slot === 'caja')?.label).toBe('Compartimento de carga')
+    expect(fotosPara('pickup').find((f) => f.slot === 'caja')?.label).toBe('Caja de carga')
+    expect(itemsPara('utilitario').map((i) => i.id)).toEqual(expect.arrayContaining(['mampara', 'puertas_carga']))
+    expect(itemsPara('pickup').map((i) => i.id)).toContain('caja_cobertor')
+    expect(itemsPara('pickup').map((i) => i.id)).not.toContain('mampara')
+    expect(itemsPara('furgon').find((i) => i.id === 'caja_limpia')?.label).toMatch(/Compartimento/)
+  })
+
+  it('valida lo de su tipo: a un trailer completo no le faltan ítems ni fotos de camioneta', async () => {
+    const { itemsPara, itemsSinResponder, fotosFaltantes } = await import('./reglas')
+    const r = Object.fromEntries(itemsPara('trailer').map((i) => [i.id, 'ok']))
+    expect(itemsSinResponder(r, 'trailer')).toEqual([])
+    expect(itemsSinResponder(r, 'pickup').length).toBeGreaterThan(0)
+    const fotos = { frente: 'a', trasera: 'a', lateral_izq: 'a', lateral_der: 'a', cubierta_di: 'a', cubierta_dd: 'a' }
+    expect(fotosFaltantes(fotos, 'trailer')).toEqual([])
+    expect(fotosFaltantes(fotos, 'pickup').map((f) => f.slot)).toEqual(['tablero', 'cubierta_ti', 'cubierta_td'])
+  })
+})

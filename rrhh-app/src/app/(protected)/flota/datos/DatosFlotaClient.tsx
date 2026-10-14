@@ -6,12 +6,13 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { TIPOS_VEHICULO, TIPO_VEHICULO_LABEL, tipoDe, type TipoVehiculo } from '@/modules/flota/reglas'
 
 interface Vehiculo {
   id: string; patente: string; descripcion: string | null
-  marca: string | null; modelo: string | null; anio: number | null; empresa: string
+  marca: string | null; modelo: string | null; anio: number | null; tipo: string | null; empresa: string
 }
-type Fila = { marca: string; modelo: string; anio: string }
+type Fila = { marca: string; modelo: string; anio: string; tipo: TipoVehiculo }
 
 const MARCAS = ['Toyota', 'Ford', 'Volkswagen', 'Chevrolet', 'Fiat', 'Renault', 'Peugeot', 'Citroën', 'Nissan', 'Mercedes-Benz', 'Iveco', 'RAM']
 const input = 'w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60'
@@ -23,6 +24,7 @@ function inicial(v: Vehiculo): Fila {
     marca: v.marca ?? (m?.trim() || ''),
     modelo: v.modelo ?? (resto.join(' - ').trim() || ''),
     anio: v.anio?.toString() ?? '',
+    tipo: tipoDe(v),
   }
 }
 
@@ -34,7 +36,7 @@ export default function DatosFlotaClient({ vehiculos, volver, variasEmpresas }: 
 
   const cambiadas = vehiculos.filter((v) => {
     const f = filas[v.id]
-    return f.marca.trim() !== (v.marca ?? '') || f.modelo.trim() !== (v.modelo ?? '') || f.anio.trim() !== (v.anio?.toString() ?? '')
+    return f.marca.trim() !== (v.marca ?? '') || f.modelo.trim() !== (v.modelo ?? '') || f.anio.trim() !== (v.anio?.toString() ?? '') || f.tipo !== v.tipo
   })
   const set = (id: string, campo: keyof Fila, valor: string) => setFilas((p) => ({ ...p, [id]: { ...p[id], [campo]: valor } }))
 
@@ -49,7 +51,7 @@ export default function DatosFlotaClient({ vehiculos, volver, variasEmpresas }: 
     const resultados = await Promise.all(cambiadas.map((v) => {
       const f = filas[v.id]
       return supabase.from('vehiculos').update({
-        marca: f.marca.trim() || null, modelo: f.modelo.trim() || null, anio: f.anio.trim() ? Number(f.anio) : null,
+        marca: f.marca.trim() || null, modelo: f.modelo.trim() || null, anio: f.anio.trim() ? Number(f.anio) : null, tipo: f.tipo,
       }).eq('id', v.id).then(({ error }) => ({ patente: v.patente, error }))
     }))
     setSaving(false)
@@ -69,8 +71,8 @@ export default function DatosFlotaClient({ vehiculos, volver, variasEmpresas }: 
           <Link href={volver} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" /> Volver a Flota
           </Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Marca, modelo y año</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Completá lo que falte y guardá todo junto. Salen en la tabla de Flota y en la etiqueta del QR.</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Marca, modelo, año y tipo</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Completá lo que falte y guardá todo junto. El tipo define qué se revisa en el checklist (a un trailer no se le piden km ni motor).</p>
         </div>
         <button type="submit" disabled={saving || cambiadas.length === 0} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50">
           {saving ? 'Guardando…' : cambiadas.length === 0 ? 'Sin cambios' : `Guardar ${cambiadas.length === 1 ? '1 cambio' : `${cambiadas.length} cambios`}`}
@@ -88,6 +90,7 @@ export default function DatosFlotaClient({ vehiculos, volver, variasEmpresas }: 
               <th className="px-3 py-3">Marca</th>
               <th className="px-3 py-3">Modelo</th>
               <th className="w-28 px-3 py-3">Año</th>
+              <th className="w-36 px-3 py-3">Tipo</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -103,6 +106,11 @@ export default function DatosFlotaClient({ vehiculos, volver, variasEmpresas }: 
                 </td>
                 <td className="px-3 py-2.5">
                   <input aria-label={`Año de ${v.patente}`} value={filas[v.id].anio} onChange={(e) => set(v.id, 'anio', e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="2020" inputMode="numeric" disabled={saving} className={`${input} tabular-nums`} />
+                </td>
+                <td className="px-3 py-2.5">
+                  <select aria-label={`Tipo de ${v.patente}`} value={filas[v.id].tipo} onChange={(e) => set(v.id, 'tipo', e.target.value)} disabled={saving} className={input}>
+                    {TIPOS_VEHICULO.map((t) => <option key={t} value={t}>{TIPO_VEHICULO_LABEL[t]}</option>)}
+                  </select>
                 </td>
               </tr>
             ))}

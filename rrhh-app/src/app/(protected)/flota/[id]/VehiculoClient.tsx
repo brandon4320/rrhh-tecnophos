@@ -15,9 +15,9 @@ import { mensajeError } from '@/lib/errores'
 import type { EstadoVencimiento } from '@/types'
 import type { ResumenVehiculo, Semaforo } from '@/modules/flota/resumen'
 import {
-  ESTADO_CHECKLIST_LABEL, FOTOS_CHECKLIST, RESULTADO_LABEL, SECCIONES_CHECKLIST, TIPOS_MANTENIMIENTO,
+  ESTADO_CHECKLIST_LABEL, RESULTADO_LABEL, TIPOS_MANTENIMIENTO, TIPOS_VEHICULO, TIPO_VEHICULO_LABEL, fotosPara, seccionesPara, tipoDe,
   GRACIA_CHECKLIST_DIAS, checklistMensual, frecuenciaChecklist, itemPorId, nombreMantenimiento,
-  type EstadoChecklist, type EstadoMantenimiento, type Resultado,
+  type EstadoChecklist, type EstadoMantenimiento, type Resultado, type TipoVehiculo,
 } from '@/modules/flota/reglas'
 
 interface Checklist {
@@ -35,6 +35,8 @@ interface Service { id: string; tipo: string; fecha: string; km: number | null; 
 interface Props {
   vehiculo: {
     id: string; patente: string; descripcion: string | null; marca: string | null; modelo: string | null; anio: number | null
+    /** Elegido en Gestión (null = se deduce del modelo). */
+    tipo: string | null
     empresaId: string; empresa: { nombre: string; slug: string }; kmActual: number | null; kmActualizadoAt: string | null
     conductorId: string | null; checklistActivo: boolean; checklistCadaDias: number
   }
@@ -62,7 +64,6 @@ const GRAVEDAD: Record<string, { label: string; cls: string }> = {
   media: { label: 'Media', cls: 'bg-warning-subtle text-warning' },
   baja: { label: 'Leve', cls: 'bg-muted text-muted-foreground' },
 }
-const SLOT_LABEL = new Map(FOTOS_CHECKLIST.map((f) => [f.slot, f.label]))
 
 const card = 'rounded-2xl border border-border bg-card'
 const input = 'w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
@@ -106,6 +107,10 @@ function FotoR2({ path, label }: { path: string; label?: string }) {
 
 export default function VehiculoClient({ vehiculo, resumen, checklists, novedades, plan, services, empleados, qr, canEdit }: Props) {
   const supabase = createClient()
+  // Qué se revisa en este vehículo (rótulos de fotos e ítems según sea pickup, furgón, trailer…).
+  const tipoVehiculo = tipoDe(vehiculo)
+  const fotosTipo = fotosPara(tipoVehiculo)
+  const secciones = seccionesPara(tipoVehiculo)
   const router = useRouter()
   const [saving, setSaving] = useState(false)
 
@@ -230,7 +235,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
 
   // ── Datos ─────────────────────────────────────────────────────────────────
   const DATOS = {
-    marca: vehiculo.marca ?? '', modelo: vehiculo.modelo ?? '', anio: vehiculo.anio?.toString() ?? '',
+    marca: vehiculo.marca ?? '', modelo: vehiculo.modelo ?? '', anio: vehiculo.anio?.toString() ?? '', tipo: tipoVehiculo,
     conductor: vehiculo.conductorId ?? '', km: vehiculo.kmActual?.toString() ?? '',
     cada: vehiculo.checklistCadaDias.toString(), activo: vehiculo.checklistActivo,
   }
@@ -248,7 +253,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
     setSaving(true)
     const kmCambio = km !== vehiculo.kmActual
     const { error } = await supabase.from('vehiculos').update({
-      marca: datos.marca.trim() || null, modelo: datos.modelo.trim() || null, anio,
+      marca: datos.marca.trim() || null, modelo: datos.modelo.trim() || null, anio, tipo: datos.tipo,
       conductor_id: datos.conductor || null, checklist_cada_dias: cada, checklist_activo: datos.activo,
       ...(kmCambio ? { km_actual: km, km_actualizado_at: new Date().toISOString() } : {}),
     }).eq('id', vehiculo.id)
@@ -444,7 +449,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
                   const fotos = comoMapa(c.fotos)
                   const anterior = checklists[idx + 1]
                   const fotosAnt = anterior ? comoMapa(anterior.fotos) : {}
-                  const excepciones = SECCIONES_CHECKLIST.flatMap((s) => s.items.filter((i) => respuestas[i.id] && respuestas[i.id] !== 'ok'))
+                  const excepciones = secciones.flatMap((s) => s.items.filter((i) => respuestas[i.id] && respuestas[i.id] !== 'ok'))
                   return (
                     <li key={c.id}>
                       <button type="button" onClick={() => setAbierto(isOpen ? null : c.id)} className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-muted/40">
@@ -478,17 +483,17 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
                           )}
                           {c.observaciones && <p className="text-sm text-muted-foreground">“{c.observaciones}”</p>}
                           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                            {FOTOS_CHECKLIST.filter((f) => fotos[f.slot]).map((f) => (
+                            {fotosTipo.filter((f) => fotos[f.slot]).map((f) => (
                               <Fragment key={f.slot}>
                                 {comparar && anterior ? (
                                   <div className="col-span-2 grid grid-cols-2 gap-2 sm:col-span-3">
-                                    <FotoR2 path={fotos[f.slot]} label={`${SLOT_LABEL.get(f.slot)} · este`} />
+                                    <FotoR2 path={fotos[f.slot]} label={`${f.label} · este`} />
                                     {fotosAnt[f.slot]
                                       ? <FotoR2 path={fotosAnt[f.slot]} label={`anterior (${fmtFechaAR(anterior.created_at)})`} />
                                       : <div className="flex aspect-[4/3] items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">Sin foto anterior</div>}
                                   </div>
                                 ) : (
-                                  <FotoR2 path={fotos[f.slot]} label={SLOT_LABEL.get(f.slot)} />
+                                  <FotoR2 path={fotos[f.slot]} label={f.label} />
                                 )}
                               </Fragment>
                             ))}
@@ -601,11 +606,19 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
               <h2 className="text-lg font-semibold tracking-tight">Datos</h2>
             </div>
             <form onSubmit={guardarDatos} className="space-y-3 px-5 py-4">
+              <div>
+                <label htmlFor="d-tipo" className="mb-1 block text-xs text-muted-foreground">Tipo (define qué se revisa en el checklist)</label>
+                <select id="d-tipo" value={datos.tipo} onChange={(e) => setDatos({ ...datos, tipo: e.target.value as TipoVehiculo })} disabled={!canEdit} className={input}>
+                  {TIPOS_VEHICULO.map((t) => <option key={t} value={t}>{TIPO_VEHICULO_LABEL[t]}</option>)}
+                </select>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <input id="d-marca" value={datos.marca} onChange={(e) => setDatos({ ...datos, marca: e.target.value })} placeholder="Marca" disabled={!canEdit} className={input} />
                 <input id="d-modelo" value={datos.modelo} onChange={(e) => setDatos({ ...datos, modelo: e.target.value })} placeholder="Modelo" disabled={!canEdit} className={input} />
                 <input id="d-anio" value={datos.anio} onChange={(e) => setDatos({ ...datos, anio: e.target.value })} placeholder="Año" inputMode="numeric" disabled={!canEdit} className={input} />
-                <input id="d-km" value={datos.km} onChange={(e) => setDatos({ ...datos, km: e.target.value })} placeholder="Km actual" inputMode="numeric" disabled={!canEdit} className={input} />
+                {datos.tipo !== 'trailer' && (
+                  <input id="d-km" value={datos.km} onChange={(e) => setDatos({ ...datos, km: e.target.value })} placeholder="Km actual" inputMode="numeric" disabled={!canEdit} className={input} />
+                )}
               </div>
               <div>
                 <label htmlFor="d-conductor" className="mb-1 block text-xs text-muted-foreground">Conductor habitual</label>

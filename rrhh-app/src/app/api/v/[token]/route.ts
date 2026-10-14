@@ -4,7 +4,7 @@ import { diaClaveAR } from '@/lib/fechas-ar'
 import { avisarEncargados, urlApp, vehiculoPorToken, type Admin, type VehiculoQR } from '@/modules/flota/servidor'
 import {
   RESULTADO_LABEL, SLOTS_VALIDOS, SLOT_NOVEDAD, calcularResultado, evaluarKm,
-  fotosFaltantes, itemPorId, itemsSinResponder, novedadesDelChecklist, novedadesNuevas, sumarMeses,
+  fotosFaltantes, itemPorId, itemsSinResponder, novedadesDelChecklist, novedadesNuevas, sumarMeses, tieneMotor,
   type Resultado,
 } from '@/modules/flota/reglas'
 
@@ -165,8 +165,10 @@ async function registrarChecklist(
     return NextResponse.json({ error: 'Ya se cargaron varios checklists hoy para esta camioneta.' }, { status: 429 })
   }
 
-  const km = Number(cuerpo.km)
-  if (!Number.isInteger(km) || km < 0 || km > 2_000_000) {
+  // Un trailer no tiene tablero: no lleva km (ni foto del tablero, ni niveles de motor).
+  const conMotor = tieneMotor(vehiculo.tipo)
+  const km = conMotor ? Number(cuerpo.km) : null
+  if (km !== null && (!Number.isInteger(km) || km < 0 || km > 2_000_000)) {
     return NextResponse.json({ error: 'Cargá los kilómetros del tablero, sin puntos ni comas' }, { status: 400 })
   }
 
@@ -176,7 +178,7 @@ async function registrarChecklist(
   for (const [id, v] of Object.entries(crudas)) {
     if (itemPorId(id) && (v === 'ok' || v === 'obs' || v === 'no_ok')) respuestas[id] = v
   }
-  const sinResponder = itemsSinResponder(respuestas)
+  const sinResponder = itemsSinResponder(respuestas, vehiculo.tipo)
   if (sinResponder.length) {
     return NextResponse.json({ error: `Faltan ${sinResponder.length} ítems por revisar` }, { status: 400 })
   }
@@ -194,7 +196,7 @@ async function registrarChecklist(
   for (const [slot, path] of Object.entries(fotosCrudas)) {
     if (SLOTS_VALIDOS.has(slot) && pathValido(path, vehiculo.id, meses, slot)) fotos[slot] = path
   }
-  const faltan = fotosFaltantes(fotos)
+  const faltan = fotosFaltantes(fotos, vehiculo.tipo)
   if (faltan.length) {
     return NextResponse.json({ error: `Falta la foto: ${faltan.map((f) => f.label.toLowerCase()).join(', ')}` }, { status: 400 })
   }
@@ -205,7 +207,9 @@ async function registrarChecklist(
     .slice(0, 6)
 
   const resultado = calcularResultado(respuestas)
-  const evaluacion = evaluarKm(km, { km: vehiculo.km_actual, fecha: vehiculo.km_actualizado_at })
+  const evaluacion = km !== null
+    ? evaluarKm(km, { km: vehiculo.km_actual, fecha: vehiculo.km_actualizado_at })
+    : { inconsistente: false, motivo: '' }
 
   const { data: checklist, error } = await admin
     .from('vehiculo_checklists')
@@ -239,7 +243,7 @@ async function registrarChecklist(
   // una novedad abierta (la falla sigue sin arreglarse) no abre otra en cada
   // quincena. Si no se puede leer, se crean todas: mejor un duplicado que
   // perder una falla grave.
-  const propuestas = novedadesDelChecklist(respuestas, notas)
+  const propuestas = novedadesDelChecklist(respuestas, notas, vehiculo.tipo)
   let itemsAbiertos: string[] = []
   if (propuestas.length) {
     const { data: abiertas, error: errAb } = await admin
@@ -273,7 +277,7 @@ async function registrarChecklist(
       reportado_por_nombre: quien.nombre, km,
     })
   }
-  if (evaluacion.inconsistente) {
+  if (evaluacion.inconsistente && km !== null) {
     novedades.push({
       vehiculo_id: vehiculo.id, empresa_id: vehiculo.empresa_id, checklist_id: checklist.id, origen: 'checklist',
       item: 'km_inconsistente', titulo: 'Revisar el kilometraje cargado',
@@ -287,8 +291,8 @@ async function registrarChecklist(
     if (errNov) console.error('[flota] checklist guardado pero sin sus novedades', errNov.message)
   }
 
-  // El km pisa el del vehículo solo si cuadra con el historial.
-  if (!evaluacion.inconsistente) {
+  // El km pisa el del vehículo solo si cuadra con el historial (un trailer no tiene).
+  if (km !== null && !evaluacion.inconsistente) {
     await admin
       .from('vehiculos')
       .update({ km_actual: km, km_actualizado_at: new Date().toISOString() })
@@ -304,7 +308,7 @@ async function registrarChecklist(
       clave: `checklist_no_apto:${checklist.id}`,
       mensaje: [
         `⚠️ ${vehiculo.patente} quedó NO APTA para circular`,
-        `Checklist de hoy, lo hizo ${quien.nombre} (${km.toLocaleString('es-AR')} km).`,
+        `Checklist de hoy, lo hizo ${quien.nombre}${km !== null ? ` (${km.toLocaleString('es-AR')} km)` : ''}.`,
         '',
         ...graves.map((g) => `• ${g.titulo}${g.descripcion ? `: ${g.descripcion}` : ''}${itemsAbiertos.includes(g.item) ? ' (ya estaba reportado)' : ''}`),
         '',

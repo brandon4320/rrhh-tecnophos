@@ -3,23 +3,25 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
-  AlertTriangle, Camera, Check, ChevronLeft, ClipboardCheck, Loader2, RotateCcw, Wrench, X,
+  AlertTriangle, Camera, Check, ChevronLeft, ClipboardCheck, FileText, Loader2, RotateCcw, Wrench, X,
 } from 'lucide-react'
 import { EstadoPill } from '@/components/ui/estado-pill'
 import type { EstadoVencimiento } from '@/types'
 import { cn } from '@/lib/utils'
 import { fmtFechaAR } from '@/lib/fechas-ar'
 import {
-  ESTADO_CHECKLIST_LABEL, FOTOS_CHECKLIST, ITEMS_CHECKLIST, RESULTADO_LABEL, SECCIONES_CHECKLIST, SLOT_NOVEDAD,
-  calcularResultado, evaluarKm, fmtDia, fotosFaltantes, frecuenciaChecklist, hastaCuando, itemsSinResponder,
-  kmPideConfirmacion,
-  type EstadoChecklist, type EstadoChecklistInfo, type Respuesta, type Resultado, type SlotFoto,
+  ESTADO_CHECKLIST_LABEL, RESULTADO_LABEL, SLOT_NOVEDAD,
+  calcularResultado, evaluarKm, fmtDia, fotosFaltantes, fotosPara, frecuenciaChecklist, hastaCuando, itemsPara,
+  itemsSinResponder, kmPideConfirmacion, seccionesPara, tieneMotor,
+  type EstadoChecklist, type EstadoChecklistInfo, type Respuesta, type Resultado, type SlotFoto, type TipoVehiculo,
 } from '@/modules/flota/reglas'
 
 export interface DocumentoQR {
   nombre: string
   vence: string
   estado: EstadoVencimiento
+  /** Archivos del certificado vigente (PDF/foto del seguro, la VTV…): se pueden abrir desde acá. */
+  archivos: { id: string; nombre: string | null }[]
 }
 
 interface Props {
@@ -27,6 +29,8 @@ interface Props {
   vehiculo: {
     patente: string; detalle: string | null; empresa: string
     kmActual: number | null; kmActualizadoAt: string | null; cadaDias: number
+    /** Decide qué fotos e ítems se piden (un trailer no tiene km ni motor). */
+    tipo: TipoVehiculo
   }
   empleados: { id: string; nombre: string }[]
   ultimo: { fecha: string; quien: string; km: number | null } | null
@@ -168,6 +172,9 @@ async function comprimir(file: File): Promise<Blob> {
 }
 
 export default function FormularioQR({ token, vehiculo, empleados, ultimo, estado, documentos }: Props) {
+  // Lo que se revisa depende de qué es el vehículo (pickup, utilitario, furgón o trailer).
+  const fotos = useMemo(() => fotosPara(vehiculo.tipo), [vehiculo.tipo])
+  const secciones = useMemo(() => seccionesPara(vehiculo.tipo), [vehiculo.tipo])
   const claveBorrador = `flota-checklist:${token}`
   const [modo, setModo] = useState<'inicio' | 'checklist' | 'novedad' | 'listo'>('inicio')
   const [paso, setPaso] = useState(0)
@@ -253,16 +260,19 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
   }
 
   const quienOk = (b.realizadoPor && b.realizadoPor !== OTRO) || (b.realizadoPor === OTRO && b.nombreLibre.trim().length >= 3)
+  // Un trailer no tiene tablero: no se piden km.
+  const conMotor = tieneMotor(vehiculo.tipo)
   const kmNum = Number(b.km)
-  const kmOk = b.km !== '' && Number.isInteger(kmNum) && kmNum >= 0
-  const pideConfirmarKm = kmOk && kmPideConfirmacion(kmNum, vehiculo.kmActual)
+  const kmCargado = b.km !== '' && Number.isInteger(kmNum) && kmNum >= 0
+  const kmOk = !conMotor || kmCargado
+  const pideConfirmarKm = conMotor && kmCargado && kmPideConfirmacion(kmNum, vehiculo.kmActual)
   const kmConfirmadoOk = !pideConfirmarKm || b.kmConfirmado === b.km
-  const sinResponder = itemsSinResponder(b.respuestas)
+  const sinResponder = itemsSinResponder(b.respuestas, vehiculo.tipo)
   const resultadoPrevio: Resultado = calcularResultado(b.respuestas)
-  const criticosMal = ITEMS_CHECKLIST.filter((i) => i.critico && b.respuestas[i.id] === 'no_ok')
+  const criticosMal = itemsPara(vehiculo.tipo).filter((i) => i.critico && b.respuestas[i.id] === 'no_ok')
 
   // Fotos: subidas (en el borrador) y pendientes (en memoria, subiéndose o con error).
-  const faltanFotos = fotosFaltantes(b.fotos)
+  const faltanFotos = fotosFaltantes(b.fotos, vehiculo.tipo)
   const faltanSacar = faltanFotos.filter((f) => !pendientes[f.slot])
   const pendientesChecklist = Object.entries(pendientes).filter(([, p]) => p.destino !== 'novedad')
   const pendientesNovedad = Object.entries(pendientes).filter(([, p]) => p.destino === 'novedad')
@@ -276,10 +286,10 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
 
   // El mismo control que hace el server al guardar (reglas.ts).
   const kmAviso = useMemo(() => {
-    if (!kmOk) return null
+    if (!conMotor || !kmCargado) return null
     const ev = evaluarKm(kmNum, { km: vehiculo.kmActual, fecha: vehiculo.kmActualizadoAt })
     return ev.inconsistente ? `${ev.motivo}. Revisá el tablero; si está bien, seguí igual: lo revisa tu encargado.` : null
-  }, [kmOk, kmNum, vehiculo.kmActual, vehiculo.kmActualizadoAt])
+  }, [conMotor, kmCargado, kmNum, vehiculo.kmActual, vehiculo.kmActualizadoAt])
 
   // ── Fotos: subida con timeout, reintentos y el blob guardado en memoria ──
 
@@ -413,7 +423,7 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
   }
 
   function todoBienEnSeccion(seccionId: string) {
-    const seccion = SECCIONES_CHECKLIST.find((s) => s.id === seccionId)!
+    const seccion = secciones.find((s) => s.id === seccionId)!
     actualizar((prev) => {
       const respuestas = { ...prev.respuestas }
       // Solo lo que falta responder: una excepción ya marcada no se pisa.
@@ -464,7 +474,7 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
       envioId,
       realizadoPor: b.realizadoPor && b.realizadoPor !== OTRO ? b.realizadoPor : null,
       nombreLibre: b.nombreLibre,
-      km: kmNum,
+      km: conMotor ? kmNum : null,
       respuestas: b.respuestas,
       notas: b.notas,
       fotos: b.fotos,
@@ -671,7 +681,7 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
   }
 
   const nombreFoto = (p: FotoPendiente) =>
-    p.destino === 'checklist' ? (FOTOS_CHECKLIST.find((f) => f.slot === p.slot)?.label ?? 'Foto') : 'Foto del daño'
+    p.destino === 'checklist' ? (fotos.find((f) => f.slot === p.slot)?.label ?? 'Foto') : 'Foto del daño'
 
   // ── Pantallas ────────────────────────────────────────────────────────────
 
@@ -785,7 +795,7 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
         {encabezado}
         <div className="sticky top-0 z-10 border-b border-border bg-background/95 px-5 py-3 backdrop-blur">
           <p className="text-xs text-muted-foreground">Paso {paso + 1} de {PASOS.length}</p>
-          <p className="font-semibold">{PASOS[paso]}</p>
+          <p className="font-semibold">{paso === 0 && !conMotor ? 'Quién lo revisa' : PASOS[paso]}</p>
           <div className="mt-2 flex gap-1">
             {PASOS.map((p, i) => <span key={p} className={cn('h-1 flex-1 rounded-full', i <= paso ? 'bg-primary' : 'bg-muted')} />)}
           </div>
@@ -797,7 +807,7 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
           {paso === 0 && (
             <>
               {selectorQuien}
-              <div className="space-y-2">
+              {conMotor && <div className="space-y-2">
                 <label htmlFor="km" className="block text-sm font-medium">Kilómetros del tablero</label>
                 <input id="km" inputMode="numeric" value={b.km}
                   onChange={(e) => actualizar({ km: e.target.value.replace(/\D/g, '') })}
@@ -816,7 +826,7 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
                   </label>
                 )}
                 <p className="text-xs text-muted-foreground">Sin puntos ni comas. En el paso siguiente se saca la foto del tablero.</p>
-              </div>
+              </div>}
             </>
           )}
 
@@ -826,7 +836,7 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
                 Tocá cada recuadro para sacar la foto. Las ruedas, de costado: que se vea la llanta y el dibujo de la cubierta.
               </p>
               <div className="grid grid-cols-2 gap-3">
-                {FOTOS_CHECKLIST.map((f) => botonFoto(f))}
+                {fotos.map((f) => botonFoto(f))}
               </div>
               {faltanSacar.length > 0 ? (
                 <p className="text-sm text-muted-foreground">Faltan {faltanSacar.length} {faltanSacar.length === 1 ? 'foto obligatoria' : 'fotos obligatorias'}.</p>
@@ -841,7 +851,7 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
               <p className="text-sm text-muted-foreground">
                 Si una sección está bien, tocá <span className="font-medium text-foreground">Todo bien</span> y marcá solo lo que no.
               </p>
-              {SECCIONES_CHECKLIST.map((s) => {
+              {secciones.map((s) => {
                 const respondidos = s.items.filter((i) => b.respuestas[i.id]).length
                 const completa = respondidos === s.items.length
                 return (
@@ -931,7 +941,7 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
                     {criticosMal.map((i) => <li key={i.id}>· {i.label}</li>)}
                   </ul>
                 )}
-                <p className="mt-2 text-xs text-muted-foreground">{vehiculo.patente} · {kmOk ? `${kmNum.toLocaleString('es-AR')} km` : ''}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{vehiculo.patente}{conMotor && kmCargado ? ` · ${kmNum.toLocaleString('es-AR')} km` : ''}</p>
               </div>
 
               {/* Qué falta para poder enviar: las fotos se suben de fondo y recién acá se espera. */}
@@ -1034,9 +1044,20 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
           <div className="divide-y divide-border rounded-xl border border-border bg-card">
             {documentos.map((d) => (
               <div key={d.nombre} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium">{d.nombre}</p>
                   <p className="text-xs text-muted-foreground">Vence el {fmtDia(d.vence)}/{d.vence.slice(0, 4)}</p>
+                  {d.archivos.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-2">
+                      {d.archivos.map((a, i) => (
+                        <a key={a.id} href={`/api/v/${token}/documento/${a.id}`} target="_blank" rel="noreferrer"
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-primary active:bg-muted">
+                          <FileText className="size-4" strokeWidth={1.75} />
+                          {d.archivos.length > 1 ? `Ver ${i + 1}` : 'Ver documento'}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <EstadoPill estado={d.estado} />
               </div>

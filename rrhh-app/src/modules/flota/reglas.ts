@@ -21,21 +21,111 @@ export interface SlotFoto {
 // Los lados se nombran por el conductor, no por izquierda/derecha: según desde
 // dónde mire, cada uno entiende otra cosa. En Argentina el conductor va a la
 // izquierda (los ids `_izq`/`_der` siguen valiendo: NO cambiarlos).
-export const FOTOS_CHECKLIST: SlotFoto[] = [
-  { slot: 'tablero', label: 'Tablero', ayuda: 'Con el motor en marcha: que se lean los kilómetros y los testigos', obligatoria: true },
-  { slot: 'frente', label: 'Frente', ayuda: 'Que se vea la patente', obligatoria: true },
-  { slot: 'trasera', label: 'Trasera', ayuda: 'Que se vea la patente', obligatoria: true },
-  { slot: 'lateral_izq', label: 'Lateral, lado del conductor', obligatoria: true },
-  { slot: 'lateral_der', label: 'Lateral, lado del acompañante', obligatoria: true },
-  { slot: 'cubierta_di', label: 'Rueda delantera, lado del conductor', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
-  { slot: 'cubierta_dd', label: 'Rueda delantera, lado del acompañante', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
-  { slot: 'cubierta_ti', label: 'Rueda trasera, lado del conductor', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
-  { slot: 'cubierta_td', label: 'Rueda trasera, lado del acompañante', ayuda: 'Que se vea la llanta y el dibujo de la cubierta', obligatoria: true },
-  { slot: 'auxilio', label: 'Rueda de auxilio', obligatoria: false },
-  { slot: 'caja', label: 'Caja de carga', obligatoria: false },
+// ── Tipos de vehículo ───────────────────────────────────────────────────────
+//
+// El checklist cambia según qué es: a un trailer no se le piden km, tablero ni
+// niveles de motor; a un furgón se le revisa el compartimento de carga y no la
+// "caja". `vehiculos.tipo` lo fija la oficina; si está vacío se deduce del modelo.
+
+export type TipoVehiculo = 'pickup' | 'utilitario' | 'furgon' | 'trailer'
+export const TIPOS_VEHICULO: TipoVehiculo[] = ['pickup', 'utilitario', 'furgon', 'trailer']
+export const TIPO_VEHICULO_LABEL: Record<TipoVehiculo, string> = {
+  pickup: 'Pickup',
+  utilitario: 'Utilitario',
+  furgon: 'Furgón',
+  trailer: 'Trailer',
+}
+const MOTOR: TipoVehiculo[] = ['pickup', 'utilitario', 'furgon']
+const TODOS: TipoVehiculo[] = TIPOS_VEHICULO
+const CON_COMPARTIMENTO: TipoVehiculo[] = ['utilitario', 'furgon']
+
+/** ¿Tiene motor y tablero? (pide km, foto del tablero, niveles, service por km). */
+export const tieneMotor = (t: TipoVehiculo) => t !== 'trailer'
+
+const MODELOS: [TipoVehiculo, RegExp][] = [
+  ['trailer', /\b(trailer|acoplado|semirremolque|batan|carro)\b/],
+  ['furgon', /\b(jumper|ducato|sprinter|master|boxer|daily|transit|trafic|iveco)\b/],
+  ['utilitario', /\b(partner|berlingo|kangoo|fiorino|doblo|caddy|expert|rifter)\b/],
+  ['pickup', /\b(amarok|ranger|strada|hilux|s10|s-10|toro|saveiro|frontier|oroch|montana|maverick|alaskan|f-?100|f-?150)\b/],
 ]
 
-export const SLOTS_VALIDOS = new Set(FOTOS_CHECKLIST.map((f) => f.slot))
+/** Tipo deducido de marca/modelo/patente (los acoplados llevan "101" adelante). Sin pistas: pickup. */
+export function inferirTipo(marca: string | null | undefined, modelo: string | null | undefined, patente?: string | null): TipoVehiculo {
+  const t = `${marca ?? ''} ${modelo ?? ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  for (const [tipo, re] of MODELOS) if (re.test(t)) return tipo
+  if (patente && /^101[A-Z]/i.test(patente.replace(/\s/g, ''))) return 'trailer'
+  return 'pickup'
+}
+
+/** El tipo que manda: el elegido por la oficina o, si no hay, el deducido. */
+export function tipoDe(v: { tipo?: string | null; marca?: string | null; modelo?: string | null; patente?: string | null }): TipoVehiculo {
+  return TIPOS_VEHICULO.includes(v.tipo as TipoVehiculo) ? (v.tipo as TipoVehiculo) : inferirTipo(v.marca, v.modelo, v.patente)
+}
+
+// ── Fotos ───────────────────────────────────────────────────────────────────
+
+interface SlotFotoDef extends SlotFoto {
+  /** A qué tipos aplica (por defecto, a los que tienen motor). */
+  para?: TipoVehiculo[]
+  /** Otro rótulo/ayuda/obligatoriedad para algún tipo. */
+  segun?: Partial<Record<TipoVehiculo, Partial<SlotFoto>>>
+}
+
+const RUEDA = 'Que se vea la llanta y el dibujo de la cubierta'
+
+// Los ids de slot NO se cambian (las fotos viejas se guardaron con ellos).
+const FOTOS_DEF: SlotFotoDef[] = [
+  { slot: 'tablero', label: 'Tablero', ayuda: 'Con el motor en marcha: que se lean los kilómetros y los testigos', obligatoria: true },
+  {
+    slot: 'frente', label: 'Frente', ayuda: 'Que se vea la patente', obligatoria: true, para: TODOS,
+    segun: { trailer: { label: 'Frente y enganche', ayuda: 'Que se vean la lanza, el enganche y la cadena de seguridad' } },
+  },
+  {
+    slot: 'trasera', label: 'Trasera', ayuda: 'Que se vea la patente', obligatoria: true, para: TODOS,
+    segun: { trailer: { ayuda: 'Que se vean las luces y la patente' } },
+  },
+  { slot: 'lateral_izq', label: 'Lateral, lado del conductor', obligatoria: true, para: TODOS },
+  { slot: 'lateral_der', label: 'Lateral, lado del acompañante', obligatoria: true, para: TODOS },
+  {
+    slot: 'cubierta_di', label: 'Rueda delantera, lado del conductor', ayuda: RUEDA, obligatoria: true, para: TODOS,
+    segun: { trailer: { label: 'Rueda, lado del conductor' } },
+  },
+  {
+    slot: 'cubierta_dd', label: 'Rueda delantera, lado del acompañante', ayuda: RUEDA, obligatoria: true, para: TODOS,
+    segun: { trailer: { label: 'Rueda, lado del acompañante' } },
+  },
+  {
+    slot: 'cubierta_ti', label: 'Rueda trasera, lado del conductor', ayuda: RUEDA, obligatoria: true, para: TODOS,
+    segun: { trailer: { label: 'Segundo eje, lado del conductor', ayuda: 'Solo si el trailer tiene dos ejes', obligatoria: false } },
+  },
+  {
+    slot: 'cubierta_td', label: 'Rueda trasera, lado del acompañante', ayuda: RUEDA, obligatoria: true, para: TODOS,
+    segun: { trailer: { label: 'Segundo eje, lado del acompañante', ayuda: 'Solo si el trailer tiene dos ejes', obligatoria: false } },
+  },
+  { slot: 'auxilio', label: 'Rueda de auxilio', obligatoria: false },
+  {
+    slot: 'caja', label: 'Caja de carga', obligatoria: false, para: TODOS,
+    segun: {
+      utilitario: { label: 'Compartimento de carga', ayuda: 'Con las puertas abiertas' },
+      furgon: { label: 'Compartimento de carga', ayuda: 'Con las puertas abiertas' },
+      trailer: { label: 'Carga o piso del trailer' },
+    },
+  },
+]
+
+/** Las fotos que se piden para un tipo de vehículo, con sus rótulos. */
+export function fotosPara(tipo: TipoVehiculo): SlotFoto[] {
+  return FOTOS_DEF.filter((f) => (f.para ?? MOTOR).includes(tipo)).map((f) => {
+    const { para: _para, segun, ...base } = f
+    void _para
+    return { ...base, ...(segun?.[tipo] ?? {}) }
+  })
+}
+
+/** Rótulos de una camioneta (el caso de siempre): se usan donde no importa el tipo. */
+export const FOTOS_CHECKLIST: SlotFoto[] = fotosPara('pickup')
+
+export const SLOTS_VALIDOS = new Set(FOTOS_DEF.map((f) => f.slot))
 /** Slot de las fotos de un reporte de novedad (golpe, falla) hecho por QR. */
 export const SLOT_NOVEDAD = 'novedad'
 
@@ -48,21 +138,44 @@ export interface ItemChecklist {
   critico: boolean
 }
 
+interface ItemDef extends ItemChecklist {
+  /** A qué tipos aplica (por defecto, a los que tienen motor). */
+  para?: TipoVehiculo[]
+  /** Otro rótulo según el tipo (el id no cambia: el historial sigue valiendo). */
+  labelSegun?: Partial<Record<TipoVehiculo, string>>
+}
+
 export interface SeccionChecklist {
   id: string
   titulo: string
   items: ItemChecklist[]
 }
 
-export const SECCIONES_CHECKLIST: SeccionChecklist[] = [
+interface SeccionDef {
+  id: string
+  titulo: string
+  items: ItemDef[]
+}
+
+// Los ids de ítem NO se cambian: las respuestas viejas se guardaron con ellos.
+const SECCIONES_DEF: SeccionDef[] = [
+  {
+    id: 'enganche',
+    titulo: 'Enganche',
+    items: [
+      { id: 'enganche_traba', label: 'Enganche bien calzado y trabado', critico: true, para: ['trailer'] },
+      { id: 'cadena_seguridad', label: 'Cadena o cable de seguridad colocado', critico: true, para: ['trailer'] },
+      { id: 'ficha_electrica', label: 'Ficha eléctrica conectada, sin cables pelados', critico: true, para: ['trailer'] },
+    ],
+  },
   {
     id: 'cubiertas',
     titulo: 'Cubiertas y ruedas',
     items: [
-      { id: 'cubiertas_desgaste', label: 'Dibujo por encima del testigo de desgaste', critico: true },
-      { id: 'cubiertas_danos', label: 'Sin cortes, globos ni deformaciones', critico: true },
-      { id: 'cubiertas_presion', label: 'Presión correcta', critico: false },
-      { id: 'bulones', label: 'Bulones completos y ajustados', critico: true },
+      { id: 'cubiertas_desgaste', label: 'Dibujo por encima del testigo de desgaste', critico: true, para: TODOS },
+      { id: 'cubiertas_danos', label: 'Sin cortes, globos ni deformaciones', critico: true, para: TODOS },
+      { id: 'cubiertas_presion', label: 'Presión correcta', critico: false, para: TODOS },
+      { id: 'bulones', label: 'Bulones completos y ajustados', critico: true, para: TODOS },
       { id: 'auxilio', label: 'Auxilio inflado y en condiciones', critico: false },
     ],
   },
@@ -83,10 +196,11 @@ export const SECCIONES_CHECKLIST: SeccionChecklist[] = [
     titulo: 'Luces',
     items: [
       { id: 'luces_bajas_altas', label: 'Bajas y altas', critico: true },
-      { id: 'luces_freno', label: 'Luces de freno', critico: true },
-      { id: 'luces_giro', label: 'Giros y balizas', critico: true },
-      { id: 'luces_posicion', label: 'Posición', critico: false },
+      { id: 'luces_freno', label: 'Luces de freno', critico: true, para: TODOS },
+      { id: 'luces_giro', label: 'Giros y balizas', critico: true, para: TODOS, labelSegun: { trailer: 'Giros' } },
+      { id: 'luces_posicion', label: 'Posición', critico: false, para: TODOS },
       { id: 'luces_reversa', label: 'Reversa', critico: false },
+      { id: 'luz_patente', label: 'Luz de patente', critico: false, para: ['trailer'] },
     ],
   },
   {
@@ -104,6 +218,15 @@ export const SECCIONES_CHECKLIST: SeccionChecklist[] = [
     ],
   },
   {
+    id: 'estructura',
+    titulo: 'Chasis y estructura',
+    items: [
+      { id: 'chasis_lanza', label: 'Chasis, lanza y piso sin fisuras ni óxido avanzado', critico: false, para: ['trailer'] },
+      { id: 'guardabarros', label: 'Guardabarros completos y firmes', critico: false, para: ['trailer'] },
+      { id: 'patente_visible', label: 'Patente colocada y legible', critico: false, para: ['trailer'] },
+    ],
+  },
+  {
     id: 'obligatorios',
     titulo: 'Elementos obligatorios',
     items: [
@@ -118,9 +241,9 @@ export const SECCIONES_CHECKLIST: SeccionChecklist[] = [
     id: 'documentacion',
     titulo: 'Documentación a bordo',
     items: [
-      { id: 'cedula', label: 'Cédula del vehículo', critico: false },
-      { id: 'seguro', label: 'Comprobante del seguro', critico: false },
-      { id: 'vtv', label: 'Oblea y certificado de VTV', critico: false },
+      { id: 'cedula', label: 'Cédula del vehículo', critico: false, para: TODOS, labelSegun: { trailer: 'Cédula del trailer' } },
+      { id: 'seguro', label: 'Comprobante del seguro', critico: false, para: TODOS },
+      { id: 'vtv', label: 'Oblea y certificado de VTV', critico: false, para: TODOS },
     ],
   },
   {
@@ -130,8 +253,13 @@ export const SECCIONES_CHECKLIST: SeccionChecklist[] = [
       // Fumigantes (fosfuro): con humedad liberan gas, y dentro de una cabina
       // cerrada es un riesgo grave para quien maneja.
       { id: 'productos_fuera_cabina', label: 'Ningún producto dentro de la cabina', critico: true },
-      { id: 'productos_envases', label: 'Productos en envases originales, cerrados y secos', critico: true },
-      { id: 'carga_sujeta', label: 'Carga sujeta y bien estibada', critico: false },
+      // En utilitarios y furgones la carga va en el mismo cuerpo que la cabina:
+      // la separación es lo que mantiene el gas lejos de quien maneja.
+      { id: 'mampara', label: 'Separación entre cabina y carga sin aberturas', critico: false, para: CON_COMPARTIMENTO },
+      { id: 'puertas_carga', label: 'Puertas de carga cierran y traban', critico: false, para: CON_COMPARTIMENTO },
+      { id: 'caja_cobertor', label: 'Tapa o lona de la caja en buen estado', critico: false, para: ['pickup'] },
+      { id: 'productos_envases', label: 'Productos en envases originales, cerrados y secos', critico: true, para: TODOS },
+      { id: 'carga_sujeta', label: 'Carga sujeta y bien estibada', critico: false, para: TODOS },
       { id: 'kit_derrames', label: 'Kit para derrames a bordo', critico: false },
       { id: 'epp', label: 'EPP a bordo (máscara, guantes, antiparras)', critico: false },
     ],
@@ -141,12 +269,37 @@ export const SECCIONES_CHECKLIST: SeccionChecklist[] = [
     titulo: 'Orden y limpieza',
     items: [
       { id: 'cabina_limpia', label: 'Cabina limpia y ordenada', critico: false },
-      { id: 'caja_limpia', label: 'Caja limpia, sin restos de producto', critico: false },
+      {
+        id: 'caja_limpia', label: 'Caja limpia, sin restos de producto', critico: false, para: TODOS,
+        labelSegun: {
+          utilitario: 'Compartimento de carga limpio, sin restos de producto',
+          furgon: 'Compartimento de carga limpio, sin restos de producto',
+          trailer: 'Trailer limpio, sin restos de producto',
+        },
+      },
     ],
   },
 ]
 
-export const ITEMS_CHECKLIST: ItemChecklist[] = SECCIONES_CHECKLIST.flatMap((s) => s.items)
+const aItem = (i: ItemDef, tipo: TipoVehiculo): ItemChecklist => ({ id: i.id, label: i.labelSegun?.[tipo] ?? i.label, critico: i.critico })
+
+/** Las secciones y los ítems que se revisan en un tipo de vehículo (sin secciones vacías). */
+export function seccionesPara(tipo: TipoVehiculo): SeccionChecklist[] {
+  return SECCIONES_DEF.map((s) => ({
+    id: s.id,
+    titulo: s.titulo,
+    items: s.items.filter((i) => (i.para ?? MOTOR).includes(tipo)).map((i) => aItem(i, tipo)),
+  })).filter((s) => s.items.length > 0)
+}
+
+export function itemsPara(tipo: TipoVehiculo): ItemChecklist[] {
+  return seccionesPara(tipo).flatMap((s) => s.items)
+}
+
+/** El checklist de una camioneta (el caso de siempre). */
+export const SECCIONES_CHECKLIST: SeccionChecklist[] = seccionesPara('pickup')
+/** TODOS los ítems que existen (de cualquier tipo): para validar y mostrar respuestas guardadas. */
+export const ITEMS_CHECKLIST: ItemChecklist[] = SECCIONES_DEF.flatMap((s) => s.items.map((i) => aItem(i, (i.para ?? MOTOR)[0])))
 const ITEM_POR_ID = new Map(ITEMS_CHECKLIST.map((i) => [i.id, i]))
 
 export function itemPorId(id: string): ItemChecklist | undefined {
@@ -164,14 +317,14 @@ export const RESULTADO_LABEL: Record<Resultado, string> = {
   no_apto: 'No apta para circular',
 }
 
-/** Ítems del checklist sin responder (vacío = completo). */
-export function itemsSinResponder(respuestas: Record<string, string | undefined>): string[] {
-  return ITEMS_CHECKLIST.filter((i) => !RESPUESTAS.includes(respuestas[i.id] as Respuesta)).map((i) => i.id)
+/** Ítems del checklist sin responder para ese tipo de vehículo (vacío = completo). */
+export function itemsSinResponder(respuestas: Record<string, string | undefined>, tipo: TipoVehiculo = 'pickup'): string[] {
+  return itemsPara(tipo).filter((i) => !RESPUESTAS.includes(respuestas[i.id] as Respuesta)).map((i) => i.id)
 }
 
-/** Fotos obligatorias que faltan. */
-export function fotosFaltantes(fotos: Record<string, string | undefined>): SlotFoto[] {
-  return FOTOS_CHECKLIST.filter((f) => f.obligatoria && !fotos[f.slot])
+/** Fotos obligatorias que faltan para ese tipo de vehículo. */
+export function fotosFaltantes(fotos: Record<string, string | undefined>, tipo: TipoVehiculo = 'pickup'): SlotFoto[] {
+  return fotosPara(tipo).filter((f) => f.obligatoria && !fotos[f.slot])
 }
 
 /**
@@ -202,9 +355,10 @@ export interface NovedadPropuesta {
  */
 export function novedadesDelChecklist(
   respuestas: Record<string, string | undefined>,
-  notas: Record<string, string | undefined> = {}
+  notas: Record<string, string | undefined> = {},
+  tipo?: TipoVehiculo
 ): NovedadPropuesta[] {
-  return ITEMS_CHECKLIST.filter((i) => respuestas[i.id] === 'no_ok').map((i) => ({
+  return (tipo ? itemsPara(tipo) : ITEMS_CHECKLIST).filter((i) => respuestas[i.id] === 'no_ok').map((i) => ({
     item: i.id,
     titulo: i.label,
     descripcion: notas[i.id]?.trim() || null,
@@ -395,6 +549,7 @@ export function hastaCuando(chk: Pick<EstadoChecklistInfo, 'venceEn' | 'limite'>
 
 export const TIPOS_MANTENIMIENTO: Record<string, string> = {
   service: 'Service (aceite y filtros)',
+  revision_trailer: 'Revisión del trailer (rulemanes, frenos, enganche)',
   cubiertas: 'Rotación y alineación',
   frenos: 'Frenos (pastillas y discos)',
   distribucion: 'Correa de distribución',

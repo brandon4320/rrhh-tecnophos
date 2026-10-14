@@ -4,6 +4,7 @@
 // client component.
 // ============================================================
 import 'server-only'
+import { tipoDe, type TipoVehiculo } from './reglas'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { enviarWhatsApp, hayCanalWhatsApp } from '@/lib/whatsapp'
 
@@ -29,6 +30,8 @@ export interface VehiculoQR {
   km_actual: number | null
   km_actualizado_at: string | null
   checklist_cada_dias: number
+  /** Qué es (decide qué se revisa): el elegido en Gestión o el deducido del modelo. */
+  tipo: TipoVehiculo
   empresa: { nombre: string; slug: string }
 }
 
@@ -41,7 +44,7 @@ export async function vehiculoPorToken(admin: Admin, token: string): Promise<Veh
   if (!tokenConFormato(token)) return null
   const { data, error } = await admin
     .from('vehiculos')
-    .select('id, patente, descripcion, marca, modelo, empresa_id, km_actual, km_actualizado_at, checklist_cada_dias, activo, checklist_activo, empresa:empresas(nombre, slug)')
+    .select('id, patente, descripcion, marca, modelo, tipo, empresa_id, km_actual, km_actualizado_at, checklist_cada_dias, activo, checklist_activo, empresa:empresas(nombre, slug)')
     .eq('checklist_token', token)
     .maybeSingle()
   // Un error de base NO es "token inválido": se propaga para responder 503.
@@ -57,6 +60,7 @@ export async function vehiculoPorToken(admin: Admin, token: string): Promise<Veh
     km_actual: data.km_actual,
     km_actualizado_at: data.km_actualizado_at,
     checklist_cada_dias: data.checklist_cada_dias,
+    tipo: tipoDe(data),
     empresa: data.empresa as { nombre: string; slug: string },
   }
 }

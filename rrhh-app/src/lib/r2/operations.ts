@@ -25,11 +25,17 @@ export async function deleteFromR2(path: string): Promise<void> {
 
 export async function getSignedDownloadUrl(
   path: string,
-  expiresIn = 120
+  expiresIn = 120,
+  /** Si se pasa, el archivo se abre en el navegador con este nombre (no con la clave de R2). */
+  nombreInline?: string
 ): Promise<string> {
   return getSignedUrl(
     r2,
-    new GetObjectCommand({ Bucket: R2_BUCKET, Key: path }),
+    new GetObjectCommand({
+      Bucket: R2_BUCKET,
+      Key: path,
+      ...(nombreInline ? { ResponseContentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(nombreInline)}` } : {}),
+    }),
     { expiresIn }
   )
 }

@@ -307,6 +307,17 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
     `/flota/datos` (marca/modelo/año de toda la flota en una grilla).
   - La etiqueta impresa dice "Checklist obligatorio" sin frecuencia: se hace los días 1 y 15 y
     puede pasar a mensual sin reimprimir.
+  - **Tipo de vehículo** (migración 25, 14/10/2026): `vehiculos.tipo` = pickup | utilitario | furgon |
+    trailer (NULL = se deduce del modelo con `inferirTipo`; `tipoDe()` es el que manda). El checklist
+    sale de `seccionesPara(tipo)` / `fotosPara(tipo)`: cada ítem/foto declara `para` (por defecto, los
+    que tienen motor) y puede cambiar de rótulo según el tipo **sin cambiar el id**. Al trailer no se le
+    piden km, tablero, motor, cabina ni elementos obligatorios; tiene sección Enganche y Chasis, y su
+    plan es `revision_trailer` cada 12 meses (triggers de alta y de cambio de tipo). Utilitarios y
+    furgones revisan compartimento de carga, mampara y puertas; las pickups, tapa/lona de la caja.
+    Los patentes de acoplado empiezan con "101" (101AG048TW es un trailer, no un duplicado de AG048TW).
+  - **Documentos desde el QR**: la pantalla del QR muestra seguro/VTV con "Ver documento"; abre
+    `/api/v/<token>/documento/<archivoId>`, que solo firma archivos de certificados de ESE vehículo
+    (302 a una URL de R2 de 5 min, inline con el nombre original) — para mostrarlo en un control.
 
 ---
 

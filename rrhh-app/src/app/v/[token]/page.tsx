@@ -48,7 +48,7 @@ export default async function ChecklistQRPage({ params }: { params: Promise<{ to
       .maybeSingle(),
     admin
       .from('certificados')
-      .select('fecha_vencimiento, alerta_dias, tipo_nombre_custom, tipo:tipos_certificado(nombre)')
+      .select('fecha_vencimiento, alerta_dias, tipo_nombre_custom, tipo:tipos_certificado(nombre), archivos(id, nombre)')
       .eq('vehiculo_id', vehiculo.id)
       .not('fecha_vencimiento', 'is', null),
   ])
@@ -64,6 +64,8 @@ export default async function ChecklistQRPage({ params }: { params: Promise<{ to
         nombre,
         vence: c.fecha_vencimiento!.slice(0, 10),
         estado: getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias),
+        // Los archivos de ESE certificado (el vigente): se abren desde el QR, p. ej. en un control.
+        archivos: (c.archivos ?? []).map((a) => ({ id: a.id, nombre: a.nombre })),
       })
     }
   }
@@ -76,6 +78,7 @@ export default async function ChecklistQRPage({ params }: { params: Promise<{ to
       vehiculo={{
         patente: vehiculo.patente,
         detalle: [vehiculo.marca, vehiculo.modelo].filter(Boolean).join(' ') || vehiculo.descripcion,
+        tipo: vehiculo.tipo,
         empresa: vehiculo.empresa.nombre,
         kmActual: vehiculo.km_actual,
         kmActualizadoAt: vehiculo.km_actualizado_at,

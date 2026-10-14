@@ -1153,6 +1153,7 @@ export type Database = {
           marca: string | null
           modelo: string | null
           patente: string
+          tipo: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1171,6 +1172,7 @@ export type Database = {
           marca?: string | null
           modelo?: string | null
           patente: string
+          tipo?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1189,6 +1191,7 @@ export type Database = {
           marca?: string | null
           modelo?: string | null
           patente?: string
+          tipo?: string | null
           updated_at?: string | null
         }
         Relationships: [

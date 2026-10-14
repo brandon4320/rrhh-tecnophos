@@ -23,7 +23,7 @@ export default async function DatosFlotaPage({ searchParams }: { searchParams: P
 
   let q = supabase
     .from('vehiculos')
-    .select('id, patente, descripcion, marca, modelo, anio, empresa:empresas(nombre)')
+    .select('id, patente, descripcion, marca, modelo, anio, tipo, empresa:empresas(nombre)')
     .eq('activo', true)
     .order('patente')
   if (empresaId) q = q.eq('empresa_id', empresaId)
@@ -38,6 +38,7 @@ export default async function DatosFlotaPage({ searchParams }: { searchParams: P
       marca: v.marca,
       modelo: v.modelo,
       anio: v.anio,
+      tipo: v.tipo,
       empresa: (v.empresa as { nombre: string } | null)?.nombre ?? '',
     }))
     .sort((a, b) => a.empresa.localeCompare(b.empresa) || a.patente.localeCompare(b.patente))

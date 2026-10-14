@@ -17,7 +17,7 @@ export default async function VehiculoFlotaPage({ params }: { params: Promise<{ 
   const [{ data: vehiculo }, sesion] = await Promise.all([
     supabase
       .from('vehiculos')
-      .select('id, patente, descripcion, marca, modelo, anio, empresa_id, km_actual, km_actualizado_at, conductor_id, checklist_token, checklist_activo, checklist_cada_dias, activo, empresa:empresas(nombre, slug)')
+      .select('id, patente, descripcion, marca, modelo, anio, tipo, empresa_id, km_actual, km_actualizado_at, conductor_id, checklist_token, checklist_activo, checklist_cada_dias, activo, empresa:empresas(nombre, slug)')
       .eq('id', id)
       .maybeSingle(),
     getSesion(),
@@ -82,6 +82,7 @@ export default async function VehiculoFlotaPage({ params }: { params: Promise<{ 
         marca: vehiculo.marca,
         modelo: vehiculo.modelo,
         anio: vehiculo.anio,
+        tipo: vehiculo.tipo,
         empresaId: vehiculo.empresa_id,
         empresa: vehiculo.empresa as { nombre: string; slug: string },
         kmActual: vehiculo.km_actual,

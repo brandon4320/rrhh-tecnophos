@@ -4,7 +4,7 @@
 // lo que llega por WhatsApp sale del mismo cálculo.
 // ============================================================
 import { diaClaveAR } from '@/lib/fechas-ar'
-import { getEstadoVencimiento, type EstadoVencimiento } from '@/types'
+import type { EstadoVencimiento } from '@/types'
 import {
   estadoChecklist, hastaCuando, kmPorDia, nombreMantenimiento, proximoMantenimiento, diasEntre,
   type EstadoChecklistInfo, type ProximoMantenimiento, type Resultado,
@@ -121,12 +121,13 @@ export function resumirVehiculo(d: DatosVehiculo, hoy: string = diaClaveAR(new D
     const previo = porTipo.get(c.nombre)
     if (!previo || vence > previo.vence) porTipo.set(c.nombre, { nombre: c.nombre, vence, alerta: c.alerta_dias })
   }
-  const documentos = [...porTipo.values()].map((x) => ({
-    nombre: x.nombre,
-    vence: x.vence,
-    estado: getEstadoVencimiento(x.vence, x.alerta),
-    dias: diasEntre(hoy, x.vence),
-  }))
+  // El estado se calcula contra `hoy` (el mismo día que el resto del resumen), no contra
+  // el reloj: misma regla que getEstadoVencimiento.
+  const documentos = [...porTipo.values()].map((x) => {
+    const dias = diasEntre(hoy, x.vence)
+    const estado: EstadoVencimiento = dias < 0 ? 'vencido' : dias <= (x.alerta ?? 30) ? 'proximo' : 'vigente'
+    return { nombre: x.nombre, vence: x.vence, estado, dias }
+  })
 
   const altas = d.novedades.filter((n) => n.gravedad === 'alta').length
   const masVieja = d.novedades.map((n) => n.created_at).sort()[0] ?? null
