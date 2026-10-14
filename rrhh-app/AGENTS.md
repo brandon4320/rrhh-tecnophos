@@ -319,6 +319,8 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
     no hay lista de empleados en la página pública. Queda recordado en el celular (`flota-quien`).
     El server sigue aceptando `realizadoPor` (id de empleado) por compatibilidad, pero el formulario
     manda siempre `nombreLibre`.
+  - **Conductor habitual**: también se escribe a mano (`vehiculos.conductor_nombre`, migración 26).
+    `conductor_id` quedó sin uso; no volver a la lista de empleados.
   - **Documentos desde el QR**: la pantalla del QR muestra seguro/VTV con "Ver documento"; abre
     `/api/v/<token>/documento/<archivoId>`, que solo firma archivos de certificados de ESE vehículo
     (302 a una URL de R2 de 5 min, inline con el nombre original) — para mostrarlo en un control.

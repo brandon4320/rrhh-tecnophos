@@ -17,7 +17,7 @@ export default async function VehiculoFlotaPage({ params }: { params: Promise<{ 
   const [{ data: vehiculo }, sesion] = await Promise.all([
     supabase
       .from('vehiculos')
-      .select('id, patente, descripcion, marca, modelo, anio, tipo, empresa_id, km_actual, km_actualizado_at, conductor_id, checklist_token, checklist_activo, checklist_cada_dias, activo, empresa:empresas(nombre, slug)')
+      .select('id, patente, descripcion, marca, modelo, anio, tipo, empresa_id, km_actual, km_actualizado_at, conductor_nombre, checklist_token, checklist_activo, checklist_cada_dias, activo, empresa:empresas(nombre, slug)')
       .eq('id', id)
       .maybeSingle(),
     getSesion(),
@@ -25,7 +25,7 @@ export default async function VehiculoFlotaPage({ params }: { params: Promise<{ 
   // La RLS decide: un vehículo de otra empresa se ve igual que uno inexistente.
   if (!vehiculo || !vehiculo.empresa_id) notFound()
 
-  const [chk, nov, plan, serv, cert, emp] = await Promise.all([
+  const [chk, nov, plan, serv, cert] = await Promise.all([
     supabase.from('vehiculo_checklists')
       .select('id, created_at, realizado_por_nombre, km, km_inconsistente, resultado, respuestas, notas_items, fotos, observaciones, origen')
       .eq('vehiculo_id', id).order('created_at', { ascending: false }).limit(60),
@@ -37,9 +37,8 @@ export default async function VehiculoFlotaPage({ params }: { params: Promise<{ 
     supabase.from('certificados')
       .select('fecha_vencimiento, alerta_dias, tipo_nombre_custom, tipo:tipos_certificado(nombre)')
       .eq('vehiculo_id', id).not('fecha_vencimiento', 'is', null),
-    supabase.from('empleados').select('id, nombre, apellido').eq('empresa_id', vehiculo.empresa_id).eq('activo', true).order('nombre'),
   ])
-  const error = [chk, nov, plan, serv, cert, emp].find((r) => r.error)?.error
+  const error = [chk, nov, plan, serv, cert].find((r) => r.error)?.error
   if (error) {
     return (
       <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
@@ -87,7 +86,7 @@ export default async function VehiculoFlotaPage({ params }: { params: Promise<{ 
         empresa: vehiculo.empresa as { nombre: string; slug: string },
         kmActual: vehiculo.km_actual,
         kmActualizadoAt: vehiculo.km_actualizado_at,
-        conductorId: vehiculo.conductor_id,
+        conductorNombre: vehiculo.conductor_nombre,
         checklistActivo: vehiculo.checklist_activo,
         checklistCadaDias: vehiculo.checklist_cada_dias,
       }}
@@ -96,7 +95,6 @@ export default async function VehiculoFlotaPage({ params }: { params: Promise<{ 
       novedades={novedades}
       plan={plan.data ?? []}
       services={serv.data ?? []}
-      empleados={(emp.data ?? []).map((e) => ({ id: e.id, nombre: [e.nombre, e.apellido].filter(Boolean).join(' ') }))}
       qr={{ url: urlQR, svg: qrSvg }}
       canEdit={tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)}
     />

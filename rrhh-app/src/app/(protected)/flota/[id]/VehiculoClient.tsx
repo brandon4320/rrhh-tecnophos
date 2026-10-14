@@ -38,14 +38,13 @@ interface Props {
     /** Elegido en Gestión (null = se deduce del modelo). */
     tipo: string | null
     empresaId: string; empresa: { nombre: string; slug: string }; kmActual: number | null; kmActualizadoAt: string | null
-    conductorId: string | null; checklistActivo: boolean; checklistCadaDias: number
+    conductorNombre: string | null; checklistActivo: boolean; checklistCadaDias: number
   }
   resumen: ResumenVehiculo
   checklists: Checklist[]
   novedades: Novedad[]
   plan: Plan[]
   services: Service[]
-  empleados: { id: string; nombre: string }[]
   qr: { url: string; svg: string }
   canEdit: boolean
 }
@@ -105,7 +104,7 @@ function FotoR2({ path, label }: { path: string; label?: string }) {
   )
 }
 
-export default function VehiculoClient({ vehiculo, resumen, checklists, novedades, plan, services, empleados, qr, canEdit }: Props) {
+export default function VehiculoClient({ vehiculo, resumen, checklists, novedades, plan, services, qr, canEdit }: Props) {
   const supabase = createClient()
   // Qué se revisa en este vehículo (rótulos de fotos e ítems según sea pickup, furgón, trailer…).
   const tipoVehiculo = tipoDe(vehiculo)
@@ -236,7 +235,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
   // ── Datos ─────────────────────────────────────────────────────────────────
   const DATOS = {
     marca: vehiculo.marca ?? '', modelo: vehiculo.modelo ?? '', anio: vehiculo.anio?.toString() ?? '', tipo: tipoVehiculo,
-    conductor: vehiculo.conductorId ?? '', km: vehiculo.kmActual?.toString() ?? '',
+    conductor: vehiculo.conductorNombre ?? '', km: vehiculo.kmActual?.toString() ?? '',
     cada: vehiculo.checklistCadaDias.toString(), activo: vehiculo.checklistActivo,
   }
   const [datos, setDatos] = useState(DATOS)
@@ -254,7 +253,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
     const kmCambio = km !== vehiculo.kmActual
     const { error } = await supabase.from('vehiculos').update({
       marca: datos.marca.trim() || null, modelo: datos.modelo.trim() || null, anio, tipo: datos.tipo,
-      conductor_id: datos.conductor || null, checklist_cada_dias: cada, checklist_activo: datos.activo,
+      conductor_nombre: datos.conductor.trim().replace(/\s+/g, ' ') || null, checklist_cada_dias: cada, checklist_activo: datos.activo,
       ...(kmCambio ? { km_actual: km, km_actualizado_at: new Date().toISOString() } : {}),
     }).eq('id', vehiculo.id)
     setSaving(false)
@@ -622,10 +621,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
               </div>
               <div>
                 <label htmlFor="d-conductor" className="mb-1 block text-xs text-muted-foreground">Conductor habitual</label>
-                <select id="d-conductor" value={datos.conductor} onChange={(e) => setDatos({ ...datos, conductor: e.target.value })} disabled={!canEdit} className={input}>
-                  <option value="">Sin asignar</option>
-                  {empleados.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-                </select>
+                <input id="d-conductor" value={datos.conductor} onChange={(e) => setDatos({ ...datos, conductor: e.target.value })} placeholder="Nombre y apellido" autoComplete="off" autoCapitalize="words" maxLength={80} disabled={!canEdit} className={input} />
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <label className="inline-flex items-center gap-2 text-sm">

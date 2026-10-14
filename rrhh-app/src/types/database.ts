@@ -1144,6 +1144,7 @@ export type Database = {
           checklist_cada_dias: number
           checklist_token: string
           conductor_id: string | null
+          conductor_nombre: string | null
           created_at: string | null
           descripcion: string | null
           empresa_id: string | null
@@ -1163,6 +1164,7 @@ export type Database = {
           checklist_cada_dias?: number
           checklist_token?: string
           conductor_id?: string | null
+          conductor_nombre?: string | null
           created_at?: string | null
           descripcion?: string | null
           empresa_id?: string | null
@@ -1182,6 +1184,7 @@ export type Database = {
           checklist_cada_dias?: number
           checklist_token?: string
           conductor_id?: string | null
+          conductor_nombre?: string | null
           created_at?: string | null
           descripcion?: string | null
           empresa_id?: string | null

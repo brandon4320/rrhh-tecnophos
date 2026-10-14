@@ -16,13 +16,13 @@ export interface VehiculoFlota extends DatosVehiculo {
   modelo: string | null
   anio: number | null
   km_actualizado_at: string | null
-  conductor_id: string | null
+  conductor_nombre: string | null
 }
 
 export async function cargarFlota(db: Db, filtro: { empresaId?: string } = {}): Promise<VehiculoFlota[]> {
   let q = db
     .from('vehiculos')
-    .select('id, patente, descripcion, marca, modelo, anio, empresa_id, km_actual, km_actualizado_at, checklist_cada_dias, checklist_activo, conductor_id')
+    .select('id, patente, descripcion, marca, modelo, anio, empresa_id, km_actual, km_actualizado_at, checklist_cada_dias, checklist_activo, conductor_nombre')
     .eq('activo', true)
     .order('patente')
   if (filtro.empresaId) q = q.eq('empresa_id', filtro.empresaId)
@@ -65,7 +65,7 @@ export async function cargarFlota(db: Db, filtro: { empresaId?: string } = {}): 
     empresa_id: v.empresa_id as string,
     km_actual: v.km_actual,
     km_actualizado_at: v.km_actualizado_at,
-    conductor_id: v.conductor_id,
+    conductor_nombre: v.conductor_nombre,
     checklist_cada_dias: v.checklist_cada_dias,
     checklist_activo: v.checklist_activo,
     checklists: de(chk.data, v.id),
