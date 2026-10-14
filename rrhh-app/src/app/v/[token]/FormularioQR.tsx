@@ -32,7 +32,6 @@ interface Props {
     /** Decide qué fotos e ítems se piden (un trailer no tiene km ni motor). */
     tipo: TipoVehiculo
   }
-  empleados: { id: string; nombre: string }[]
   ultimo: { fecha: string; quien: string; km: number | null } | null
   estado: EstadoChecklistInfo
   documentos: DocumentoQR[]
@@ -65,7 +64,6 @@ const BORRADOR_VACIO: Borrador = {
   realizadoPor: '', nombreLibre: '', km: '', kmConfirmado: '', fotos: {}, respuestas: {}, notas: {},
   danio: '', fotosDanio: [], observaciones: '',
 }
-const OTRO = '__otro'
 const PASOS = ['Quién y kilómetros', 'Fotos', 'Revisión', 'Cierre'] as const
 
 /** Un borrador de más de 12 horas no es "el checklist de hoy": se descarta. */
@@ -171,7 +169,7 @@ async function comprimir(file: File): Promise<Blob> {
   }
 }
 
-export default function FormularioQR({ token, vehiculo, empleados, ultimo, estado, documentos }: Props) {
+export default function FormularioQR({ token, vehiculo, ultimo, estado, documentos }: Props) {
   // Lo que se revisa depende de qué es el vehículo (pickup, utilitario, furgón o trailer).
   const fotos = useMemo(() => fotosPara(vehiculo.tipo), [vehiculo.tipo])
   const secciones = useMemo(() => seccionesPara(vehiculo.tipo), [vehiculo.tipo])
@@ -259,7 +257,8 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
     actualizar({ modo: 'inicio' })
   }
 
-  const quienOk = (b.realizadoPor && b.realizadoPor !== OTRO) || (b.realizadoPor === OTRO && b.nombreLibre.trim().length >= 3)
+  // Cada uno escribe su nombre (no hay lista de empleados en una página pública).
+  const quienOk = b.nombreLibre.trim().length >= 3
   // Un trailer no tiene tablero: no se piden km.
   const conMotor = tieneMotor(vehiculo.tipo)
   const kmNum = Number(b.km)
@@ -472,8 +471,8 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
     const r = await enviar({
       tipo: 'checklist',
       envioId,
-      realizadoPor: b.realizadoPor && b.realizadoPor !== OTRO ? b.realizadoPor : null,
-      nombreLibre: b.nombreLibre,
+      realizadoPor: null,
+      nombreLibre: b.nombreLibre.trim(),
       km: conMotor ? kmNum : null,
       respuestas: b.respuestas,
       notas: b.notas,
@@ -531,8 +530,8 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
     const r = await enviar({
       tipo: 'novedad',
       envioId,
-      realizadoPor: b.realizadoPor && b.realizadoPor !== OTRO ? b.realizadoPor : null,
-      nombreLibre: b.nombreLibre,
+      realizadoPor: null,
+      nombreLibre: b.nombreLibre.trim(),
       titulo: nov.titulo,
       descripcion: nov.descripcion,
       gravedad: nov.gravedad,
@@ -581,27 +580,18 @@ export default function FormularioQR({ token, vehiculo, empleados, ultimo, estad
 
   const selectorQuien = (
     <div className="space-y-2">
-      <label htmlFor="quien" className="block text-sm font-medium">¿Quién sos?</label>
-      <select
+      <label htmlFor="quien" className="block text-sm font-medium">Tu nombre y apellido</label>
+      <input
         id="quien"
-        value={b.realizadoPor}
-        onChange={(e) => actualizar({ realizadoPor: e.target.value })}
+        value={b.nombreLibre}
+        onChange={(e) => actualizar({ realizadoPor: '', nombreLibre: e.target.value })}
+        placeholder="Ej: Juan Pérez"
+        autoComplete="name"
+        autoCapitalize="words"
+        maxLength={80}
         className="h-12 w-full rounded-xl border border-input bg-card px-3 text-base"
-      >
-        <option value="">Elegí tu nombre…</option>
-        {empleados.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-        <option value={OTRO}>No estoy en la lista</option>
-      </select>
-      {b.realizadoPor === OTRO && (
-        <input
-          id="nombre-libre"
-          value={b.nombreLibre}
-          onChange={(e) => actualizar({ nombreLibre: e.target.value })}
-          placeholder="Tu nombre y apellido"
-          autoComplete="name"
-          className="h-12 w-full rounded-xl border border-input bg-card px-3 text-base"
-        />
-      )}
+      />
+      <p className="text-xs text-muted-foreground">Queda guardado en este celular para la próxima.</p>
     </div>
   )
 

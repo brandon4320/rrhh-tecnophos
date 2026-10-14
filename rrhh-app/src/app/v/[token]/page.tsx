@@ -32,13 +32,9 @@ export default async function ChecklistQRPage({ params }: { params: Promise<{ to
   }
   if (!vehiculo) notFound()
 
-  const [{ data: empleados }, { data: ultimo }, { data: certs }] = await Promise.all([
-    admin
-      .from('empleados')
-      .select('id, nombre, apellido')
-      .eq('empresa_id', vehiculo.empresa_id)
-      .eq('activo', true)
-      .order('nombre'),
+  // Sin lista de empleados: cada uno escribe su nombre (y una página pública no
+  // muestra el plantel a quien escanee el QR).
+  const [{ data: ultimo }, { data: certs }] = await Promise.all([
     admin
       .from('vehiculo_checklists')
       .select('created_at, realizado_por_nombre, km, resultado')
@@ -84,7 +80,6 @@ export default async function ChecklistQRPage({ params }: { params: Promise<{ to
         kmActualizadoAt: vehiculo.km_actualizado_at,
         cadaDias: vehiculo.checklist_cada_dias,
       }}
-      empleados={(empleados ?? []).map((e) => ({ id: e.id, nombre: [e.nombre, e.apellido].filter(Boolean).join(' ') }))}
       ultimo={ultimo ? { fecha: ultimo.created_at, quien: ultimo.realizado_por_nombre, km: ultimo.km } : null}
       estado={estado}
       documentos={[...porTipo.values()]}

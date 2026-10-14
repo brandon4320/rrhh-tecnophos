@@ -315,6 +315,10 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
     plan es `revision_trailer` cada 12 meses (triggers de alta y de cambio de tipo). Utilitarios y
     furgones revisan compartimento de carga, mampara y puertas; las pickups, tapa/lona de la caja.
     Los patentes de acoplado empiezan con "101" (101AG048TW es un trailer, no un duplicado de AG048TW).
+  - **Quién hace el checklist**: cada uno escribe su nombre y apellido (pedido de Brandon, 14/10);
+    no hay lista de empleados en la página pública. Queda recordado en el celular (`flota-quien`).
+    El server sigue aceptando `realizadoPor` (id de empleado) por compatibilidad, pero el formulario
+    manda siempre `nombreLibre`.
   - **Documentos desde el QR**: la pantalla del QR muestra seguro/VTV con "Ver documento"; abre
     `/api/v/<token>/documento/<archivoId>`, que solo firma archivos de certificados de ESE vehículo
     (302 a una URL de R2 de 5 min, inline con el nombre original) — para mostrarlo en un control.
