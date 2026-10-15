@@ -18,6 +18,8 @@ import clsx from 'clsx'
 
 type ArchivoCert = { id: string; nombre: string; path: string }
 
+import { detallePala, esPala, fmtHorometro, validarAnio, validarHorometro } from '@/modules/palas/reglas'
+
 interface CertEquipo {
   id: string
   tipo_id?: string | null
@@ -47,6 +49,13 @@ interface Props {
   empresaId: string
   /** Ítem a mostrar abierto al entrar (?equipo=<id>, desde el dashboard o vencimientos). */
   abiertoInicial?: string | null
+  /**
+   * Mostrar UNA sola sección y esconder la gestión de secciones. Lo usa
+   * /palas, que es una vista de una categoría y no el árbol de activos.
+   */
+  soloCategoria?: string | null
+  /** Categorías que esta pantalla NO muestra (las palas tienen la suya aparte). */
+  excluirCategorias?: readonly string[]
 }
 
 const FORM_EMPTY = {
@@ -58,7 +67,9 @@ const FORM_EMPTY = {
   alerta_dias: String(ALERTA_DIAS_DEFECTO),
 }
 
-const ITEM_EMPTY = { nombre: '', tipo: '', numero_serie: '' }
+// marca/modelo/anio/horometro son de la ficha y solo se piden para las palas;
+// para un matafuego el formulario queda igual que antes.
+const ITEM_EMPTY = { nombre: '', tipo: '', numero_serie: '', marca: '', modelo: '', anio: '', horometro: '' }
 
 // Sugerencias para el datalist de secciones nuevas
 const SECCIONES_SUGERIDAS = ['Equipos de medición', 'Matafuegos', 'Herramientas', 'Instalaciones']
@@ -82,6 +93,8 @@ export default function EquiposClient({
   empresaSlug,
   empresaId,
   abiertoInicial = null,
+  soloCategoria = null,
+  excluirCategorias = [],
 }: Props) {
   const supabase = createClient()
   const router = useRouter()
@@ -104,6 +117,8 @@ export default function EquiposClient({
 
   // Alta de ítem dentro de una sección (nombre de la sección, o null)
   const [creandoItemEn, setCreandoItemEn] = useState<string | null>(null)
+  /** id del ítem en edición; null = el formulario es de alta. */
+  const [editandoItem, setEditandoItem] = useState<string | null>(null)
   const [itemForm, setItemForm] = useState(ITEM_EMPTY)
   const [savingItem, setSavingItem] = useState(false)
 
@@ -116,13 +131,20 @@ export default function EquiposClient({
 
   // Secciones a mostrar: tabla de secciones ∪ categorías usadas por equipos
   // (por si quedó algún equipo con categoría sin fila de sección)
+  // El llamador pasa un literal nuevo en cada render; sin aplanarlo a texto, la
+  // identidad del arreglo cambia siempre y el memo de abajo no memoriza nada.
+  const excluidas = excluirCategorias.join('|')
   const nombresSecciones = useMemo(() => {
+    // Con `soloCategoria` la pantalla es la de esa categoría: se muestra siempre,
+    // aunque todavía no haya ningún ítem cargado (si no, no habría dónde crear el primero).
+    if (soloCategoria) return [soloCategoria]
     const set = new Set<string>(secciones.map((s) => s.nombre))
     for (const e of equipos) set.add(e.categoria || 'Equipos de medición')
+    for (const fuera of excluidas ? excluidas.split('|') : []) set.delete(fuera)
     return [...set].sort((a, b) =>
       a === 'Equipos de medición' ? -1 : b === 'Equipos de medición' ? 1 : a.localeCompare(b, 'es')
     )
-  }, [secciones, equipos])
+  }, [secciones, equipos, soloCategoria, excluidas])
 
   async function handleCrearSeccion() {
     const nombre = nombreSeccion.trim()
@@ -166,16 +188,61 @@ export default function EquiposClient({
 
   function abrirAltaItem(seccion: string) {
     setItemForm(ITEM_EMPTY)
+    setEditandoItem(null)
     setCreandoItemEn(seccion)
+  }
+
+  /** Abre el MISMO formulario con los datos cargados, para corregirlos. */
+  function abrirEdicionItem(eq: EquipoConCerts) {
+    setItemForm({
+      nombre: eq.nombre ?? '',
+      tipo: eq.tipo ?? '',
+      numero_serie: eq.numero_serie ?? '',
+      marca: eq.marca ?? '',
+      modelo: eq.modelo ?? '',
+      anio: eq.anio != null ? String(eq.anio) : '',
+      horometro: eq.horometro != null ? String(eq.horometro) : '',
+    })
+    setEditandoItem(eq.id)
+    setCreandoItemEn(eq.categoria || 'Equipos de medición')
   }
 
   function cerrarAltaItem() {
     setCreandoItemEn(null)
+    setEditandoItem(null)
     setItemForm(ITEM_EMPTY)
+  }
+
+  /**
+   * Campos de ficha listos para la base, o el mensaje de error.
+   * Solo se mandan para las palas: en el resto de las secciones van en null y
+   * las columnas quedan como estaban.
+   */
+  function fichaParaGuardar(seccion: string, anterior?: number | null): { datos: Record<string, unknown> } | { error: string } {
+    if (!esPala(seccion)) return { datos: {} }
+    const errAnio = validarAnio(itemForm.anio)
+    if (errAnio) return { error: errAnio }
+    const errHoro = validarHorometro(itemForm.horometro, anterior)
+    if (errHoro) return { error: errHoro }
+    const horometro = itemForm.horometro.trim() ? Number(itemForm.horometro.trim().replace(',', '.')) : null
+    return {
+      datos: {
+        marca: itemForm.marca.trim() || null,
+        modelo: itemForm.modelo.trim() || null,
+        anio: itemForm.anio.trim() ? Number(itemForm.anio.trim()) : null,
+        horometro,
+        // La fecha solo se toca si el horometro cambió: si no, "actualizado hoy"
+        // mentiría cada vez que se corrige el nombre.
+        ...(horometro !== (anterior ?? null) ? { horometro_actualizado_at: new Date().toISOString() } : {}),
+      },
+    }
   }
 
   async function handleCrearItem() {
     if (!itemForm.nombre.trim() || !creandoItemEn) return
+    const ficha = fichaParaGuardar(creandoItemEn)
+    if ('error' in ficha) return toast.error(ficha.error)
+
     setSavingItem(true)
     const { data, error: err } = await supabase
       .from('equipos')
@@ -185,6 +252,7 @@ export default function EquiposClient({
         numero_serie: itemForm.numero_serie.trim() || null,
         categoria: creandoItemEn,
         empresa_id: empresaId,
+        ...ficha.datos,
       })
       .select('*')
       .single()
@@ -199,6 +267,38 @@ export default function EquiposClient({
     cerrarAltaItem()
     setExpandedId(data.id)
     toast.success(`"${data.nombre}" agregado`)
+    router.refresh()
+  }
+
+  async function handleGuardarItem() {
+    if (!itemForm.nombre.trim() || !editandoItem || !creandoItemEn) return
+    const actual = equipos.find((e) => e.id === editandoItem)
+    const ficha = fichaParaGuardar(creandoItemEn, actual?.horometro)
+    if ('error' in ficha) return toast.error(ficha.error)
+
+    setSavingItem(true)
+    const { data, error: err } = await supabase
+      .from('equipos')
+      .update({
+        nombre: itemForm.nombre.trim(),
+        tipo: itemForm.tipo.trim() || null,
+        numero_serie: itemForm.numero_serie.trim() || null,
+        ...ficha.datos,
+      })
+      .eq('id', editandoItem)
+      .select('*')
+      .single()
+
+    setSavingItem(false)
+    if (err || !data) {
+      toast.error(err ? mensajeError(err, 'guardar el ítem') : 'No se pudo guardar: el ítem ya no existe o no tenés permiso.')
+      return
+    }
+
+    // Los certificados no vienen en el update: se conservan los que ya teníamos.
+    setEquipos((prev) => prev.map((e) => (e.id === data.id ? { ...e, ...data } : e)))
+    cerrarAltaItem()
+    toast.success('Datos guardados')
     router.refresh()
   }
 
@@ -374,6 +474,11 @@ export default function EquiposClient({
     router.refresh()
   }
 
+  /** Cómo se llama una unidad de esta sección en los textos de la pantalla. */
+  function unidadDe(seccion: string) {
+    return esPala(seccion) ? { una: 'pala', la: 'la pala', plural: 'palas' } : { una: 'ítem', la: 'el ítem', plural: 'ítems' }
+  }
+
   function renderEquipoCard(eq: EquipoConCerts) {
     const isOpen = expandedId === eq.id
     const isAddingHere = addingTo === eq.id
@@ -396,7 +501,13 @@ export default function EquiposClient({
               sin_fecha: 'bg-muted-foreground/40',
             }[worstEstado] ?? 'bg-muted-foreground/40'
 
-    const subtitulo = [eq.tipo, eq.numero_serie ? `N° ${eq.numero_serie}` : null]
+    // En una pala el subtítulo es la ficha (marca, modelo, año y horas); en el
+    // resto de los activos sigue siendo tipo y número de serie.
+    const subtitulo = (
+      esPala(eq.categoria)
+        ? [detallePala(eq), eq.numero_serie ? `N° ${eq.numero_serie}` : null, fmtHorometro(eq.horometro)]
+        : [eq.tipo, eq.numero_serie ? `N° ${eq.numero_serie}` : null]
+    )
       .filter(Boolean)
       .join(' · ')
 
@@ -424,6 +535,16 @@ export default function EquiposClient({
               {eq.certificados.length} certificado
               {eq.certificados.length !== 1 ? 's' : ''}
             </span>
+
+            {canEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); abrirEdicionItem(eq) }}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                title="Editar los datos"
+              >
+                Editar
+              </button>
+            )}
 
             {canEdit && (
               <button
@@ -567,14 +688,16 @@ export default function EquiposClient({
 
         return (
           <div key={nombre}>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-foreground">{nombre}</h2>
+            <div className={clsx('flex items-center mb-3', soloCategoria ? 'justify-end' : 'justify-between')}>
+              {/* Con `soloCategoria` el nombre ya es el título de la página: repetirlo
+                  acá deja "Palas cargadoras" dos veces, una debajo de la otra. */}
+              {!soloCategoria && <h2 className="text-base font-semibold text-foreground">{nombre}</h2>}
               {canEdit && !agregandoAca && (
                 <button
                   onClick={() => abrirAltaItem(nombre)}
                   className="text-xs font-medium text-primary hover:text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors"
                 >
-                  + Agregar ítem
+                  + Agregar {unidadDe(nombre).una}
                 </button>
               )}
             </div>
@@ -582,11 +705,15 @@ export default function EquiposClient({
             <div className="space-y-3">
               {agregandoAca && canEdit && (
                 <form
-                  onSubmit={(e) => { e.preventDefault(); handleCrearItem() }}
+                  onSubmit={(e) => { e.preventDefault(); if (editandoItem) handleGuardarItem(); else handleCrearItem() }}
                   onKeyDown={escCancela(cerrarAltaItem)}
                   className="bg-card rounded-xl border border-primary/30 p-4"
                 >
-                  <p className="text-sm font-medium text-foreground mb-3">Nuevo ítem en {nombre}</p>
+                  <p className="text-sm font-medium text-foreground mb-3">
+                    {editandoItem
+                      ? `Editar ${unidadDe(nombre).la}`
+                      : esPala(nombre) ? 'Nueva pala' : `Nuevo ítem en ${nombre}`}
+                  </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1">Nombre / identificador</label>
@@ -595,20 +722,68 @@ export default function EquiposClient({
                         value={itemForm.nombre}
                         onChange={(e) => setItemForm((f) => ({ ...f, nombre: e.target.value }))}
                         className={inputCls}
-                        placeholder="Ej: Matafuego ABC 5kg — Galpón"
+                        placeholder={esPala(nombre) ? 'Ej: Pala 1' : 'Ej: Matafuego ABC 5kg — Galpón'}
                         autoFocus
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-foreground mb-1">Tipo / marca</label>
-                      <input
-                        type="text"
-                        value={itemForm.tipo}
-                        onChange={(e) => setItemForm((f) => ({ ...f, tipo: e.target.value }))}
-                        className={inputCls}
-                        placeholder="Ej: ABC / CO2 (opcional)"
-                      />
-                    </div>
+                    {!esPala(nombre) && (
+                      <div>
+                        <label className="block text-xs font-medium text-foreground mb-1">Tipo / marca</label>
+                        <input
+                          type="text"
+                          value={itemForm.tipo}
+                          onChange={(e) => setItemForm((f) => ({ ...f, tipo: e.target.value }))}
+                          className={inputCls}
+                          placeholder="Ej: ABC / CO2 (opcional)"
+                        />
+                      </div>
+                    )}
+                    {esPala(nombre) && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium text-foreground mb-1">Marca</label>
+                          <input
+                            type="text"
+                            value={itemForm.marca}
+                            onChange={(e) => setItemForm((f) => ({ ...f, marca: e.target.value }))}
+                            className={inputCls}
+                            placeholder="Ej: Caterpillar (opcional)"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-foreground mb-1">Modelo</label>
+                          <input
+                            type="text"
+                            value={itemForm.modelo}
+                            onChange={(e) => setItemForm((f) => ({ ...f, modelo: e.target.value }))}
+                            className={inputCls}
+                            placeholder="Ej: 950H (opcional)"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-foreground mb-1">Año</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={itemForm.anio}
+                            onChange={(e) => setItemForm((f) => ({ ...f, anio: e.target.value }))}
+                            className={inputCls}
+                            placeholder="Ej: 2015 (opcional)"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-foreground mb-1">Horómetro (horas)</label>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={itemForm.horometro}
+                            onChange={(e) => setItemForm((f) => ({ ...f, horometro: e.target.value }))}
+                            className={inputCls}
+                            placeholder="Ej: 4820 (opcional)"
+                          />
+                        </div>
+                      </>
+                    )}
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1">N° de serie</label>
                       <input
@@ -626,7 +801,9 @@ export default function EquiposClient({
                       disabled={savingItem || !itemForm.nombre.trim()}
                       className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
                     >
-                      {savingItem ? 'Creando...' : 'Crear ítem'}
+                      {savingItem
+                        ? (editandoItem ? 'Guardando...' : 'Creando...')
+                        : (editandoItem ? 'Guardar cambios' : `Crear ${unidadDe(nombre).una}`)}
                     </button>
                     <button type="button" onClick={cerrarAltaItem} className="text-xs text-muted-foreground px-3 py-2">
                       Cancelar
@@ -640,10 +817,12 @@ export default function EquiposClient({
               {items.length === 0 && !agregandoAca && (
                 <div className="bg-card rounded-xl border border-dashed border-border px-5 py-6 text-center">
                   <p className="text-sm text-muted-foreground">
-                    Sin ítems en esta sección.
-                    {canEdit && ' Agregá el primero con "+ Agregar ítem".'}
+                    {soloCategoria
+                      ? `Todavía no hay ${unidadDe(nombre).plural} cargadas.`
+                      : 'Sin ítems en esta sección.'}
+                    {canEdit && ` Agregá la primera con "+ Agregar ${unidadDe(nombre).una}".`}
                   </p>
-                  {canEdit && secciones.some((s) => s.nombre === nombre) && (
+                  {canEdit && !soloCategoria && secciones.some((s) => s.nombre === nombre) && (
                     <button
                       onClick={() => handleEliminarSeccion(nombre)}
                       className="mt-2 text-xs text-muted-foreground hover:text-red-500 transition-colors"
@@ -658,7 +837,7 @@ export default function EquiposClient({
         )
       })}
 
-      {canEdit && (
+      {canEdit && !soloCategoria && (
         nuevaSeccionOpen ? (
           <form
             onSubmit={(e) => { e.preventDefault(); handleCrearSeccion() }}

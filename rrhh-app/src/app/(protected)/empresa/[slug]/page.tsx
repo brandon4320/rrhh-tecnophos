@@ -13,6 +13,7 @@ import { Donut } from '@/components/ui/donut'
 import { SegmentedLocal } from '@/components/ui/segmented-local'
 import VehiculosClient from './VehiculosClient'
 import EquiposClient from './EquiposClient'
+import { CATEGORIA_PALAS } from '@/modules/palas/reglas'
 import EmpresaCertsClient from './EmpresaCertsClient'
 
 interface CertFecha {
@@ -160,6 +161,9 @@ export default async function EmpresaPage({
           empresaSlug={slug}
           empresaId={empresa.id}
           abiertoInicial={sp.equipo ?? null}
+          // Las palas tienen su propia pantalla en Recursos: si también salieran acá,
+          // la misma unidad estaría en dos lugares y no se sabría cuál es el bueno.
+          excluirCategorias={[CATEGORIA_PALAS]}
         />
       </div>
     )

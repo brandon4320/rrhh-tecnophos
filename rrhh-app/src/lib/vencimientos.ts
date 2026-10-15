@@ -5,6 +5,7 @@
 // Puras (sin React ni Supabase): se usan en server components y tienen tests.
 // ============================================================
 import { diaClaveAR } from './fechas-ar'
+import { esPala } from '@/modules/palas/reglas'
 
 /** Ventana de alerta máxima que admite un certificado (input "Alerta, días antes"). */
 export const ALERTA_DIAS_MAX = 365
@@ -37,7 +38,7 @@ export interface CertConDueno {
   id: string
   empleado?: { id: string; nombre?: string | null; apellido?: string | null; empresa?: EmpresaRef } | null
   vehiculo?: { id: string; patente?: string | null; empresa?: EmpresaRef } | null
-  equipo?: { id: string; nombre?: string | null; empresa?: EmpresaRef } | null
+  equipo?: { id: string; nombre?: string | null; categoria?: string | null; empresa?: EmpresaRef } | null
   empresa?: EmpresaRef
 }
 
@@ -54,7 +55,11 @@ export function hrefCertificado(c: CertConDueno): string | null {
   }
   if (c.equipo?.id) {
     const slug = c.equipo.empresa?.slug
-    return slug ? `/empresa/${slug}?vista=documentacion&equipo=${c.equipo.id}` : null
+    if (!slug) return null
+    // Una pala no vive en Habilitaciones sino en Recursos → Palas cargadoras.
+    return esPala(c.equipo.categoria)
+      ? `/palas?empresa=${slug}&pala=${c.equipo.id}`
+      : `/empresa/${slug}?vista=documentacion&equipo=${c.equipo.id}`
   }
   return c.empresa?.slug ? `/empresa/${c.empresa.slug}?vista=documentacion` : null
 }
@@ -63,7 +68,12 @@ export function hrefCertificado(c: CertConDueno): string | null {
 export function titularCertificado(c: CertConDueno): string {
   if (c.empleado) return [c.empleado.nombre, c.empleado.apellido].filter(Boolean).join(' ') || 'Empleado'
   if (c.vehiculo) return `Vehículo ${c.vehiculo.patente ?? ''}`.trim()
-  if (c.equipo) return c.equipo.nombre ?? 'Activo'
+  if (c.equipo) {
+    const nombre = c.equipo.nombre ?? ''
+    if (!esPala(c.equipo.categoria)) return nombre || 'Activo'
+    // Si ya se llama "Pala 1", prefijar daría "Pala Pala 1".
+    return /^pala/i.test(nombre.trim()) ? nombre.trim() : `Pala ${nombre}`.trim()
+  }
   return c.empresa?.nombre ?? '—'
 }
 

@@ -250,6 +250,25 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   carpeta con archivos se vea SIEMPRE: sacar una del subconjunto nunca esconde lo ya cargado. Son documentos de la EMPRESA: lo de cada persona sigue en `recibos_sueldo`
   (la carpeta "Recibos de sueldos" muestra cuántos empleados activos ya tienen el suyo y cuenta como
   completa si están todos). UI en `documentos/DocumentosClient.tsx`, API `/api/documentos`.
+- **Palas cargadoras** (migración 26, 15/10/2026): **NO hay tabla nueva**. Una pala es un
+  `equipos` con `categoria = 'Palas cargadoras'` (`modules/palas/reglas.ts::CATEGORIA_PALAS`,
+  con tests). El motivo es el constraint `check_owner` de `certificados`, que admite UN dueño
+  entre empleado | empresa | vehiculo | equipo: sumar un quinto obligaba a tocar ese constraint,
+  las policies de `certificados` y `archivos` y todas las consultas de /vencimientos y /dashboard.
+  Colgadas de `equipos` heredan certificados con vencimiento, adjuntos en R2 y RLS (migración 10)
+  sin tocar nada. La migración 26 solo agrega columnas opcionales a `equipos` para la ficha
+  (`marca`, `modelo`, `anio`, `horometro`, `horometro_actualizado_at`) con CHECK de año y de
+  horómetro no negativo; no afecta a matafuegos ni equipos de medición.
+  **Una sola pantalla por unidad**: `/palas?empresa=slug` (Recursos → Palas cargadoras) reusa
+  `EquiposClient` con `soloCategoria`, y la vista Documentación la excluye con
+  `excluirCategorias={[CATEGORIA_PALAS]}`. Si se saca uno de los dos, la misma pala aparece en
+  dos lugares. `hrefCertificado` manda los certificados de pala a `/palas?empresa=&pala=` y no a
+  Habilitaciones, por eso **los selects de /dashboard y /vencimientos traen `equipos.categoria`**:
+  sin esa columna el link vuelve silenciosamente al lugar equivocado.
+  El horómetro es el km de las camionetas pero **se carga a mano** (las palas no tienen el
+  checklist por QR: eso lo hace el sistema aparte de checklist.serviwhite.com) y `validarHorometro`
+  no lo deja bajar salvo que se pida expresamente. De paso, `EquiposClient` ahora permite **editar**
+  un ítem, no solo crearlo y borrarlo.
 - **En los `<select>` de tipo de certificado, la opción "Otro" usa el valor
   `'otro'`, que NO es un UUID**: al guardar va `tipo_id: null` +
   `tipo_nombre_custom`. Ese bug ya se arregló una vez — no lo reintroduzcas.
