@@ -20,7 +20,7 @@ const CERT_COLUMNAS = `
   tipo:tipos_certificado(nombre),
   empleado:empleados(id, nombre, apellido, activo, empresa_id, empresa:empresas(id, nombre, slug)),
   vehiculo:vehiculos(id, patente, empresa_id, empresa:empresas(id, nombre, slug)),
-  equipo:equipos(id, nombre, empresa_id, empresa:empresas(id, nombre, slug)),
+  equipo:equipos(id, nombre, categoria, empresa_id, empresa:empresas(id, nombre, slug)),
   empresa:empresas(id, nombre, slug)
 `
 

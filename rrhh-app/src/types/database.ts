@@ -889,11 +889,16 @@ export type Database = {
       equipos: {
         Row: {
           activo: boolean | null
+          anio: number | null
           categoria: string
           created_at: string | null
           descripcion: string | null
           empresa_id: string | null
+          horometro: number | null
+          horometro_actualizado_at: string | null
           id: string
+          marca: string | null
+          modelo: string | null
           nombre: string
           numero_serie: string | null
           tipo: string | null
@@ -901,11 +906,16 @@ export type Database = {
         }
         Insert: {
           activo?: boolean | null
+          anio?: number | null
           categoria?: string
           created_at?: string | null
           descripcion?: string | null
           empresa_id?: string | null
+          horometro?: number | null
+          horometro_actualizado_at?: string | null
           id?: string
+          marca?: string | null
+          modelo?: string | null
           nombre: string
           numero_serie?: string | null
           tipo?: string | null
@@ -913,11 +923,16 @@ export type Database = {
         }
         Update: {
           activo?: boolean | null
+          anio?: number | null
           categoria?: string
           created_at?: string | null
           descripcion?: string | null
           empresa_id?: string | null
+          horometro?: number | null
+          horometro_actualizado_at?: string | null
           id?: string
+          marca?: string | null
+          modelo?: string | null
           nombre?: string
           numero_serie?: string | null
           tipo?: string | null

@@ -27,6 +27,7 @@ import {
   Package,
   ShieldCheck,
   Sun,
+  Forklift,
   Truck,
   Upload,
   UserPlus,
@@ -321,6 +322,10 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
         titulo: 'Recursos',
         items: [
           { key: 'flota', label: 'Flota', href: `/flota?empresa=${activa.slug}`, icon: Truck, active: pathname.startsWith('/flota') },
+          // Maquinaria pesada con ficha y documentación. Hoy solo ADC tiene palas, pero
+          // la entrada va para todas: la pantalla funciona igual y así no hay un slug
+          // escrito a mano en el menú que haya que recordar si mañana compran una.
+          { key: 'palas', label: 'Palas cargadoras', href: `/palas?empresa=${activa.slug}`, icon: Forklift, active: pathname.startsWith('/palas') },
           { key: 'stock', label: 'Stock', href: `/stock?empresa=${activa.slug}`, icon: Package, active: pathname.startsWith('/stock') },
         ],
       }
