@@ -1401,7 +1401,8 @@ function abrirOrden() {
   $('ordenNumPreview').textContent = 'N° ' + proximoNumOrden();
   document.querySelectorAll('#chipsTipo .chip').forEach(c => c.classList.remove('on'));
   const cs = $('chipsSector'); cs.innerHTML = '';
-  const lista = plantaActual ? DB.sectores.filter(s => s.plantaId === plantaActual.id) : DB.sectores;
+  // las jaulas son una tarea, no un lugar de la planta
+  const lista = (plantaActual ? DB.sectores.filter(s => s.plantaId === plantaActual.id) : DB.sectores).filter(s => s.tipo !== 'jaulas');
   lista.forEach(s => {
     const b = document.createElement('button');
     b.className = 'chip'; b.dataset.v = s.nombre; b.textContent = s.nombre;
@@ -2597,11 +2598,11 @@ function editarSector(idx) {
     }
     nc = nuevosGrupos.reduce((a, g) => a + g.cebos, 0);
   } else {
-    const cebos = prompt('Cantidad de estaciones de cebado:', s.cebos);
+    const cebos = prompt(s.tipo === 'jaulas' ? 'Cantidad de jaulas:' : 'Cantidad de estaciones de cebado:', s.cebos);
     if (cebos === null) return;
     nc = parseInt(cebos, 10);
   }
-  const uv = prompt('Cantidad de trampas UV (0 si no tiene):', s.uv);
+  const uv = s.tipo === 'jaulas' ? '0' : prompt('Cantidad de trampas UV (0 si no tiene):', s.uv);
   if (uv === null) return;
   const nu = parseInt(uv, 10);
   if (!nombre.trim() || !nc || nc < 1 || isNaN(nu) || nu < 0) { toast('Datos inválidos, no se guardó'); return; }
