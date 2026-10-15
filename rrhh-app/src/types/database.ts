@@ -1464,6 +1464,30 @@ export type Database = {
           },
         ]
       }
+      integraciones: {
+        Row: {
+          clave: string
+          created_at: string
+          notas: string | null
+          token_hash: string
+          updated_at: string
+        }
+        Insert: {
+          clave: string
+          created_at?: string
+          notas?: string | null
+          token_hash: string
+          updated_at?: string
+        }
+        Update: {
+          clave?: string
+          created_at?: string
+          notas?: string | null
+          token_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       flota_encargados: {
         Row: {
           activo: boolean

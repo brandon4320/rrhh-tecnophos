@@ -17,7 +17,9 @@ import { SUPABASE_JWKS } from '@/lib/supabase/jwks'
 // pegado en cada camioneta. Lo completa quien maneja, sin cuenta en el sistema;
 // la autorización es el token del vehículo (ver modules/flota/servidor.ts).
 // /api/cron/*: los llama Vercel; cada ruta valida CRON_SECRET.
-const PUBLIC_PATHS = ['/login', '/control-plagas.html', '/api/arcor/ingest', '/v', '/api/v', '/api/cron']
+// /api/externo/*: otros sistemas propios (el Comercial en Cloudflare); cada ruta
+// valida su token (ver modules/integracion-comercial/servidor.ts).
+const PUBLIC_PATHS = ['/login', '/control-plagas.html', '/api/arcor/ingest', '/v', '/api/v', '/api/cron', '/api/externo']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
@@ -68,6 +70,6 @@ export const config = {
   // máquinas y choferes (QR de flota, cron, ingest de ARCOR, control de plagas):
   // no tienen sesión de navegador y validan su propio token. /login queda adentro.
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|v/|api/v/|api/cron/|api/arcor/ingest|control-plagas\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|v/|api/v/|api/cron/|api/externo/|api/arcor/ingest|control-plagas\\.html|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }

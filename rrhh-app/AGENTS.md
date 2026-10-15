@@ -91,6 +91,7 @@ rrhh-app/src/
 │       ├── archivo/                # GET url firmada (valida RLS) / DELETE
 │       ├── recibos/  documentos/   # registran filas de recibos_sueldo / documentos_mensuales (+fallback, DELETE)
 │       ├── arcor/ingest/           # ★ entrada de datos del sistema ARCOR (token, service role)
+│       ├── externo/comercial/      # ★ lectura para el Sistema de Gestión Comercial (token, service role, ver §8c)
 │       └── comercial/{tarea,proyecto,tags,tarea-rapida}/
 ├── components/
 │   ├── layout/AppShell.tsx         # Sidebar única RRHH (selector "Viendo": todas / empresa / ARCOR)
@@ -469,6 +470,24 @@ solo muestra lo que ese sistema le reporta.
   Gestión enlaza a ellas desde la sección (`components/arcor/AccionesArcor.tsx`, tile "Revisar
   foto", vista "Carga manual" en la sidebar). URLs centralizadas en `modules/arcor/enlaces.ts`.
   El hub ya no tiene fila externa de ARCOR (se unificó el 2026-09-08).
+
+---
+
+## 8c. Integración con el Sistema de Gestión Comercial (Cloudflare)
+
+El CRM nuevo de los comerciales (repo local `comercial-tecnophos`, Worker en Cloudflare) **lee**
+documentación de RRHH para mostrarla en su Biblioteca. Es solo lectura y máquina a máquina:
+
+- `GET /api/externo/comercial/documentos?marca=tecnophos|adc` → certificados **de la empresa**
+  (habilitaciones, inscripciones, seguros, PTS) con sus archivos + los últimos 3 meses de las
+  carpetas mensuales **ART** y **SVO**. `GET /api/externo/comercial/archivo?tipo=certificado|mensual&id=`
+  → `{ url, nombre }` firmada de R2 por 5 min, solo si el archivo entra en el recorte (si no, 404).
+- **El recorte vive en `modules/integracion-comercial/reglas.ts`** (con tests). Decisión de Brandon
+  (15/10/2026): nada del personal (cursos, médicos, carnets), ni F931, ni recibos. Si cambia, se cambia ahí.
+- Auth: `Authorization: Bearer <token>`; sha256 en `integraciones` (clave `comercial`, migración 27,
+  RLS prendida sin policies = solo service role). El token en claro es el secret `RRHH_TOKEN` del
+  Worker. **El hash no se commitea** (repo público). DB caída o hash faltante → 503, no 401.
+- Las rutas están en `PUBLIC_PATHS` del proxy (`/api/externo`) y validan su propio token.
 
 ---
 
