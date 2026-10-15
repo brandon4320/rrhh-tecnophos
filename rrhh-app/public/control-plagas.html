@@ -17,6 +17,7 @@
     --ocu: #2C5F8A;  --ocu-soft: #E1EBF3;
     --peg: #6B4FA3;  --peg-soft: #EAE4F4;
     --tub: #0E7C86;  --tub-soft: #DDF1F3;
+    --cap: #8E1B4F;  --cap-soft: #F5E1EA;
     --shadow: 0 1px 3px rgba(34,48,43,.08), 0 4px 16px rgba(34,48,43,.06);
   }
   * { box-sizing: border-box; margin: 0; }
@@ -117,6 +118,7 @@
   .st[data-e="O"] { background: var(--ocu-soft); border-color: var(--ocu); }  .st[data-e="O"] .tag { color: var(--ocu); }
   .st[data-e="X"] { background: var(--peg-soft); border-color: var(--peg); }  .st[data-e="X"] .tag { color: var(--peg); }
   .st[data-e="T"] { background: var(--tub-soft); border-color: var(--tub); }  .st[data-e="T"] .tag { color: var(--tub); }
+  .st[data-e="K"] { background: var(--cap-soft); border-color: var(--cap); }  .st[data-e="K"] .tag { color: var(--cap); }
   .st.mini { min-height: 46px; pointer-events: none; }
   .st-grid.grouped { display: block; }
   .grp-title { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 2px 0; font-weight: 700; font-size: 15px; }
@@ -149,6 +151,8 @@
   .e-btn.eO { background: var(--ocu-soft); border-color: var(--ocu); color: var(--ocu); }
   .e-btn.eX { background: var(--peg-soft); border-color: var(--peg); color: var(--peg); }
   .e-btn.eT { background: var(--tub-soft); border-color: var(--tub); color: var(--tub); }
+  .e-btn.eK { background: var(--cap-soft); border-color: var(--cap); color: var(--cap); }
+  .e-btn.sel { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px currentColor; }
 
   label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
   textarea, input[type="text"], input[type="number"], input[type="date"] {
@@ -211,6 +215,49 @@
   .section-title h2 { font-size: 18px; }
   .section-title span { font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 
+  /* detalle por estación */
+  .sheet-zona { color: var(--ink-2); font-size: 14px; margin-top: 2px; }
+  .det-box { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+  .det-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-weight: 700; font-size: 16.5px; }
+  .det-head small { font-weight: 500; color: var(--ink-3); font-size: 13px; }
+  .chip.sm { padding: 8px 13px; font-size: 14px; }
+  .cant-row { display: flex; gap: 10px; align-items: center; }
+  .cant-row input { max-width: 170px; }
+  .cant-row span { color: var(--ink-2); font-weight: 600; }
+  .foto-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .foto-row .ghost { width: auto; flex: none; }
+  .foto-thumb { width: 104px; height: 78px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+  .foto-estado { color: var(--ink-3); font-size: 13px; }
+  .primary.sup { background: var(--ocu); }
+  /* informe */
+  .inf-wrap { background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow-x: auto; }
+  .inf-wrap svg { display: block; width: 100%; height: auto; }
+  .inf-wrap table { max-width: 100%; }
+  .inf-wrap img { max-width: 100%; height: auto; }
+  /* tablero */
+  .tab-filtros { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .tab-filtros .fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .tab-filtros .rot { font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); margin-right: 4px; }
+  .demo-banner { display: flex; gap: 10px; align-items: center; background: var(--ocu-soft); border: 1px solid var(--ocu); color: var(--ocu); border-radius: 12px; padding: 10px 14px; font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .kpi .v { font-size: 28px; font-weight: 750; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .kpi .l { font-size: 13.5px; font-weight: 650; margin-top: 4px; }
+  .kpi .s { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+  #tabCuerpo { display: flex; flex-direction: column; gap: 14px; }
+  .viz-card h3 { font-size: 16.5px; font-weight: 700; }
+  .viz-card .sub { font-size: 13.5px; color: var(--ink-2); margin-top: 2px; }
+  .viz { margin-top: 12px; }
+  .viz svg { display: block; width: 100%; height: auto; }
+  .plano-hoja-tit { font-weight: 700; font-size: 14px; margin: 14px 0 6px; color: var(--ink-2); }
+  .plano-box { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .rampa { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; color: var(--ink-2); }
+  .rampa i { width: 22px; height: 12px; border-radius: 3px; display: inline-block; margin-left: 6px; }
+  .tab-tabla { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  .tab-tabla th { text-align: left; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); padding: 6px 8px; border-bottom: 1.5px solid var(--line); }
+  .tab-tabla td { padding: 9px 8px; border-bottom: 1px solid var(--line); }
+  .tab-tabla .n { font-weight: 700; font-variant-numeric: tabular-nums; }
+
   #printArea { display: none; }
   @media print {
     body * { visibility: hidden; }
@@ -255,6 +302,12 @@
       <p class="lead">Tocá tu nombre para empezar.</p>
     </div>
     <div class="stack" id="nameList"></div>
+    <div class="section-title"><h2>Supervisión</h2></div>
+    <button class="big-btn" onclick="abrirTablero()">
+      <span class="icon" style="background:var(--ocu-soft); color:var(--ocu)">📊</span>
+      <span><span class="t">Tablero del supervisor</span><br><span class="s">Consumo, capturas y mapa de cada planta</span></span>
+      <span class="arrow">›</span>
+    </button>
     <button class="backlink" onclick="abrirAjustes()">⚙ Ajustes (administrador)</button>
   </section>
 
@@ -275,7 +328,7 @@
     <div class="stack">
       <button class="big-btn" onclick="renderSectores(); go('scr-sector')">
         <span class="icon">◉</span>
-        <span><span class="t">Desratización</span><br><span class="s">Recorrido de estaciones de cebado y trampas UV</span></span>
+        <span><span class="t">Desratización</span><br><span class="s" id="menuDesratSub">Recorrido de estaciones de cebado</span></span>
         <span class="arrow">›</span>
       </button>
       <button class="big-btn coral" onclick="abrirOrden()">
@@ -288,9 +341,9 @@
         <span><span class="t">Monitoreo de trampas UV</span><br><span class="s">Equipos, placas adherentes y recuento de insectos</span></span>
         <span class="arrow">›</span>
       </button>
-      <button class="big-btn gris" id="btnMenuPalomas" style="display:none" onclick="abrirPalomas()">
-        <span class="icon">🕊</span>
-        <span><span class="t">Palomas</span><br><span class="s">Registro de capturas</span></span>
+      <button class="big-btn" id="btnMenuJaulas" style="display:none" onclick="abrirJaulas()">
+        <span class="icon" style="background:var(--cap-soft); color:var(--cap)">▦</span>
+        <span><span class="t">Jaulas</span><br><span class="s" id="menuJaulasSub">Roedores o palomas</span></span>
         <span class="arrow">›</span>
       </button>
       <button class="big-btn gris" onclick="renderHistorial(); go('scr-historial')">
@@ -304,6 +357,27 @@
       <button class="backlink" onclick="go('scr-quien')">‹ Cambiar de operario</button>
       <button class="backlink" onclick="abrirAjustes()">⚙ Ajustes (administrador)</button>
     </div>
+  </section>
+
+  <section class="screen" id="scr-jaulas">
+    <div class="screen-head">
+      <div class="eyebrow" id="jaulasEyebrow"></div>
+      <h1>Jaulas</h1>
+      <p class="lead">¿Qué jaulas vas a revisar?</p>
+    </div>
+    <div class="stack">
+      <button class="big-btn" id="btnJaulasRoedores" onclick="abrirJaulasRoedores()">
+        <span class="icon" style="background:var(--cap-soft); color:var(--cap)">🐀</span>
+        <span><span class="t">Roedores</span><br><span class="s" id="jaulasRoedoresSub">Recorrido de las jaulas del plano</span></span>
+        <span class="arrow">›</span>
+      </button>
+      <button class="big-btn gris" id="btnJaulasPalomas" onclick="abrirPalomas()">
+        <span class="icon">🕊</span>
+        <span><span class="t">Palomas</span><br><span class="s">Registro de capturas</span></span>
+        <span class="arrow">›</span>
+      </button>
+    </div>
+    <button class="backlink" onclick="go('scr-menu')">‹ Volver</button>
   </section>
 
   <section class="screen" id="scr-sector">
@@ -324,15 +398,7 @@
       <div class="progress-row"><span>Estaciones revisadas</span><span class="num" id="recCount">0 / 0</span></div>
       <div class="bar"><i id="recBar"></i></div>
       <div class="st-grid" id="stGrid"></div>
-      <div class="legend">
-        <span><i style="background:var(--ok)"></i>Bien</span>
-        <span><i style="background:var(--warn)"></i>Consumido</span>
-        <span><i style="background:var(--bad)"></i>Faltante</span>
-        <span><i style="background:var(--det)"></i>Deteriorado</span>
-        <span><i style="background:var(--ocu)"></i>Oculto</span>
-        <span><i style="background:var(--peg)"></i>Cambio de pegamento</span>
-        <span id="legendT" style="display:none"><i style="background:var(--tub)"></i>Cambio de tubo lumínico (UV)</span>
-      </div>
+      <div class="legend" id="recLegend"></div>
     </div>
     <div id="uvBlock" style="display:none">
       <div class="section-title"><h2>Trampas UV</h2><span id="uvCount"></span></div>
@@ -473,6 +539,7 @@
       <p class="lead" id="listoSub"></p>
     </div>
     <div class="stack" style="max-width:440px; margin:10px auto 0">
+      <button class="primary sup" id="listoInforme">📊 Ver informe para el supervisor</button>
       <button class="primary" id="listoMail">Enviar reporte por mail</button>
       <button class="ghost" id="listoCompartir">Enviar por WhatsApp</button>
       <button class="ghost" id="listoPdf">Ver planilla / guardar PDF</button>
@@ -504,12 +571,44 @@
     </div>
     <div id="detBody" class="stack"></div>
     <div class="stack" style="margin-top:16px">
+      <button class="primary sup" id="detInforme">📊 Informe para el supervisor</button>
       <button class="primary" id="detMail">Enviar reporte por mail</button>
       <button class="ghost" id="detCompartir">Enviar por WhatsApp</button>
       <button class="ghost" id="detPdf">Ver planilla / guardar PDF</button>
       <button class="ghost" id="detBorrar" style="color:var(--bad)">Eliminar este registro</button>
     </div>
     <button class="backlink" onclick="renderHistorial(); go('scr-historial')">‹ Volver al historial</button>
+  </section>
+
+  <section class="screen" id="scr-informe">
+    <div class="screen-head">
+      <div class="eyebrow" id="infEyebrow"></div>
+      <h1 id="infTitle">Informe</h1>
+      <p class="lead">Esto es lo que recibe el supervisor: estado de cada estación, qué se hizo, fotos y los planos.</p>
+    </div>
+    <div id="infBody"></div>
+    <div class="stack" style="margin-top:16px">
+      <button class="primary sup" id="infEnviar" onclick="enviarInforme(this)">Enviar al supervisor por WhatsApp</button>
+    </div>
+    <button class="backlink" onclick="volverDeInforme()">‹ Volver</button>
+  </section>
+
+  <section class="screen" id="scr-tablero">
+    <div class="screen-head">
+      <div class="eyebrow">Supervisión</div>
+      <h1>Tablero</h1>
+    </div>
+    <div class="tab-filtros">
+      <div class="fila"><span class="rot">Planta</span><span class="chips" id="tabPlantas" style="gap:8px"></span></div>
+      <div class="fila"><span class="rot">Período</span><span class="chips" id="tabSemanas" style="gap:8px">
+        <button class="chip sm" data-s="4" onclick="tableroSemanas(this)">4 semanas</button>
+        <button class="chip sm" data-s="8" onclick="tableroSemanas(this)">8 semanas</button>
+        <button class="chip sm" data-s="12" onclick="tableroSemanas(this)">12 semanas</button>
+      </span><button class="chip sm" id="tabEjemplo" onclick="tableroEjemplo()">Datos de ejemplo</button></div>
+    </div>
+    <div class="demo-banner" id="tabDemoBanner" hidden><span>ⓘ</span><span>Estás viendo datos de ejemplo para la presentación. No son registros reales y no se guardan.</span></div>
+    <div id="tabCuerpo"></div>
+    <button class="backlink" onclick="go('scr-quien')">‹ Volver</button>
   </section>
 
   <section class="screen" id="scr-ajustes">
@@ -550,6 +649,17 @@
       <p style="color:var(--ink-3); font-size:13.5px; margin-top:10px">Los registros ya guardados no cambian al editar sectores.</p>
     </div>
 
+    <div class="section-title"><h2>Productos</h2></div>
+    <div class="card">
+      <p style="color:var(--ink-2); font-size:15px; margin-bottom:6px">Lo que el operario puede elegir en cada estación (“¿Qué hiciste?”). La unidad se usa para sumar cantidades en el informe y el tablero.</p>
+      <div id="listaProductos"></div>
+      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
+        <input type="text" id="nuevoProducto" placeholder="Nombre del producto" style="flex:2; min-width:200px">
+        <input type="text" id="nuevoProductoU" placeholder="Unidad (g, u., ml)" style="flex:1; min-width:120px">
+        <button class="mini-btn" style="flex:none" onclick="agregarProducto()">Agregar</button>
+      </div>
+    </div>
+
     <div class="section-title"><h2>Envío automático de reportes</h2></div>
     <div class="card">
       <p style="color:var(--ink-2); font-size:15px; margin-bottom:12px">Con esto configurado, el botón "Enviar reporte por mail" manda la planilla en PDF automáticamente. Ver la guía de instalación del servicio de Google.</p>
@@ -558,8 +668,10 @@
         <div><label for="cfgMail">Casilla por defecto (para plantas sin casilla propia; pueden ser varias separadas por coma)</label><input type="text" id="cfgMail" placeholder="calidad@ejemplo.com" onchange="guardarConfigEnvio()"></div>
         <div><label for="cfgWa">WhatsApp destino (opcional, con código de país sin +)</label><input type="text" id="cfgWa" placeholder="5493411234567" onchange="guardarConfigEnvio()"></div>
         <p style="color:var(--ink-3); font-size:13.5px">Para mandar a un GRUPO de WhatsApp, dejá este campo vacío: al tocar "Enviar por WhatsApp" el operario elige el grupo de su lista (WhatsApp no permite abrir un grupo directo). Con un número cargado, abre directo ese chat.</p>
+        <div><label for="cfgWaSup">WhatsApp del supervisor (recibe el informe con planos; con código de país, sin +)</label><input type="text" id="cfgWaSup" placeholder="5493411234567" onchange="guardarConfigEnvio()"></div>
         <button class="ghost" onclick="probarConexion()">Probar conexión</button>
         <button class="ghost" onclick="cambiarPin()">Cambiar PIN de administrador</button>
+        <button class="ghost" onclick="cambiarPinSupervisor()">Cambiar PIN del supervisor</button>
       </div>
     </div>
 
@@ -589,8 +701,39 @@
 <div class="sheet-veil no-print" id="veil" onclick="if(event.target===this) closeSheet()">
   <div class="sheet" role="dialog" aria-modal="true" aria-label="Estado de la estación">
     <h2><span id="sheetKind">Estación</span> <span class="num" id="sheetNum">—</span></h2>
+    <p class="sheet-zona" id="sheetZona"></p>
     <p class="lead" style="font-size:15px">¿Cómo la encontraste?</p>
     <div class="estados" id="estadoBtns"></div>
+    <div class="det-box" id="sheetDetalle" hidden>
+      <div class="det-head">¿Qué hiciste? <small id="detHora"></small></div>
+      <div>
+        <label>Producto utilizado</label>
+        <div class="chips" id="detProdChips"></div>
+      </div>
+      <div id="detCantBox" hidden>
+        <label for="detCant">Cantidad</label>
+        <div class="cant-row"><input type="number" id="detCant" min="0" step="any" inputmode="decimal" placeholder="Ej.: 20" oninput="detCampo('cant', this.value)"><span id="detUnidad"></span></div>
+      </div>
+      <div id="detCaptBox" hidden>
+        <label for="detCapt">Roedores capturados</label>
+        <div class="cant-row"><input type="number" id="detCapt" min="1" step="1" inputmode="numeric" oninput="detCampo('capt', this.value)"><span>roedores</span></div>
+      </div>
+      <div>
+        <label>Foto</label>
+        <div class="foto-row">
+          <img class="foto-thumb" id="detFotoThumb" alt="Foto de la estación" hidden>
+          <button type="button" class="ghost" id="detFotoBtn" onclick="tomarFoto()">📷 Sacar foto</button>
+          <button type="button" class="mini-btn rojo" id="detFotoQuitar" onclick="quitarFoto()" hidden>Quitar</button>
+          <span class="foto-estado" id="detFotoEstado"></span>
+        </div>
+        <input type="file" id="detFotoInput" accept="image/*" capture="environment" style="display:none" onchange="fotoElegida(this)">
+      </div>
+      <div>
+        <label for="detNota">Nota</label>
+        <input type="text" id="detNota" placeholder="Opcional: qué viste o qué hiciste" oninput="detCampo('nota', this.value.trim())">
+      </div>
+      <button class="primary" onclick="closeSheet()">Listo</button>
+    </div>
     <button class="ghost" style="margin-top:14px" onclick="clearEstado()">Borrar marca</button>
   </div>
 </div>
@@ -633,8 +776,8 @@
 
 <div class="modal-veil no-print" id="pinVeil" onclick="if(event.target===this) cerrarPin()">
   <div class="modal" role="dialog" aria-modal="true">
-    <h2>Acceso de administrador</h2>
-    <p>Esta sección es solo para administradores. Ingresá el PIN.</p>
+    <h2 id="pinTit">Acceso de administrador</h2>
+    <p id="pinTxt">Esta sección es solo para administradores. Ingresá el PIN.</p>
     <input type="password" inputmode="numeric" id="pinInput" maxlength="8" autocomplete="off"
       style="margin-top:14px; font-size:24px; text-align:center; letter-spacing:8px">
     <p class="field-err" id="pinError" style="margin-top:8px">PIN incorrecto.</p>
@@ -663,10 +806,13 @@ const ESTADOS = [
   { k: 'O', n: 'Oculto',      d: 'No se pudo acceder' },
   { k: 'X', n: 'Cambio de pegamento', d: 'Placa renovada' },
   { k: 'T', n: 'Cambio de tubo lumínico', d: 'Tubo UV renovado' },
+  { k: 'K', n: 'Con captura', d: 'Roedor atrapado' },
 ];
 const ESTADOS_CEBO = ['B', 'C', 'N', 'D', 'O', 'X'];
 const ESTADOS_UV = ['B', 'X', 'D', 'N'];          // + 'T' en plantas cuyo certificado lo contempla
-const COLORES = { B: 'var(--ok)', C: 'var(--warn)', N: 'var(--bad)', D: 'var(--det)', O: 'var(--ocu)', X: 'var(--peg)', T: 'var(--tub)' };
+const ESTADOS_JAULA = ['B', 'K', 'D', 'N'];
+const COLORES = { B: 'var(--ok)', C: 'var(--warn)', N: 'var(--bad)', D: 'var(--det)', O: 'var(--ocu)', X: 'var(--peg)', T: 'var(--tub)', K: 'var(--cap)' };
+function estadosDeSector(s) { return s && s.tipo === 'jaulas' ? ESTADOS_JAULA : ESTADOS_CEBO; }
 
 /* Un sector puede tener sus estaciones de cebado divididas en grupos con
    numeración propia (ej. Cabildo: Perímetro externo 1-37 y Perímetro de
@@ -727,6 +873,10 @@ function migrar(db) {
   if (!db.config) db.config = { gasUrl: '', mailDestino: '', waNumero: '', adminPin: '1234' };
   if (db.config.waNumero === undefined) db.config.waNumero = '';
   if (!db.config.adminPin) db.config.adminPin = '1234';
+  if (!db.config.supPin) db.config.supPin = '1234';
+  if (db.config.waSupervisor === undefined) db.config.waSupervisor = '';
+  if (!db.config.productos) db.config.productos = PRODUCTOS_INICIALES.map(p => Object.assign({}, p));
+  if (!db.migraciones) db.migraciones = {};
   if (!db.plantas || !db.plantas.length) db.plantas = [{ id: 'p1', nombre: 'Frigorífico Cabildo', mail: '', empresa: 'ADC SRL' }];
   db.plantas.forEach(p => { if (p.mail === undefined) p.mail = ''; if (!p.empresa) p.empresa = 'ADC SRL'; });
   db.sectores.forEach(s => { if (!s.plantaId) s.plantaId = db.plantas[0].id; });
@@ -772,6 +922,25 @@ function migrar(db) {
       }
     }
   });
+  // Actualizaciones de una sola vez (ej. Molino adaptado al plano: 50 cebos y
+  // sector renombrado) y sector de jaulas para las plantas que las tienen.
+  CERT_MODELOS.forEach((m, i) => {
+    const planta = db.plantas.find(p => indiceModelo(p.nombre) === i);
+    if (!planta || !m.seed) return;
+    const a = m.actualizacion;
+    if (a && !db.migraciones[a.id]) {
+      db.sectores.filter(s => s.plantaId === planta.id && s.tipo !== 'jaulas' && !s.grupos && a.desde.includes(s.nombre)).forEach(s => {
+        s.nombre = m.seed.sector; s.cebos = m.seed.cebos; s.uv = m.seed.uv;
+      });
+      db.migraciones[a.id] = true;
+    }
+    const clave = 'jaulas-' + m.match[0].replace(/[^a-z0-9]/g, '');
+    if (m.seed.jaulas && !db.migraciones[clave]) {
+      if (!db.sectores.some(s => s.plantaId === planta.id && s.tipo === 'jaulas'))
+        db.sectores.push({ id: 'sj-' + m.match[0].replace(/[^a-z0-9]/g, ''), plantaId: planta.id, nombre: 'Jaulas para roedores', cebos: m.seed.jaulas, uv: 0, tipo: 'jaulas' });
+      db.migraciones[clave] = true;
+    }
+  });
   // Consistencia: en sectores agrupados el total es la suma de los grupos.
   db.sectores.forEach(s => { if (s.grupos && s.grupos.length) s.cebos = s.grupos.reduce((a, g) => a + (parseInt(g.cebos, 10) || 0), 0); });
   return db;
@@ -812,8 +981,12 @@ function go(id) {
 /* ============ acceso de administrador (PIN) ============ */
 let adminOk = false;
 let pinCb = null;
+let pinModo = 'admin';
 function pedirPin(cb) {
   if (adminOk) { cb(); return; }
+  pinModo = 'admin';
+  $('pinTit').textContent = 'Acceso de administrador';
+  $('pinTxt').textContent = 'Esta sección es solo para administradores. Ingresá el PIN.';
   pinCb = cb;
   $('pinInput').value = '';
   $('pinError').style.display = 'none';
@@ -821,8 +994,10 @@ function pedirPin(cb) {
   setTimeout(() => $('pinInput').focus(), 120);
 }
 function confirmarPin() {
-  if ($('pinInput').value === (DB.config.adminPin || '1234')) {
-    adminOk = true;
+  const v = $('pinInput').value;
+  const ok = v === (DB.config.adminPin || '1234') || (pinModo === 'supervisor' && v === (DB.config.supPin || '1234'));
+  if (ok) {
+    if (pinModo === 'admin') adminOk = true;
     $('pinVeil').classList.remove('on');
     const cb = pinCb; pinCb = null;
     if (cb) cb();
@@ -849,7 +1024,7 @@ function fFecha(iso, conHora) {
   const d = new Date(iso);
   const f = d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   if (!conHora) return f;
-  return f + ' ' + d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  return f + ' ' + d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 function nombreEstado(k) { const e = ESTADOS.find(x => x.k === k); return e ? e.n : k; }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -915,7 +1090,10 @@ function renderMenu() {
   $('menuPlanta').textContent = plantaActual ? plantaActual.nombre : '';
   const modelo = modeloPara(plantaActual ? plantaActual.nombre : '');
   $('btnMenuUV').style.display = modelo.monitoreoUV ? 'flex' : 'none';
-  $('btnMenuPalomas').style.display = modelo.palomas ? 'flex' : 'none';
+  const sjMenu = sectorJaulasDe(plantaActual);
+  $('btnMenuJaulas').style.display = (modelo.palomas || sjMenu) ? 'flex' : 'none';
+  $('menuJaulasSub').textContent = sjMenu && modelo.palomas ? 'Roedores o palomas' : (sjMenu ? 'Jaulas para roedores' : 'Registro de palomas');
+  $('menuDesratSub').textContent = modelo.uvGrupo === 'PLACAS ADHESIVAS' ? 'Recorrido de cebaderas y placas adhesivas' : 'Recorrido de estaciones de cebado y trampas UV';
   const av = $('avisos'); av.innerHTML = '';
   if (DB.borrador) {
     const d = DB.borrador;
@@ -950,12 +1128,12 @@ function renderMenu() {
 /* ============ desratización: sectores ============ */
 function renderSectores() {
   const sl = $('sectorList'); sl.innerHTML = '';
-  const lista = plantaActual ? DB.sectores.filter(s => s.plantaId === plantaActual.id) : DB.sectores;
+  const lista = (plantaActual ? DB.sectores.filter(s => s.plantaId === plantaActual.id) : DB.sectores).filter(s => s.tipo !== 'jaulas');
   if (!lista.length) { sl.innerHTML = '<p class="lead">Esta planta no tiene sectores cargados. Agregalos desde Ajustes.</p>'; return; }
   lista.forEach(s => {
     const b = document.createElement('button');
     b.className = 'big-btn';
-    const extra = s.uv ? ` + ${s.uv} trampas UV` : '';
+    const extra = s.uv ? ` + ${s.uv} ${modeloPara(plantaActual ? plantaActual.nombre : '').uvGrupo === 'PLACAS ADHESIVAS' ? 'placas adhesivas' : 'trampas UV'}` : '';
     const gs = gruposDe(s);
     const desc = gs.length > 1 ? gs.map(g => `${esc(g.nombre)} 1 a ${g.cebos}`).join(' · ') : `Estaciones 1 a ${s.cebos}`;
     b.innerHTML = `<span class="icon">${s.cebos}</span><span><span class="t">${esc(s.nombre)}</span><br><span class="s">${desc}${extra}</span></span><span class="arrow">›</span>`;
@@ -968,8 +1146,9 @@ function startRecorrido(s, borrador) {
   sector = s;
   marcas = borrador ? Object.assign({}, borrador.cebos) : {};
   marcasUV = borrador ? Object.assign({}, borrador.uv) : {};
+  detalles = borrador && borrador.det ? JSON.parse(JSON.stringify(borrador.det)) : {};
   $('recTitle').textContent = s.nombre;
-  $('recEyebrow').textContent = (plantaActual ? plantaActual.nombre + ' · ' : '') + 'Desratización · ' + new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+  $('recEyebrow').textContent = (plantaActual ? plantaActual.nombre + ' · ' : '') + (s.tipo === 'jaulas' ? 'Jaulas' : 'Desratización') + ' · ' + new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
   buildGrid();
   guardarBorrador();
   go('scr-recorrido');
@@ -978,7 +1157,7 @@ function startRecorrido(s, borrador) {
 function continuarBorrador() {
   const d = DB.borrador;
   if (!d) return;
-  const s = DB.sectores.find(x => x.id === d.sectorId) || { id: d.sectorId, nombre: d.sectorNombre, cebos: d.cebosTotal, uv: d.uvTotal, grupos: d.grupos || null };
+  const s = DB.sectores.find(x => x.id === d.sectorId) || { id: d.sectorId, nombre: d.sectorNombre, cebos: d.cebosTotal, uv: d.uvTotal, grupos: d.grupos || null, tipo: d.tipo || null };
   operario = d.operario;
   if (d.plantaId) plantaActual = DB.plantas.find(p => p.id === d.plantaId) || plantaActual;
   $('whoName').textContent = operario; $('whoBadge').style.display = 'flex';
@@ -991,7 +1170,7 @@ function guardarBorrador() {
     plantaId: plantaActual ? plantaActual.id : null,
     plantaNombre: plantaActual ? plantaActual.nombre : '',
     cebosTotal: sector.cebos, uvTotal: sector.uv, grupos: sector.grupos || null,
-    cebos: marcas, uv: marcasUV, actualizado: hoyISO(),
+    cebos: marcas, uv: marcasUV, det: detalles, tipo: sector.tipo || null, actualizado: hoyISO(),
   };
   persistir();
 }
@@ -1024,7 +1203,8 @@ function buildGrid() {
     }
   });
   const modeloPl = modeloPara(plantaActual ? plantaActual.nombre : '');
-  $('legendT').style.display = (sector.uv && modeloPl.tuboLuminico) ? 'inline-flex' : 'none';
+  const enLeyenda = estadosDeSector(sector).concat(sector.uv ? estadosUVDe(plantaActual ? plantaActual.nombre : '') : []);
+  $('recLegend').innerHTML = ESTADOS.filter(e => enLeyenda.includes(e.k)).map(e => `<span><i style="background:${COLORES[e.k]}"></i>${e.n}</span>`).join('') + '<span>📷 con foto · ✎ con detalle</span>';
   const uvB = $('uvBlock');
   if (sector.uv) {
     const modelo = modeloPl;
@@ -1045,34 +1225,59 @@ function buildGrid() {
 
 function openSheet(tipo, num) {
   sheetTarget = { tipo, num };
+  const jaulas = sector.tipo === 'jaulas';
+  const modelo = modeloPara(plantaActual ? plantaActual.nombre : '');
   const et = tipo === 'uv' ? null : etiquetaCebo(sector, num);
-  $('sheetKind').textContent = tipo === 'uv' ? 'Trampa UV' : (et.grupo ? et.grupo + ' · Estación' : 'Estación');
+  $('sheetKind').textContent = tipo === 'uv' ? (modelo.uvGrupo === 'PLACAS ADHESIVAS' ? 'Placa adhesiva' : 'Trampa UV') : (jaulas ? 'Jaula' : (et.grupo ? et.grupo + ' · Estación' : 'Estación'));
   $('sheetNum').textContent = tipo === 'uv' ? num : et.num;
+  const rTmp = { plantaNombre: plantaActual ? plantaActual.nombre : '', tipoTarea: jaulas ? 'jaulas' : 'desratizacion' };
+  const u = ubicacionEn(planoDePlanta(rTmp.plantaNombre), tipoPlanoDe(rTmp, tipo), num);
+  $('sheetZona').textContent = u ? '📍 ' + textoUbicacion(u) : '';
   const box = $('estadoBtns'); box.innerHTML = '';
-  const permitidos = tipo === 'uv' ? estadosUVDe(plantaActual ? plantaActual.nombre : '') : ESTADOS_CEBO;
-  const lista = ESTADOS.filter(e => permitidos.includes(e.k));
+  const permitidos = tipo === 'uv' ? estadosUVDe(plantaActual ? plantaActual.nombre : '') : estadosDeSector(sector);
+  const lista = permitidos.map(k => ESTADOS.find(e => e.k === k)).filter(Boolean);
   lista.forEach(e => {
     const b = document.createElement('button');
     b.className = 'e-btn e' + e.k;
-    b.innerHTML = `${e.n}<small>${e.d}</small>`;
+    b.dataset.k = e.k;
+    b.innerHTML = `${jaulas && e.k === 'B' ? 'Sin captura' : e.n}<small>${jaulas && e.k === 'B' ? 'Jaula en orden' : e.d}</small>`;
     b.onclick = () => setEstado(e.k);
     box.appendChild(b);
   });
+  renderDetalleSheet();
   $('veil').classList.add('on');
 }
-function closeSheet() { $('veil').classList.remove('on'); sheetTarget = null; }
+function closeSheet() { $('veil').classList.remove('on'); sheetTarget = null; if (sector) guardarBorrador(); }
 
+/* Al marcar un estado queda la hora. "Bien" sin nada más cierra la hoja al
+   instante; cualquier otro estado la deja abierta en "¿Qué hiciste?" con el
+   producto sugerido, para cargar cantidad, foto y nota. */
 function setEstado(k) {
   if (!sheetTarget) return;
-  if (sheetTarget.tipo === 'uv') marcasUV[sheetTarget.num] = k;
-  else marcas[sheetTarget.num] = k;
-  paint(sheetTarget.tipo, sheetTarget.num, k);
-  closeSheet(); refresh(); guardarBorrador();
+  const t = sheetTarget;
+  const previo = t.tipo === 'uv' ? marcasUV[t.num] : marcas[t.num];
+  if (t.tipo === 'uv') marcasUV[t.num] = k;
+  else marcas[t.num] = k;
+  const d = detDe(t, true);
+  d.t = hoyISO();
+  if (k !== previo) {
+    if (d.prodAuto && d.cant == null) { delete d.prod; delete d.unidad; delete d.prodAuto; }
+    if (k !== 'B' && !d.prod) {
+      const sug = sector.tipo === 'jaulas' ? null : productoSugerido(k, t.tipo);
+      if (sug) { d.prod = sug; d.unidad = unidadDe(sug); d.prodAuto = true; }
+    }
+    if (k === 'K' && !d.capt) d.capt = 1;
+    if (k !== 'K') delete d.capt;
+  }
+  paint(t.tipo, t.num, k); refresh(); guardarBorrador();
+  if (k === 'B' && !tieneExtras(d)) { closeSheet(); return; }
+  renderDetalleSheet();
 }
 function clearEstado() {
   if (!sheetTarget) return;
   if (sheetTarget.tipo === 'uv') delete marcasUV[sheetTarget.num];
   else delete marcas[sheetTarget.num];
+  delete detalles[claveDet(sheetTarget.tipo, sheetTarget.num)];
   paint(sheetTarget.tipo, sheetTarget.num, null);
   closeSheet(); refresh(); guardarBorrador();
 }
@@ -1080,7 +1285,10 @@ function paint(tipo, num, k) {
   const el = $((tipo === 'uv' ? 'uv-' : 'st-') + num);
   const tag = $((tipo === 'uv' ? 'uvtag-' : 'tag-') + num);
   if (!el) return;
-  if (k) { el.dataset.e = k; tag.textContent = nombreEstado(k); }
+  const d = detalles[claveDet(tipo, num)];
+  const marcasExtra = (d && d.foto ? ' 📷' : '') + (d && (d.prod || d.nota) ? ' ✎' : '');
+  const nombre = sector && sector.tipo === 'jaulas' && k === 'B' ? 'Sin captura' : nombreEstado(k);
+  if (k) { el.dataset.e = k; tag.textContent = nombre + marcasExtra; }
   else { delete el.dataset.e; tag.textContent = '—'; }
 }
 function refresh() {
@@ -1095,8 +1303,9 @@ function refresh() {
   if (sector.uv) $('uvCount').textContent = `${Object.keys(marcasUV).length} / ${sector.uv} revisadas`;
 }
 function markRestantes() {
-  for (let i = 1; i <= sector.cebos; i++) if (!marcas[i]) { marcas[i] = 'B'; paint('cebo', i, 'B'); }
-  if (sector.uv) for (let i = 1; i <= sector.uv; i++) if (!marcasUV[i]) { marcasUV[i] = 'B'; paint('uv', i, 'B'); }
+  const ahora = hoyISO();
+  for (let i = 1; i <= sector.cebos; i++) if (!marcas[i]) { marcas[i] = 'B'; detDe({ tipo: 'cebo', num: i }, true).t = ahora; paint('cebo', i, 'B'); }
+  if (sector.uv) for (let i = 1; i <= sector.uv; i++) if (!marcasUV[i]) { marcasUV[i] = 'B'; detDe({ tipo: 'uv', num: i }, true).t = ahora; paint('uv', i, 'B'); }
   refresh(); guardarBorrador();
   toast('Las estaciones sin marcar quedaron como “Bien”');
 }
@@ -1123,14 +1332,17 @@ function goResumen() {
     al.style.display = 'flex';
   } else al.style.display = 'none';
 
-  $('resEyebrow').textContent = `Desratización · ${sector.nombre} · ${fFecha(hoyISO())}`;
+  $('resEyebrow').textContent = `${sector.tipo === 'jaulas' ? 'Jaulas' : 'Desratización'} · ${sector.nombre} · ${fFecha(hoyISO())}`;
   const counts = contarEstados(marcas);
   let html = '';
-  ESTADOS.filter(e => ESTADOS_CEBO.includes(e.k) || counts[e.k]).forEach(e => {
-    html += `<div class="sum-row"><span class="pill"><i style="background:${COLORES[e.k]}"></i>${e.n}</span><span class="num">${counts[e.k] || 0}</span></div>`;
+  ESTADOS.filter(e => estadosDeSector(sector).includes(e.k) || counts[e.k]).forEach(e => {
+    html += `<div class="sum-row"><span class="pill"><i style="background:${COLORES[e.k]}"></i>${sector.tipo === 'jaulas' && e.k === 'B' ? 'Sin captura' : e.n}</span><span class="num">${counts[e.k] || 0}</span></div>`;
   });
   if (faltan.length) html += `<div class="sum-row"><span class="pill"><i style="background:var(--ink-3)"></i>Sin revisar</span><span class="num">${faltan.length}</span></div>`;
-  if (sector.uv) html += `<div class="sum-row"><span class="pill"><i style="background:var(--ink-3)"></i>Trampas UV revisadas</span><span class="num">${Object.keys(marcasUV).length} / ${sector.uv}</span></div>`;
+  if (sector.uv) html += `<div class="sum-row"><span class="pill"><i style="background:var(--ink-3)"></i>${modeloPara(plantaActual ? plantaActual.nombre : '').uvGrupo === 'PLACAS ADHESIVAS' ? 'Placas adhesivas' : 'Trampas UV'} revisadas</span><span class="num">${Object.keys(marcasUV).length} / ${sector.uv}</span></div>`;
+  const dets = Object.values(detalles);
+  const nFotos = dets.filter(d => d.foto).length, nProd = dets.filter(d => d.prod).length;
+  if (nFotos || nProd) html += `<div class="sum-row"><span class="pill">📷 Fotos · ✎ productos usados</span><span class="num">${nFotos} · ${nProd}</span></div>`;
   $('resCard').innerHTML = html;
   go('scr-resumen');
 }
@@ -1164,7 +1376,14 @@ function guardarRegistro() {
     cebos: Object.assign({}, marcas),
     uv: Object.assign({}, marcasUV),
     obs: $('obsGral').value.trim(),
+    tipoTarea: sector.tipo === 'jaulas' ? 'jaulas' : 'desratizacion',
+    det: JSON.parse(JSON.stringify(detalles)),
   };
+  if (sector.tipo === 'jaulas') reg.etiquetaEstacion = 'JAULA';
+  Object.values(reg.det).forEach(d => delete d.prodAuto);
+  const horas = Object.values(reg.det).map(d => d.t).filter(Boolean).sort();
+  if (horas.length) { reg.inicio = horas[0]; reg.fin = reg.fecha; }
+  detalles = {};
   DB.registros.unshift(reg);
   DB.borrador = null;
   persistir();
@@ -1245,7 +1464,7 @@ function renderEquiposUV() {
     const b = document.createElement('button');
     b.className = 'big-btn';
     if (d) b.style.borderColor = 'var(--ok)';
-    b.innerHTML = `<span class="icon" style="${d ? 'background:var(--ok-soft); color:var(--ok)' : ''}">${n}</span><span><span class="t">${esc(ub)}</span><br><span class="s">${d ? esc(resumenEquipoUV(d)) : 'Sin revisar'}</span></span><span class="arrow">›</span>`;
+    b.innerHTML = `<span class="icon" style="${d ? 'background:var(--ok-soft); color:var(--ok)' : ''}">${numPlanoUV(modelo, i)}</span><span><span class="t">${modelo.monitoreoUV.numPlano ? 'UV ' + numPlanoUV(modelo, i) + ' · ' : ''}${esc(ub)}</span><br><span class="s">${d ? esc(resumenEquipoUV(d)) : 'Sin revisar'}</span></span><span class="arrow">›</span>`;
     b.onclick = () => abrirEquipoUV(n, ub);
     list.appendChild(b);
   });
@@ -1371,12 +1590,13 @@ function goListo(obj, tipo) {
     $('listoTitle').textContent = 'Registro guardado';
     $('listoSub').textContent = `Palomas · ${obj.plantaNombre} · ${obj.capturadas > 0 ? obj.capturadas + ' capturadas' : 'sin capturas'} · reportó ${obj.operario}.`;
   } else {
-    $('listoTitle').textContent = 'Registro guardado';
+    $('listoTitle').textContent = obj.tipoTarea === 'jaulas' ? 'Recorrido de jaulas guardado' : 'Registro guardado';
     $('listoSub').textContent = `${obj.sectorNombre} · ${fFecha(obj.fecha, true)} · reportó ${obj.operario}. Quedó en el historial.` + avisoFirmas;
   }
   const imprimir = { registro: imprimirRegistro, orden: imprimirOrden, monitoreo: imprimirMonitoreo }[tipo];
   const compartir = { registro: compartirRegistro, orden: compartirOrden, monitoreo: compartirMonitoreo, palomas: compartirPalomas }[tipo];
   const sinFirmas = tipo === 'palomas';
+  $('listoInforme').onclick = () => abrirInforme(tipo, obj, 'scr-listo');
   $('listoMail').textContent = 'Enviar reporte por mail';
   $('listoMail').onclick = ev => enviarReporte(tipo, obj, ev.currentTarget);
   $('listoCompartir').onclick = () => sinFirmas ? compartir(obj) : conGuardiaDeFirmas(obj, tipo, () => compartir(obj));
@@ -1570,10 +1790,11 @@ function renderHistorial() {
       const r = it.obj;
       const c = contarEstados(r.cebos);
       const nov = Object.keys(c).filter(k => k !== 'B').map(k => `${c[k]} ${nombreEstado(k).toLowerCase()}`).join(' · ');
+      const nFotos = Object.values(r.det || {}).filter(d => d.foto).length;
       b.innerHTML = `
-        <span class="hist-top"><span class="badge desrat">DESRATIZACIÓN</span><span class="hist-fecha">${fFecha(r.fecha, true)}</span></span>
+        <span class="hist-top">${r.tipoTarea === 'jaulas' ? '<span class="badge desrat" style="background:var(--cap-soft); color:var(--cap)">JAULAS</span>' : '<span class="badge desrat">DESRATIZACIÓN</span>'}<span class="hist-fecha">${fFecha(r.fecha, true)}</span></span>
         <span class="hist-tit">${esc(r.sectorNombre)}</span>
-        <span class="hist-sub">${r.plantaNombre ? esc(r.plantaNombre) + ' · ' : ''}${Object.keys(r.cebos).length}/${r.cebosTotal} revisadas${nov ? ' · ' + nov : ' · todo bien'} · ${esc(r.operario)}${r.enviado ? ' · ✉ enviado' : ''}</span>`;
+        <span class="hist-sub">${r.plantaNombre ? esc(r.plantaNombre) + ' · ' : ''}${Object.keys(r.cebos).length}/${r.cebosTotal} revisadas${nov ? ' · ' + nov : ' · todo bien'}${nFotos ? ' · 📷 ' + nFotos : ''} · ${esc(r.operario)}${r.enviado ? ' · ✉ enviado' : ''}</span>`;
       b.onclick = () => abrirDetalleRegistro(r);
     } else if (it.tipo === 'orden') {
       const o = it.obj;
@@ -1605,6 +1826,7 @@ function renderHistorial() {
 function abrirDetalleMonitoreo(m) {
   detalleActual = { tipo: 'monitoreo', obj: m };
   $('detEyebrow').textContent = m.plantaNombre + ' · Trampas UV · ' + fFecha(m.fecha, true);
+  $('detInforme').onclick = () => abrirInforme('monitoreo', m, 'detalle');
   $('detTitle').textContent = 'Monitoreo de trampas UV';
   $('detSub').textContent = 'Reportó ' + m.operario + (m.enviado ? ' · ✉ enviado por mail el ' + fFecha(m.enviado, true) : '');
   $('detMail').textContent = m.enviado ? 'Reenviar por mail' : 'Enviar reporte por mail';
@@ -1632,6 +1854,7 @@ function abrirDetalleMonitoreo(m) {
 function abrirDetallePalomas(p) {
   detalleActual = { tipo: 'palomas', obj: p };
   $('detEyebrow').textContent = p.plantaNombre + ' · Palomas · ' + fFecha(p.fecha, true);
+  $('detInforme').onclick = () => abrirInforme('palomas', p, 'detalle');
   $('detTitle').textContent = p.capturadas > 0 ? p.capturadas + ' palomas capturadas' : 'Sin capturas';
   $('detSub').textContent = 'Reportó ' + p.operario + (p.enviado ? ' · ✉ enviado por mail el ' + fFecha(p.enviado, true) : '');
   $('detMail').textContent = p.enviado ? 'Reenviar por mail' : 'Enviar reporte por mail';
@@ -1649,7 +1872,8 @@ function abrirDetallePalomas(p) {
 /* ============ detalle ============ */
 function abrirDetalleRegistro(r) {
   detalleActual = { tipo: 'registro', obj: r };
-  $('detEyebrow').textContent = (r.plantaNombre ? r.plantaNombre + ' · ' : '') + 'Desratización · ' + fFecha(r.fecha, true);
+  $('detEyebrow').textContent = (r.plantaNombre ? r.plantaNombre + ' · ' : '') + (r.tipoTarea === 'jaulas' ? 'Jaulas' : 'Desratización') + ' · ' + fFecha(r.fecha, true);
+  $('detInforme').onclick = () => abrirInforme('registro', r, 'detalle');
   $('detTitle').textContent = r.sectorNombre;
   $('detSub').textContent = 'Reportó ' + r.operario + (r.enviado ? ' · ✉ enviado por mail el ' + fFecha(r.enviado, true) : '');
   $('detMail').textContent = r.enviado ? 'Reenviar por mail' : 'Enviar reporte por mail';
@@ -1673,7 +1897,7 @@ function abrirDetalleRegistro(r) {
     for (let k = 1; k <= grp.cebos; k++) {
       const i = grp.desde + k - 1;
       const e = r.cebos[i];
-      html += `<div class="st mini" ${e ? `data-e="${e}"` : ''}><span class="num">${k}</span><span class="tag">${e ? nombreEstado(e) : '—'}</span></div>`;
+      html += `<div class="st mini" ${e ? `data-e="${e}"` : ''}><span class="num">${k}</span><span class="tag">${e ? (r.tipoTarea === 'jaulas' && e === 'B' ? 'Sin captura' : nombreEstado(e)) : '—'}</span></div>`;
     }
     html += '</div>';
   });
@@ -1686,6 +1910,19 @@ function abrirDetalleRegistro(r) {
     html += '</div>';
   }
   html += '</div>';
+  const conDetalle = filasRegistro(r).filter(f => f.k !== 'B' || tieneExtras(f.d));
+  if (conDetalle.length) {
+    html += '<div class="card"><b>Detalle por estación</b>';
+    conDetalle.forEach(f => {
+      const partes = [nombreEstado(f.k)];
+      if (f.d.prod) partes.push(f.d.prod + (f.d.cant ? ' ' + fmtNum(f.d.cant) + ' ' + (f.d.unidad || '') : ''));
+      if (f.k === 'K') partes.push((f.d.capt || 1) + ' capturado' + ((f.d.capt || 1) > 1 ? 's' : ''));
+      if (f.d.nota) partes.push('“' + f.d.nota + '”');
+      if (f.d.foto) partes.push('📷');
+      html += `<div class="sum-row"><span class="pill"><i style="background:${COLORES[f.k] || 'var(--ink-3)'}"></i>${esc(f.nombre)}</span><span style="font-size:14px; color:var(--ink-2); text-align:right">${esc(partes.join(' · '))}${f.d.t ? ' · ' + fHora(f.d.t) : ''}</span></div>`;
+    });
+    html += '</div>';
+  }
   if (r.obs) html += `<div class="card"><b>Novedades:</b><p style="color:var(--ink-2); margin-top:4px">${esc(r.obs)}</p></div>`;
   html += bloqueFirmasDetalle(r);
   $('detBody').innerHTML = html;
@@ -1728,6 +1965,7 @@ function agregarBotonFirmar(obj, tipo) {
 function abrirDetalleOrden(o) {
   detalleActual = { tipo: 'orden', obj: o };
   $('detEyebrow').textContent = (o.plantaNombre ? o.plantaNombre + ' · ' : '') + 'Servicio esporádico · ' + fFecha(o.fecha, true);
+  $('detInforme').onclick = () => abrirInforme('orden', o, 'detalle');
   $('detTitle').textContent = 'Orden N° ' + o.numero;
   $('detSub').textContent = o.tipo + ' · reportó ' + o.operario + (o.enviado ? ' · ✉ enviado por mail el ' + fFecha(o.enviado, true) : '');
   $('detMail').textContent = o.enviado ? 'Reenviar por mail' : 'Enviar reporte por mail';
@@ -1759,7 +1997,7 @@ function textoRegistro(r) {
   const sinRevisar = r.cebosTotal - Object.keys(r.cebos).length;
   const lineas = [
     '*ADC Fumigación – Control de plagas*',
-    `*Desratización – ${r.sectorNombre}*`,
+    `*${r.tipoTarea === 'jaulas' ? 'Jaulas para roedores' : 'Desratización'} – ${r.sectorNombre}*`,
     ...(r.plantaNombre ? [r.plantaNombre] : []),
     `${fFecha(r.fecha, true)} · reportó ${r.operario}`,
     '',
@@ -1844,6 +2082,7 @@ function guardarConfigEnvio() {
   DB.config.gasUrl = $('cfgGasUrl').value.trim();
   DB.config.mailDestino = $('cfgMail').value.trim();
   DB.config.waNumero = $('cfgWa').value.replace(/[^\d]/g, '');
+  DB.config.waSupervisor = $('cfgWaSup').value.replace(/[^\d]/g, '');
   persistir();
   toast('Configuración de envío guardada');
 }
@@ -1931,11 +2170,16 @@ const CERT_MODELOS = [
     mail: 'dcompagnucci@lanuevamanera.com.ar, laboratorio@lanuevamanera.com.ar',
     uvEtiqueta: 'CAJ', uvGrupo: 'PLACAS ADHESIVAS',
     pie: { elaboro: 'BRAIAN RISSO', reviso: 'MANUEL FRANCIULLI', aprobo: 'LIC. ALEJANDRO BRITEZ', fecha: '13-07-2026' },
-    seed: { nombre: 'Molino La Nueva Manera', sector: 'Cebadera perímetro y trampas UV', cebos: 48, uv: 30,
-      renombrar: ['Cebadera perímetro y placas adhesivas'] },
+    // Adaptado al plano "Ubicación de cebos" (oct. 2026): 50 cebos, 30 placas
+    // adhesivas (verdes en el plano), 6 trampas UV y 28 jaulas para roedores.
+    seed: { nombre: 'Molino La Nueva Manera', sector: 'Cebadera perímetro y placas adhesivas', cebos: 50, uv: 30, jaulas: 28 },
+    actualizacion: { id: 'manera-plano-2026-10', desde: ['Cebadera perímetro y trampas UV', 'Cebadera perímetro y placas adhesivas'] },
+    plano: 'manera',
+    uvPlano: 'a',   // las "uv" del recorrido de esta planta son las placas adhesivas del plano
     monitoreoUV: {
       frecuencia: 'SEMANAL',
       equipos: ['Molino Planta Baja', 'Molino - Primer piso', 'Molino - Segundo Piso', 'Molino - Tercer Piso', 'Depósito robot', 'Depósito Surgente'],
+      numPlano: [1, 2, 3, 4, 6, 5],   // en el plano: UV 5 = Depósito insumos (Surgente), UV 6 = Depósito (robot)
     },
     palomas: true },
   { match: ['millagro'], paraEmpresa: 'MILLAGRO S.A.', empresa: 'TECNOPHOS',
@@ -1984,6 +2228,8 @@ function modeloPara(plantaNombre) {
     monitoreoUV: m.monitoreoUV || null,
     palomas: !!m.palomas,
     tuboLuminico: !!m.tuboLuminico,
+    plano: m.plano || null,
+    uvPlano: m.uvPlano || null,
   };
 }
 
@@ -2028,6 +2274,7 @@ function bloqueReferencias(r, empresa, modelo) {
       <div>B: Bien</div>
       <div>X: Cambio de pegamento</div>
       ${modelo.tuboLuminico ? '<div>T: Cambio de tubo luminico</div>' : ''}
+      ${r.tipoTarea === 'jaulas' ? '<div>K: Con captura</div>' : ''}
     </td>
     <td style="vertical-align:top; font-size:11px">
       <div style="font-weight:700; margin-bottom:5px">Ref: &nbsp;${esc((r.sectorNombre || '').toUpperCase())}</div>
@@ -2060,7 +2307,8 @@ function planillaDesratizacion(r, empresa) {
   // encabezado de grupo (como en las planillas de Cabildo y Molino).
   const gs = gruposDe(r);
   const agrupado = gs.length > 1;
-  const bloques = gs.map(g => ({ titulo: agrupado ? g.nombre.toUpperCase() : (modelo.uvGrupo && r.uvTotal ? 'CEBOS' : null), etiqueta: 'CEBO', total: g.cebos, datos: r.cebos, offset: g.desde - 1 }));
+  const etiqueta = r.etiquetaEstacion || 'CEBO';
+  const bloques = gs.map(g => ({ titulo: agrupado ? g.nombre.toUpperCase() : (modelo.uvGrupo && r.uvTotal ? 'CEBOS' : null), etiqueta, total: g.cebos, datos: r.cebos, offset: g.desde - 1 }));
   if (r.uvTotal) bloques.push({ titulo: modelo.uvGrupo || (agrupado ? 'TRAMPAS UV' : null), etiqueta: modelo.uvEtiqueta, total: r.uvTotal, datos: r.uv, offset: 0 });
   bloques.forEach(b => b.cols = Math.max(1, Math.ceil(b.total / filas)));
   const conTitulos = bloques.some(b => b.titulo);
@@ -2093,7 +2341,7 @@ function planillaDesratizacion(r, empresa) {
     </table>` : '';
   return `
   <div style="padding:24px; font-family:Arial; color:#000">
-    ${cabPlanilla(modelo.titulo, r.fecha, empresa)}
+    ${cabPlanilla(r.tipoTarea === 'jaulas' ? 'CONTROL DE JAULAS PARA ROEDORES' : modelo.titulo, r.fecha, empresa)}
     ${bloqueReferencias(r, empresa, modelo)}
     ${tabla}
     ${filaFirmas(r, empresa, modelo.firmaIzq)}
@@ -2261,7 +2509,7 @@ function renderAjustes() {
     const div = document.createElement('div');
     div.className = 'ajuste-item';
     const pl = DB.plantas.find(p => p.id === s.plantaId);
-    const detalleCebos = s.grupos && s.grupos.length > 1 ? s.grupos.map(g => `${esc(g.nombre)} ${g.cebos}`).join(' + ') + ' estaciones' : `${s.cebos} estaciones`;
+    const detalleCebos = s.tipo === 'jaulas' ? `${s.cebos} jaulas` : (s.grupos && s.grupos.length > 1 ? s.grupos.map(g => `${esc(g.nombre)} ${g.cebos}`).join(' + ') + ' estaciones' : `${s.cebos} estaciones`);
     div.innerHTML = `<span class="nom">${esc(s.nombre)}<br><span class="meta">${pl ? esc(pl.nombre) + ' · ' : ''}${detalleCebos}${s.uv ? ' + ' + s.uv + ' UV' : ''}</span></span>`;
     const be = document.createElement('button'); be.className = 'mini-btn'; be.textContent = 'Editar';
     be.onclick = () => editarSector(idx);
@@ -2276,6 +2524,8 @@ function renderAjustes() {
   $('cfgGasUrl').value = DB.config.gasUrl || '';
   $('cfgMail').value = DB.config.mailDestino || '';
   $('cfgWa').value = DB.config.waNumero || '';
+  $('cfgWaSup').value = DB.config.waSupervisor || '';
+  renderProductos();
 
   const totReg = DB.registros.length + DB.ordenes.length + DB.monitoreos.length + DB.palomas.length;
   $('pruebasResumenTxt').textContent = totReg
@@ -2371,7 +2621,7 @@ function borrarTodosLosRegistros() {
     () => {
       DB.registros = []; DB.ordenes = []; DB.monitoreos = []; DB.palomas = [];
       DB.borrador = null; DB.seqOrden = {};
-      persistir(); renderAjustes();
+      persistir(); fotosBorrarTodas(); renderAjustes();
       toast('Registros borrados. La tablet quedó en limpio.');
     }, 'Eliminar');
 }
@@ -2416,6 +2666,1111 @@ function importarRespaldo(input) {
       'Sí, reemplazar');
   };
   reader.readAsText(file);
+}
+
+/* ============ planos digitalizados ============ */
+/* Cada hoja: vb (recorte), fondo (edificios, líneas, tanques: [d, relleno,
+   borde, grosor]), textos ([x, y, tamaño, giro, texto]) y est (estaciones:
+   [tipo, n, x, y, ancho, alto, cajaX, cajaY, cajaAncho, cajaAlto, zona]).
+   La "caja" es el cuadradito blanco del plano donde se escribe el estado.
+   Tipos: c = punto de cebado, a = trampa adherente, u = trampa UV, j = jaula. */
+const PLANOS = {
+  // Molino La Nueva Manera: "Ubicacion de Cebos.docx" (3 hojas), con los errores de tipeo
+  // corregidos (adherente 25 y jaula 23 en el depósito de la hoja 2).
+  manera: { hojas: [{"nombre":"Espartillo y Taller","vb":[22.0,69.8,800.6,523.2],"fondo":[["M82.0 77.9L804.6 82.0","none","#000000",1.5],["M81.2 77.8L30.0 113.8","none","#000000",1.5],["M162.8 323.0H313.2V343.7H162.8Z","#ffffff","#000000",0.5],["M297.6 94.8H351.5V266.0H297.6Z","#ffffff","#000000",0.5],["M406.0 382.6H504.8V501.8H406.0Z","#ffffff","#000000",0.5],["M35.8 380.0L347.0 380.0","none","#000000",1.5],["M33.5 574.3L31.0 113.0","none","#000000",1.5],["M37.0 385.2H78.6V442.7H37.0Z","#ffffff","#000000",0.5],["M36.8 444.5H78.4V502.0H36.8Z","#ffffff","#000000",0.5],["M98.2 479.6H248.7V500.3H98.2Z","#ffffff","#000000",0.5],["M275.4 479.7H366.0V579.2H275.4Z","#ffffff","#000000",0.5],["M285.1 500.5C285.1 493.6 291.5 487.9 299.4 487.9C307.2 487.9 313.6 493.6 313.6 500.5C313.6 507.4 307.2 513.0 299.4 513.0C291.5 513.0 285.1 507.4 285.1 500.5","#156082","#042433",1.0],["M286.1 528.8C286.1 521.9 292.5 516.3 300.4 516.3C308.2 516.3 314.6 521.9 314.6 528.8C314.6 535.8 308.2 541.4 300.4 541.4C292.5 541.4 286.1 535.8 286.1 528.8","#156082","#042433",1.0],["M285.9 557.5C285.9 550.6 292.2 544.9 300.1 544.9C307.9 544.9 314.3 550.6 314.3 557.5C314.3 564.4 307.9 570.0 300.1 570.0C292.2 570.0 285.9 564.4 285.9 557.5","#156082","#042433",1.0],["M320.9 499.4C320.9 492.5 327.2 486.8 335.1 486.8C342.9 486.8 349.3 492.5 349.3 499.4C349.3 506.3 342.9 511.9 335.1 511.9C327.2 511.9 320.9 506.3 320.9 499.4","#156082","#042433",1.0],["M321.9 527.7C321.9 520.8 328.2 515.2 336.1 515.2C343.9 515.2 350.3 520.8 350.3 527.7C350.3 534.7 343.9 540.3 336.1 540.3C328.2 540.3 321.9 534.7 321.9 527.7","#156082","#042433",1.0],["M321.0 557.6C321.0 550.7 327.4 545.0 335.2 545.0C343.1 545.0 349.5 550.7 349.5 557.6C349.5 564.5 343.1 570.1 335.2 570.1C327.4 570.1 321.0 564.5 321.0 557.6","#156082","#042433",1.0],["M70.8 554.8C70.8 538.4 83.8 525.2 99.7 525.2C115.7 525.2 128.6 538.4 128.6 554.8C128.6 571.3 115.7 584.5 99.7 584.5C83.8 584.5 70.8 571.3 70.8 554.8","#156082","#042433",1.0],["M138.7 554.8C138.7 538.4 151.6 525.1 167.6 525.1C183.5 525.1 196.4 538.4 196.4 554.8C196.4 571.2 183.5 584.5 167.6 584.5C151.6 584.5 138.7 571.2 138.7 554.8","#156082","#042433",1.0],["M319.8 482.1L354.1 482.1C354.5 482.1 354.9 481.8 354.9 481.3L354.9 433.6L354.1 434.4L387.0 434.4L387.0 432.9L354.1 432.9C353.7 432.9 353.4 433.2 353.4 433.6L353.4 481.3L354.1 480.6L319.8 480.6L319.8 482.1M381.3 437.8L388.5 433.6L381.3 429.5C381.0 429.3 380.5 429.4 380.3 429.8C380.1 430.1 380.2 430.6 380.6 430.8L386.6 434.3L386.6 433.0L380.6 436.5C380.2 436.7 380.1 437.2 380.3 437.5C380.5 437.9 381.0 438.0 381.3 437.8","#000000","none",0],["M685.7 365.8H813.7V576.0H685.7Z","#ffffff","#000000",0.5],["M618.7 167.4H686.4V576.0H618.7Z","#ffffff","#000000",0.5],["M686.5 92.9H814.5V365.0H686.5Z","#ffffff","#000000",0.5]],"textos":[[207.0,338.1,12.0,0,"Contenedor"],[312.6,258.5,12.0,-90,"Depósito ESPARTILLO"],[413.5,447.8,12.0,0,"P. Almacenaje"],[50.2,435.3,10.0,-90,"Subestación"],[49.9,494.6,10.0,-90,"Depósito"],[132.1,494.7,12.0,0,"Sala Aditivación"],[735.9,456.0,12.0,0,"Taller"]],"est":[["c",14,368.8,557.6,27.2,20.8,370.2,536.2,25.2,20.8,"Perímetro"],["c",15,367.4,501.9,27.2,20.8,368.9,480.5,25.2,20.8,"cerca de P. Almacenaje"],["c",16,248.2,531.2,27.2,20.8,249.7,509.8,25.3,20.8,"cerca de Sala Aditivación"],["c",19,287.2,384.7,27.2,20.8,315.1,384.7,25.2,20.8,"cerca de Contenedor"],["c",20,341.2,354.6,27.2,20.8,369.1,354.6,25.2,20.8,"Perímetro"],["c",21,584.0,257.2,27.2,20.8,585.5,235.7,25.2,20.8,"Perímetro"],["c",22,586.5,432.2,27.2,20.8,588.0,410.7,25.2,20.8,"Perímetro"],["c",31,689.5,257.4,27.2,20.8,691.0,235.9,25.2,20.8,"cerca de Taller"],["c",32,728.0,338.7,27.2,20.8,756.0,338.7,25.2,20.8,"cerca de Taller"],["c",33,783.8,287.8,27.2,20.8,785.3,266.3,25.2,20.8,"cerca de Taller"],["c",34,785.0,192.8,27.2,20.8,786.5,171.3,25.2,20.8,"cerca de Taller"],["c",35,759.3,94.2,27.2,20.8,787.2,94.3,25.2,20.8,"Perímetro"],["c",36,688.4,94.2,27.2,20.8,716.3,94.3,25.2,20.8,"Perímetro"],["c",37,355.6,236.2,27.2,20.8,357.1,214.8,25.2,20.8,"cerca de Depósito ESPARTILLO"],["c",38,355.6,136.3,27.2,20.8,357.1,114.9,25.2,20.8,"cerca de Depósito ESPARTILLO"],["c",39,298.5,268.0,27.2,20.8,326.4,268.0,25.2,20.8,"cerca de Depósito ESPARTILLO"],["c",40,265.4,233.0,27.2,20.8,266.9,211.5,25.2,20.8,"cerca de Depósito ESPARTILLO"],["c",41,266.7,139.6,27.2,20.8,268.2,118.1,25.2,20.8,"cerca de Depósito ESPARTILLO"],["c",42,194.1,85.0,27.2,20.8,221.9,85.1,25.2,20.8,"Perímetro"],["c",43,94.7,84.9,27.2,20.8,122.6,84.9,25.3,20.8,"Perímetro"],["c",44,41.0,166.8,27.2,20.8,41.2,143.6,25.2,20.8,"Perímetro"],["c",45,41.7,249.2,27.2,20.8,41.5,227.7,25.2,20.8,"Perímetro"],["c",46,118.2,349.0,27.2,20.8,146.1,349.0,25.2,20.8,"cerca de Contenedor"],["c",47,43.7,327.0,27.2,20.8,44.2,305.5,25.2,20.8,"cerca de Subestación"],["c",48,245.2,350.3,27.2,20.8,273.1,350.3,25.2,20.8,"cerca de Contenedor"],["a",30,751.7,544.8,27.2,22.6,779.3,544.7,25.2,22.6,"Taller"],["j",17,198.0,564.2,27.2,20.8,225.9,564.2,25.2,20.8,"cerca de Sala Aditivación"],["j",18,449.6,475.9,27.2,22.6,477.3,475.9,25.2,22.6,"P. Almacenaje"],["j",19,413.2,385.1,27.2,22.6,440.9,385.1,25.2,22.6,"P. Almacenaje"],["j",20,187.3,383.4,27.2,20.8,215.1,383.4,25.2,20.8,"cerca de Contenedor"],["j",21,86.2,383.4,27.2,20.8,114.0,383.4,25.2,20.8,"cerca de Subestación"]]},{"nombre":"Molino y Depósito","vb":[24.8,-8.0,795.3,603.8],"fondo":[["M34.3 587.8L33.5 -78.6","none","#000000",1.5],["M32.8 80.7L456.4 82.3","none","#000000",1.5],["M87.2 146.8C87.2 130.4 100.2 117.1 116.1 117.1C132.1 117.1 145.0 130.4 145.0 146.8C145.0 163.2 132.1 176.5 116.1 176.5C100.2 176.5 87.2 163.2 87.2 146.8","#156082","#042433",1.0],["M155.1 146.4C155.1 130.0 168.0 116.7 184.0 116.7C199.9 116.7 212.9 130.0 212.9 146.4C212.9 162.8 199.9 176.1 184.0 176.1C168.0 176.1 155.1 162.8 155.1 146.4","#156082","#042433",1.0],["M36.3 241.7L460.0 243.4","none","#000000",1.5],["M129.0 199.4H279.5V220.1H129.0Z","#ffffff","#000000",0.5],["M38.5 245.9H432.0V308.7H38.5Z","#ffffff","#000000",0.5],["M38.8 437.8H432.2V500.6H38.8Z","#ffffff","#000000",0.5],["M37.9 374.3H431.4V437.0H37.9Z","#ffffff","#000000",0.5],["M38.8 310.6H432.2V373.4H38.8Z","#ffffff","#000000",0.5],["M460.2 44.4H559.0V148.2H460.2Z","#ffffff","#000000",0.5],["M461.3 148.1H560.0V217.6H461.3Z","#ffffff","#000000",0.5],["M462.1 216.0H559.2V282.9H462.1Z","#ffffff","#000000",0.5],["M463.0 283.8H558.8V327.3H463.0Z","#ffffff","#000000",0.5],["M271.2 158.1L358.7 158.1C359.1 158.1 359.5 157.8 359.5 157.4L359.5 115.5L358.7 116.3L444.7 116.3L444.7 114.8L358.7 114.8C358.3 114.8 358.0 115.1 358.0 115.5L358.0 157.4L358.7 156.6L271.2 156.6L271.2 158.1M439.1 119.7L446.2 115.5L439.1 111.4C438.7 111.2 438.3 111.3 438.1 111.6C437.9 112.0 438.0 112.5 438.3 112.7L444.3 116.2L444.3 114.9L438.3 118.4C438.0 118.6 437.9 119.0 438.1 119.4C438.3 119.8 438.7 119.9 439.1 119.7","#000000","none",0],["M376.7 547.5L424.8 547.5C425.2 547.5 425.6 547.1 425.6 546.7L425.6 514.8L424.8 515.6L471.5 515.6L471.5 514.1L424.8 514.1C424.4 514.1 424.1 514.4 424.1 514.8L424.1 546.7L424.8 546.0L376.7 546.0L376.7 547.5M465.8 519.0L473.0 514.8L465.8 510.7C465.5 510.5 465.0 510.6 464.8 511.0C464.6 511.3 464.7 511.8 465.1 512.0L471.1 515.5L471.1 514.2L465.1 517.7C464.7 517.9 464.6 518.4 464.8 518.7C465.0 519.1 465.5 519.2 465.8 519.0","#000000","none",0],["M473.0 485.5H572.6V550.8H473.0Z","#ffffff","#000000",0.5],["M684.0 52.8H812.0V537.5H684.0Z","#ffffff","#000000",0.5],["M617.0 52.8H684.8V537.4H617.0Z","#ffffff","#000000",0.5]],"textos":[[188.3,214.5,12.0,0,"Rejilla"],[200.9,286.0,12.0,0,"Molino Piso 3"],[209.5,478.1,12.0,0,"Molino PB"],[200.3,414.4,12.0,0,"Molino Piso 1"],[201.1,350.8,12.0,0,"Molino Piso 2"],[467.7,109.5,12.0,0,"Techo"],[502.9,188.5,12.0,0,"2 P"],[502.9,256.1,12.0,0,"1 P"],[494.8,299.0,12.0,0,"P Baja"],[508.9,525.7,12.0,0,"Cinta"],[495.3,542.7,12.0,0,"Transporte"],[724.7,292.6,12.0,0,"Depósito"]],"est":[["c",10,70.9,508.8,27.2,20.8,97.7,508.8,25.2,20.8,"Perímetro"],["c",11,193.4,508.8,27.2,20.8,221.0,508.8,25.2,20.8,"cerca de Molino PB"],["c",12,315.0,509.1,27.2,20.8,342.6,509.1,25.2,20.8,"cerca de Molino PB"],["c",13,431.5,456.6,27.2,20.8,433.0,435.1,25.2,20.8,"cerca de Cinta transportadora"],["c",17,228.2,48.8,27.2,20.8,255.9,48.7,25.2,20.8,"Perímetro"],["c",18,105.8,47.5,27.2,20.8,133.4,47.5,25.2,20.8,"Perímetro"],["c",23,588.0,79.1,27.2,20.7,589.5,57.6,25.2,20.8,"Perímetro"],["c",24,589.0,210.6,27.2,20.8,590.5,189.2,25.2,20.8,"Perímetro"],["c",25,587.3,360.1,27.2,20.8,588.8,338.6,25.2,20.8,"Perímetro"],["c",26,589.5,482.6,27.2,20.8,591.0,461.2,25.2,20.8,"cerca de Cinta transportadora"],["c",27,302.5,214.4,27.2,20.8,330.2,214.4,25.2,20.8,"cerca de Molino Piso 3"],["c",28,51.5,213.6,27.2,20.8,78.2,213.6,25.2,20.8,"Perímetro"],["c",29,44.5,87.4,27.2,20.8,71.9,87.3,25.2,20.8,"Perímetro"],["c",30,295.9,88.1,27.2,20.8,323.5,88.1,25.2,20.8,"Perímetro"],["a",6,265.9,477.3,27.2,20.8,293.5,477.3,25.2,20.8,"Molino PB"],["a",7,401.5,447.1,27.2,20.8,403.0,468.3,25.2,20.8,"Molino PB"],["a",8,307.8,440.4,27.2,20.8,335.5,440.4,25.2,20.8,"Molino PB"],["a",9,100.2,440.4,27.2,20.8,127.8,440.4,25.2,20.8,"Molino PB"],["a",10,45.7,445.4,27.2,20.8,47.2,466.6,25.2,20.8,"Molino PB"],["a",11,106.9,413.0,27.2,20.8,134.6,413.0,25.2,20.8,"Molino Piso 1"],["a",12,310.4,377.6,27.2,20.8,338.0,377.6,25.2,20.8,"Molino Piso 1"],["a",13,102.8,377.6,27.2,20.8,130.4,377.6,25.2,20.8,"Molino Piso 1"],["a",14,44.0,383.5,27.2,20.8,45.5,404.7,25.3,20.8,"Molino Piso 1"],["a",15,328.2,351.2,27.2,20.8,355.9,351.2,25.2,20.8,"Molino Piso 2"],["a",16,311.5,313.2,27.2,20.8,339.1,313.2,25.2,20.8,"Molino Piso 2"],["a",17,104.4,313.0,27.2,20.8,132.1,313.0,25.2,20.8,"Molino Piso 2"],["a",18,43.2,322.7,27.2,20.8,44.7,343.9,25.2,20.8,"Molino Piso 2"],["a",19,325.3,286.2,27.2,20.8,353.0,286.2,25.2,20.8,"Molino Piso 3"],["a",20,304.4,249.2,27.2,20.8,332.0,249.2,25.2,20.8,"Molino Piso 3"],["a",21,106.8,249.1,27.2,20.8,134.5,249.1,25.2,20.8,"Molino Piso 3"],["a",22,42.3,259.3,27.2,20.8,43.8,280.5,25.2,20.8,"Molino Piso 3"],["a",23,693.2,63.0,27.2,20.8,720.8,63.0,25.2,20.8,"Depósito"],["a",24,756.5,61.2,27.2,20.8,783.2,61.1,25.2,20.8,"Depósito"],["a",25,782.3,185.0,27.2,20.8,783.2,206.6,25.2,20.8,"Depósito"],["a",26,783.2,385.4,27.2,20.8,784.1,406.1,25.2,20.8,"Depósito"],["a",27,753.2,497.3,27.2,20.7,781.0,497.3,25.2,20.8,"Depósito"],["a",28,684.8,335.8,27.2,20.8,712.3,335.8,25.2,20.8,"Depósito"],["a",29,685.3,210.8,27.2,20.8,713.2,210.7,25.2,20.8,"Depósito"],["u",1,174.8,476.6,27.2,20.8,null,null,null,null,"Molino PB"],["u",2,227.6,377.0,27.2,20.8,null,null,null,null,"Molino Piso 1"],["u",3,225.4,312.5,27.2,20.8,null,null,null,null,"Molino Piso 2"],["u",4,221.2,247.5,27.2,20.8,null,null,null,null,"Molino Piso 3"],["u",6,687.6,257.3,27.2,20.8,null,null,null,null,"Depósito"],["j",4,202.1,175.0,27.2,20.8,229.8,175.1,25.2,20.8,"cerca de Rejilla"],["j",5,468.0,303.7,27.2,20.8,495.6,303.7,25.2,20.8,"Torre · planta baja"],["j",6,503.5,260.1,27.2,20.8,531.2,260.1,25.2,20.8,"Torre · 1er piso"],["j",7,466.3,218.6,27.2,20.8,493.9,218.6,25.3,20.8,"Torre · 1er piso"],["j",8,502.9,190.6,27.2,22.6,530.5,190.6,25.2,22.6,"Torre · 2do piso"],["j",9,467.6,152.8,27.2,22.6,495.3,152.8,25.2,22.6,"Torre · 2do piso"],["j",10,531.7,101.5,27.2,20.8,531.3,122.5,25.2,20.8,"Torre · techo"],["j",11,467.0,121.1,27.2,22.6,494.7,121.1,25.2,22.6,"Torre · techo"],["j",12,503.1,47.5,27.2,20.8,530.7,47.6,25.2,20.8,"Torre · techo"],["j",13,467.1,48.1,27.2,22.6,467.0,70.1,25.2,22.6,"Torre · techo"],["j",14,289.7,20.5,27.2,20.8,317.3,20.3,25.2,20.8,"Perímetro"],["j",15,164.7,19.9,27.2,20.8,192.3,20.0,25.2,20.8,"Perímetro"],["j",16,45.7,18.0,27.2,20.8,73.5,17.9,25.2,20.8,"Perímetro"],["j",22,784.5,110.4,27.2,20.8,784.5,131.1,25.2,20.8,"Depósito"],["j",23,782.2,310.5,27.2,20.8,784.8,331.2,25.2,20.8,"Depósito"],["j",24,683.6,395.9,27.2,20.8,711.4,395.8,25.2,20.8,"Depósito"],["j",25,683.2,160.9,27.2,20.8,710.8,160.9,25.2,20.8,"Depósito"],["j",26,683.7,498.2,27.2,20.8,711.5,498.1,25.2,20.8,"Depósito"],["j",27,476.8,466.2,27.2,20.8,478.2,487.4,25.2,20.8,"cerca de Cinta transportadora"],["j",28,539.7,465.0,27.2,20.8,541.2,486.2,25.2,20.8,"cerca de Cinta transportadora"]]},{"nombre":"Ingreso y Oficinas","vb":[24.2,8.0,796.6,390.3],"fondo":[["M47.7 43.5H441.2V133.1H47.7Z","#ffffff","#000000",0.5],["M32.7 391.8L32.7 -169.1","none","#000000",1.5],["M49.0 132.7H442.4V198.0H49.0Z","#ffffff","#000000",0.5],["M531.6 251.2H597.7V316.5H531.6Z","#ffffff","#000000",0.5],["M32.2 388.7L455.8 390.3","none","#000000",1.5],["M656.3 88.7H810.3V138.1H656.3Z","#ffffff","#000000",0.5],["M661.3 205.1H812.8V343.2H661.3Z","#ffffff","#000000",0.5]],"textos":[[197.5,83.7,12.0,0,"Depósito insumos"],[224.1,172.8,12.0,0,"Oficinas"],[544.0,291.3,12.0,0,"Guardia"],[770.4,103.8,12.0,0,"Baños"],[753.5,320.2,12.0,0,"Ingreso"]],"est":[["c",1,634.7,289.9,27.2,20.8,634.5,310.6,25.2,20.8,"cerca de Guardia"],["c",2,538.1,321.6,27.2,20.8,565.8,321.6,25.2,20.8,"cerca de Guardia"],["c",3,598.2,253.2,27.2,20.8,625.8,253.2,25.2,20.8,"cerca de Guardia"],["c",4,449.5,143.9,27.2,20.8,477.1,143.9,25.2,20.8,"Perímetro"],["c",5,444.2,81.7,27.2,20.8,471.9,81.7,25.2,20.8,"Perímetro"],["c",6,447.5,41.4,27.2,20.8,475.2,41.4,25.2,20.8,"Perímetro"],["c",7,328.2,16.2,27.2,20.8,355.9,16.2,25.2,20.8,"cerca de Depósito insumos"],["c",8,206.6,16.0,27.2,20.8,234.2,16.0,25.2,20.8,"cerca de Depósito insumos"],["c",9,84.2,16.0,27.2,20.8,110.9,16.0,25.2,20.8,"Perímetro"],["c",49,748.9,141.3,27.2,20.8,775.7,141.2,25.2,20.8,"cerca de Baños"],["c",50,670.2,182.1,27.2,20.8,697.0,182.1,25.2,20.8,"Perímetro"],["a",1,338.5,108.3,27.2,20.8,366.1,108.3,25.2,20.8,"Depósito insumos"],["a",2,238.1,108.3,27.2,20.8,265.6,108.3,25.2,20.8,"Depósito insumos"],["a",3,119.2,109.0,27.2,20.8,146.8,109.0,25.2,20.8,"Depósito insumos"],["a",4,54.0,57.2,27.2,20.8,81.6,57.2,25.2,20.8,"Depósito insumos"],["a",5,255.4,47.1,27.2,20.8,283.0,47.0,25.2,20.8,"Depósito insumos"],["u",5,408.0,61.5,27.2,20.8,null,null,null,null,"Depósito insumos"],["j",1,393.6,108.1,27.2,20.8,421.2,108.1,25.2,20.8,"Depósito insumos"],["j",2,176.8,109.9,27.2,20.8,204.4,109.9,25.2,20.8,"Depósito insumos"],["j",3,53.9,107.5,27.2,20.8,81.4,107.5,25.2,20.8,"Depósito insumos"]]}] },
+};
+
+const TIPOS_ESTACION = {
+  c: { n: 'Cebo', plural: 'Puntos de cebado', color: '#E01B1B', ink: '#FFFFFF' },
+  a: { n: 'Adherente', plural: 'Trampas adherentes', color: '#8DCB55', ink: '#1C2A10' },
+  u: { n: 'Trampa UV', plural: 'Trampas UV', color: '#4F95DA', ink: '#FFFFFF' },
+  j: { n: 'Jaula', plural: 'Jaulas', color: '#FFE21F', ink: '#2B2600' },
+};
+// Colores de estado en hex: el PDF de Google no entiende variables CSS.
+const HEX_ESTADO = {
+  B: ['#2E7D4F', '#E2F0E6'], C: ['#B97A18', '#F7ECD8'], N: ['#B3382E', '#F7E2E0'],
+  D: ['#C05621', '#F8E7DC'], O: ['#2C5F8A', '#E1EBF3'], X: ['#6B4FA3', '#EAE4F4'],
+  T: ['#0E7C86', '#DDF1F3'], K: ['#8E1B4F', '#F5E1EA'],
+};
+
+function planoDePlanta(plantaNombre) {
+  const m = modeloPara(plantaNombre);
+  return m.plano ? PLANOS[m.plano] || null : null;
+}
+function ubicacionEn(plano, t, n) {
+  if (!plano) return null;
+  for (let i = 0; i < plano.hojas.length; i++) {
+    const e = plano.hojas[i].est.find(x => x[0] === t && x[1] === Number(n));
+    if (e) return { hoja: i + 1, nombreHoja: plano.hojas[i].nombre, zona: e[10] || '' };
+  }
+  return null;
+}
+function textoUbicacion(u, corto) {
+  if (!u) return '';
+  return `Hoja ${u.hoja} · ${u.nombreHoja}` + (!corto && u.zona ? ' · ' + u.zona : '');
+}
+// Tipo de estación del plano para cada clase de marca de un registro.
+function tipoPlanoDe(r, clase) {
+  if (r.tipoTarea === 'jaulas') return 'j';
+  if (clase === 'uv') return modeloPara(r.plantaNombre).uvPlano || 'u';
+  return 'c';
+}
+function nombreEstacion(r, clase, n) {
+  if (r.tipoTarea === 'jaulas') return 'Jaula ' + n;
+  if (clase === 'uv') {
+    const m = modeloPara(r.plantaNombre);
+    return (m.uvGrupo === 'PLACAS ADHESIVAS' ? 'Placa ' : 'Trampa UV ') + n;
+  }
+  const et = etiquetaCebo(r, Number(n));
+  return et.grupo ? `${et.grupo} · Cebo ${et.num}` : 'Cebo ' + n;
+}
+
+/* Dibuja una hoja del plano. celda(t, n) decide cómo se ve cada estación:
+   { txt, fill, ink, ring, dim }. Sin celda se dibuja el plano tal cual. */
+function svgHoja(hoja, celda, opts) {
+  opts = opts || {};
+  const [vx, vy, vw, vh] = hoja.vb;
+  const tam = opts.ancho ? ` width="${opts.ancho}" height="${Math.round(opts.ancho * vh / vw)}"` : '';
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vx} ${vy} ${vw} ${vh}"${tam} font-family="Arial, Helvetica, sans-serif" role="img" aria-label="Plano · ${esc(hoja.nombre)}">`;
+  s += `<rect x="${vx}" y="${vy}" width="${vw}" height="${vh}" fill="#FFFFFF"/>`;
+  hoja.fondo.forEach(([d, f, st, w]) => { s += `<path d="${d}" fill="${f}" stroke="${st}" stroke-width="${w || 0}"/>`; });
+  hoja.textos.forEach(([x, y, size, rot, txt]) => {
+    s += `<text x="${x}" y="${y}" font-size="${(size * 0.92).toFixed(1)}" fill="#2A2A2A"${rot ? ` transform="rotate(${rot} ${x} ${y})"` : ''}>${esc(txt)}</text>`;
+  });
+  const anillos = [];
+  hoja.est.forEach(([t, n, x, y, w, h, bx, by, bw, bh]) => {
+    const tp = TIPOS_ESTACION[t];
+    const c = celda ? (celda(t, n) || {}) : {};
+    s += `<g${c.dim ? ' opacity="0.22"' : ''}>`;
+    s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${tp.color}" stroke="#1A1A1A" stroke-width="0.6"/>`;
+    s += `<text x="${(x + w / 2).toFixed(1)}" y="${(y + h / 2 + 3.9).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="${tp.ink}">${n}</text>`;
+    if (bx != null) {
+      s += `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" fill="${c.fill || '#FFFFFF'}" stroke="#1A1A1A" stroke-width="0.6"/>`;
+      if (c.txt) s += `<text x="${(bx + bw / 2).toFixed(1)}" y="${(by + bh / 2 + 4.2).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="${c.ink || '#1A1A1A'}">${esc(c.txt)}</text>`;
+    } else if (c.txt) {
+      // trampas UV: sin cajita en el plano, el estado va en una insignia
+      s += `<circle cx="${x + w}" cy="${y}" r="9" fill="${c.fill || '#FFFFFF'}" stroke="#1A1A1A" stroke-width="0.6"/>`;
+      s += `<text x="${x + w}" y="${(y + 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="${c.ink || '#1A1A1A'}">${esc(c.txt)}</text>`;
+    }
+    s += '</g>';
+    if (c.ring) {
+      const x0 = Math.min(x, bx != null ? bx : x) - 3.5, y0 = Math.min(y, bx != null ? by : y - 9) - 3.5;
+      const x1 = Math.max(x + w, bx != null ? bx + bw : x + w + 9) + 3.5, y1 = Math.max(y + h, bx != null ? by + bh : y + h) + 3.5;
+      anillos.push(`<rect x="${x0.toFixed(1)}" y="${y0.toFixed(1)}" width="${(x1 - x0).toFixed(1)}" height="${(y1 - y0).toFixed(1)}" rx="5" fill="none" stroke="${c.ring}" stroke-width="2.8"/>`);
+    }
+  });
+  s += anillos.join('');
+  return s + '</svg>';
+}
+
+// SVG -> PNG (para el PDF: el conversor de Google no dibuja SVG).
+function svgAPng(svg, anchoPx, altoPx) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = anchoPx; c.height = altoPx;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        res(c.toDataURL('image/png'));
+      } catch (e) { res(null); }
+    };
+    img.onerror = () => res(null);
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+
+/* ============ fotos con sello (fecha, hora, lugar y GPS) ============ */
+// Las fotos viven en IndexedDB (localStorage se llena con pocas fotos).
+const fotosMem = new Map();
+let fotosDbP = null;
+function fotosDb() {
+  if (!fotosDbP) fotosDbP = new Promise((res, rej) => {
+    try {
+      const rq = indexedDB.open('adc-control-plagas-fotos', 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('fotos');
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    } catch (e) { rej(e); }
+  });
+  return fotosDbP;
+}
+async function fotoGuardar(id, dataUrl) {
+  fotosMem.set(id, dataUrl);
+  try {
+    const db = await fotosDb();
+    await new Promise((res, rej) => {
+      const tx = db.transaction('fotos', 'readwrite');
+      tx.objectStore('fotos').put(dataUrl, id);
+      tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    });
+  } catch (e) { /* queda en memoria mientras la app esté abierta */ }
+}
+async function fotoLeer(id) {
+  if (!id) return null;
+  if (fotosMem.has(id)) return fotosMem.get(id);
+  try {
+    const db = await fotosDb();
+    const v = await new Promise(res => {
+      const rq = db.transaction('fotos').objectStore('fotos').get(id);
+      rq.onsuccess = () => res(rq.result || null);
+      rq.onerror = () => res(null);
+    });
+    if (v) fotosMem.set(id, v);
+    return v;
+  } catch (e) { return null; }
+}
+async function fotosBorrarTodas() {
+  fotosMem.clear();
+  try { const db = await fotosDb(); db.transaction('fotos', 'readwrite').objectStore('fotos').clear(); } catch (e) {}
+}
+
+function ubicacionActual() {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    let listo = false;
+    const fin = v => { if (!listo) { listo = true; res(v); } };
+    setTimeout(() => fin(null), 8000);
+    try {
+      navigator.geolocation.getCurrentPosition(
+        p => fin({ lat: p.coords.latitude, lon: p.coords.longitude, acc: Math.round(p.coords.accuracy) }),
+        () => fin(null),
+        { enableHighAccuracy: true, timeout: 7500, maximumAge: 120000 });
+    } catch (e) { fin(null); }
+  });
+}
+function cargarImagen(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload = () => { res(im); setTimeout(() => URL.revokeObjectURL(url), 1000); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('imagen')); };
+    im.src = url;
+  });
+}
+function fechaHoraLarga(d) {
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' +
+    d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
+// Achica la foto (máx. 1280 px) y le imprime abajo una banda como Timestamp Camera.
+async function sellarFoto(file, lineas) {
+  const im = await cargarImagen(file);
+  const k = Math.min(1, 1280 / Math.max(im.naturalWidth, im.naturalHeight));
+  const W = Math.round(im.naturalWidth * k), H = Math.round(im.naturalHeight * k);
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(im, 0, 0, W, H);
+  const fs = Math.max(16, Math.round(Math.min(W, H) * 0.042));
+  const pad = Math.round(fs * 0.7), alto = Math.round(pad * 2 + fs * 1.32 * lineas.length + fs * 0.25);
+  ctx.fillStyle = 'rgba(0,0,0,0.58)';
+  ctx.fillRect(0, H - alto, W, alto);
+  ctx.textBaseline = 'top';
+  lineas.forEach((t, i) => {
+    ctx.font = (i === 0 ? '700 ' + Math.round(fs * 1.12) : '600 ' + fs) + 'px Arial, Helvetica, sans-serif';
+    ctx.fillStyle = i === 0 ? '#FFC23D' : '#FFFFFF';
+    ctx.fillText(t, pad, H - alto + pad + i * fs * 1.32, W - pad * 2);
+  });
+  return c.toDataURL('image/jpeg', 0.74);
+}
+// Copia reducida para el PDF (el conversor no imprime imágenes más anchas que la hoja).
+function achicarFoto(dataUrl, ancho) {
+  return new Promise(res => {
+    if (!dataUrl) return res(null);
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const k = Math.min(1, ancho / im.naturalWidth);
+        const c = document.createElement('canvas');
+        c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        res({ src: c.toDataURL('image/jpeg', 0.8), w: c.width, h: c.height });
+      } catch (e) { res(null); }
+    };
+    im.onerror = () => res(null);
+    im.src = dataUrl;
+  });
+}
+
+/* ============ detalle por estación (hora, producto, foto, nota) ============ */
+let detalles = {};        // del recorrido en curso: { c44: { t, prod, unidad, cant, capt, foto, gps, nota } }
+let geoPendiente = null;
+const claveDet = (tipo, num) => (tipo === 'uv' ? 'u' : 'c') + num;
+function detDe(target, crear) {
+  const k = claveDet(target.tipo, target.num);
+  if (!detalles[k] && crear) detalles[k] = {};
+  return detalles[k] || null;
+}
+const PRODUCTOS_INICIALES = [
+  { n: 'Cebo en bloque parafinado', u: 'g' },
+  { n: 'Cebo en pellet', u: 'g' },
+  { n: 'Portacebo nuevo', u: 'u.' },
+  { n: 'Placa adhesiva nueva', u: 'u.' },
+  { n: 'Pegamento', u: 'g' },
+  { n: 'Tubo UV', u: 'u.' },
+];
+function productos() { return DB.config.productos && DB.config.productos.length ? DB.config.productos : PRODUCTOS_INICIALES; }
+function unidadDe(nombre) { const p = productos().find(x => x.n === nombre); return p ? p.u : ''; }
+function productoSugerido(k, clase) {
+  const busca = re => (productos().find(p => re.test(normalizarTxt(p.n))) || {}).n || null;
+  if (k === 'C') return busca(/bloque/) || busca(/cebo/);
+  if (k === 'X') return clase === 'uv' ? (busca(/placa/) || busca(/pegamento/)) : busca(/pegamento/);
+  if (k === 'N' || k === 'D') return clase === 'uv' ? busca(/placa/) : busca(/portacebo/);
+  if (k === 'T') return busca(/tubo/);
+  return null;
+}
+function tieneExtras(d) { return !!(d && (d.foto || d.prod || d.nota || d.capt)); }
+
+function renderDetalleSheet() {
+  const t = sheetTarget;
+  if (!t) return;
+  const k = t.tipo === 'uv' ? marcasUV[t.num] : marcas[t.num];
+  document.querySelectorAll('#estadoBtns .e-btn').forEach(b => b.classList.toggle('sel', b.dataset.k === k));
+  const box = $('sheetDetalle');
+  if (!k) { box.hidden = true; return; }
+  box.hidden = false;
+  const d = detDe(t, false) || {};
+  $('detHora').textContent = d.t ? 'Revisada a las ' + fHora(d.t) : '';
+  const chips = $('detProdChips');
+  chips.innerHTML = '';
+  [{ n: '', u: '' }].concat(productos()).forEach(p => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip sm' + ((d.prod || '') === p.n ? ' on' : '');
+    b.textContent = p.n || 'Ninguno';
+    b.onclick = () => {
+      const dd = detDe(t, true);
+      if (p.n) { dd.prod = p.n; dd.unidad = p.u; } else { delete dd.prod; delete dd.unidad; delete dd.cant; }
+      dd.prodAuto = false;
+      guardarBorrador(); renderDetalleSheet(); paint(t.tipo, t.num, k);
+    };
+    chips.appendChild(b);
+  });
+  $('detCantBox').hidden = !d.prod;
+  $('detCant').value = d.cant != null ? d.cant : '';
+  $('detUnidad').textContent = d.unidad || unidadDe(d.prod) || '';
+  $('detCaptBox').hidden = k !== 'K';
+  $('detCapt').value = d.capt != null ? d.capt : '';
+  $('detNota').value = d.nota || '';
+  const th = $('detFotoThumb');
+  $('detFotoBtn').textContent = d.foto ? '📷 Cambiar la foto' : '📷 Sacar foto';
+  $('detFotoQuitar').hidden = !d.foto;
+  $('detFotoEstado').textContent = d.foto ? (d.gps ? 'Con ubicación GPS' : 'Sin ubicación GPS') : 'Queda sellada con fecha, hora y ubicación';
+  th.hidden = !d.foto;
+  if (d.foto) fotoLeer(d.foto).then(src => { if (src && sheetTarget === t) th.src = src; });
+}
+function detCampo(campo, valor) {
+  if (!sheetTarget) return;
+  const d = detDe(sheetTarget, true);
+  if (campo === 'cant' || campo === 'capt') {
+    const v = parseFloat(String(valor).replace(',', '.'));
+    if (isNaN(v) || v < 0) delete d[campo]; else d[campo] = v;
+  } else if (valor) d[campo] = valor; else delete d[campo];
+  if (campo === 'cant') d.prodAuto = false;
+  guardarBorrador();
+  paint(sheetTarget.tipo, sheetTarget.num, sheetTarget.tipo === 'uv' ? marcasUV[sheetTarget.num] : marcas[sheetTarget.num]);
+}
+function tomarFoto() {
+  geoPendiente = ubicacionActual();
+  $('detFotoInput').value = '';
+  $('detFotoInput').click();
+}
+async function fotoElegida(input) {
+  const file = input.files && input.files[0];
+  if (!file || !sheetTarget) return;
+  const t = Object.assign({}, sheetTarget);
+  $('detFotoEstado').textContent = 'Sellando la foto…';
+  $('detFotoBtn').disabled = true;
+  try {
+    const gps = await (geoPendiente || ubicacionActual());
+    geoPendiente = null;
+    const ahora = new Date();
+    const r = { plantaNombre: plantaActual ? plantaActual.nombre : '', tipoTarea: sector && sector.tipo === 'jaulas' ? 'jaulas' : 'desratizacion', grupos: sector ? sector.grupos : null, cebosTotal: sector ? sector.cebos : 0 };
+    const est = nombreEstacion(r, t.tipo, t.num);
+    const u = ubicacionEn(planoDePlanta(r.plantaNombre), tipoPlanoDe(r, t.tipo), t.num);
+    const lineas = [
+      fechaHoraLarga(ahora),
+      `${r.plantaNombre} · ${est}${u ? ' · ' + textoUbicacion(u) : ''}`,
+      gps ? `GPS ${gps.lat.toFixed(5)}, ${gps.lon.toFixed(5)}  (±${gps.acc} m)` : 'Ubicación GPS no disponible',
+      'Operario: ' + (operario || ''),
+    ];
+    const dataUrl = await sellarFoto(file, lineas);
+    const id = 'f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    await fotoGuardar(id, dataUrl);
+    const k = claveDet(t.tipo, t.num);
+    if (!detalles[k]) detalles[k] = {};
+    Object.assign(detalles[k], { foto: id, gps: gps || null, fotoT: ahora.toISOString() });
+    guardarBorrador();
+    paint(t.tipo, t.num, t.tipo === 'uv' ? marcasUV[t.num] : marcas[t.num]);
+    toast('Foto guardada ✓');
+  } catch (e) {
+    toast('No se pudo procesar la foto. Probá de nuevo.');
+  } finally {
+    $('detFotoBtn').disabled = false;
+    if (sheetTarget && sheetTarget.tipo === t.tipo && sheetTarget.num === t.num) renderDetalleSheet();
+  }
+}
+function quitarFoto() {
+  if (!sheetTarget) return;
+  const d = detDe(sheetTarget, false);
+  if (d) { delete d.foto; delete d.gps; delete d.fotoT; }
+  guardarBorrador(); renderDetalleSheet();
+  paint(sheetTarget.tipo, sheetTarget.num, sheetTarget.tipo === 'uv' ? marcasUV[sheetTarget.num] : marcas[sheetTarget.num]);
+}
+
+/* ============ jaulas (roedores / palomas) ============ */
+function sectorJaulasDe(planta) {
+  return planta ? DB.sectores.find(s => s.plantaId === planta.id && s.tipo === 'jaulas') || null : null;
+}
+function abrirJaulas() {
+  const modelo = modeloPara(plantaActual ? plantaActual.nombre : '');
+  const sj = sectorJaulasDe(plantaActual);
+  $('jaulasEyebrow').textContent = plantaActual ? plantaActual.nombre : '';
+  $('btnJaulasRoedores').style.display = sj ? 'flex' : 'none';
+  if (sj) $('jaulasRoedoresSub').textContent = `Recorrido de las jaulas 1 a ${sj.cebos}`;
+  $('btnJaulasPalomas').style.display = modelo.palomas ? 'flex' : 'none';
+  go('scr-jaulas');
+}
+function abrirJaulasRoedores() {
+  const sj = sectorJaulasDe(plantaActual);
+  if (sj) startRecorrido(sj, null);
+}
+
+/* ============ informe para el supervisor ============ */
+const INF = { ink: '#1E2B26', ink2: '#5C6963', ink3: '#8B958F', line: '#DDDAD0', band: '#1B6E5A', soft: '#F4F6F2', azul: '#2A78D6' };
+const fHora = iso => new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+function infCabecera(eyebrow, titulo, sub, metas, empresa) {
+  const logo = logoEmpresa(empresa === 'TECNOPHOS' ? 'TECNOPHOS' : 'ADC SRL');
+  let h = `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif"><tr>
+    <td style="background:${INF.band}; color:#FFFFFF; padding:18px 20px; vertical-align:middle">
+      <div style="font-size:10.5px; letter-spacing:2px; font-weight:700; color:#CFE5DC">${esc(eyebrow)}</div>
+      <div style="font-size:24px; font-weight:700; margin-top:4px">${esc(titulo)}</div>
+      <div style="font-size:14px; margin-top:3px; color:#E4F1EC">${esc(sub)}</div>
+    </td>
+    <td style="background:${INF.band}; padding:14px 18px; width:96px; text-align:right; vertical-align:middle">
+      <table cellspacing="0" cellpadding="0" style="background:#FFFFFF; border-collapse:collapse"><tr><td style="padding:6px 8px"><img src="${logo}" alt="${esc(empresa)}" width="72" height="54" style="width:72px; height:54px"></td></tr></table>
+    </td></tr></table>`;
+  h += `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; border-bottom:1px solid ${INF.line}"><tr>`;
+  metas.forEach(([l, v]) => {
+    h += `<td style="padding:11px 20px; vertical-align:top"><div style="font-size:10px; letter-spacing:1px; font-weight:700; color:${INF.ink3}">${esc(l.toUpperCase())}</div><div style="font-size:14px; font-weight:700; color:${INF.ink}; margin-top:2px">${esc(v)}</div></td>`;
+  });
+  return h + '</tr></table>';
+}
+function infSeccion(titulo, sub) {
+  return `<div style="font-family:Arial, Helvetica, sans-serif; padding:22px 20px 8px"><div style="font-size:16px; font-weight:700; color:${INF.ink}">${esc(titulo)}</div>${sub ? `<div style="font-size:12.5px; color:${INF.ink2}; margin-top:2px">${esc(sub)}</div>` : ''}</div>`;
+}
+function infKpis(items) {
+  let h = `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate; border-spacing:10px 0; font-family:Arial, Helvetica, sans-serif; padding:16px 10px 0"><tr>`;
+  items.forEach(it => {
+    h += `<td style="background:${INF.soft}; border-radius:12px; padding:13px 14px; vertical-align:top; width:${Math.floor(100 / items.length)}%">
+      <div style="font-size:26px; font-weight:700; color:${it.color || INF.ink}; line-height:1.1">${esc(it.v)}</div>
+      <div style="font-size:12.5px; font-weight:700; color:${INF.ink}; margin-top:5px">${esc(it.l)}</div>
+      ${it.s ? `<div style="font-size:11.5px; color:${INF.ink2}; margin-top:2px">${esc(it.s)}</div>` : ''}
+    </td>`;
+  });
+  return h + '</tr></table>';
+}
+// Barra apilada por estado + leyenda con cantidades.
+function infBarraEstados(titulo, total, counts, orden) {
+  const sinRev = total - orden.reduce((a, k) => a + (counts[k] || 0), 0);
+  const partes = orden.filter(k => counts[k]).map(k => ({ k, v: counts[k], col: HEX_ESTADO[k][0], n: nombreEstado(k) }));
+  if (sinRev > 0) partes.push({ k: '-', v: sinRev, col: '#C9CCC6', n: 'Sin revisar' });
+  let h = `<table width="100%" cellspacing="0" cellpadding="0" style="font-family:Arial, Helvetica, sans-serif; padding:6px 20px 4px"><tr><td>
+    <div style="font-size:13px; font-weight:700; color:${INF.ink}; margin-bottom:6px">${esc(titulo)} <span style="font-weight:400; color:${INF.ink2}">· ${total}</span></div>
+    <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr>`;
+  partes.forEach((p, i) => {
+    h += `<td style="width:${(p.v / total * 100).toFixed(2)}%; background:${p.col}; height:16px; border-left:${i ? '2px solid #FFFFFF' : '0'}"></td>`;
+  });
+  h += `</tr></table><div style="margin-top:7px; font-size:12px; color:${INF.ink2}">`;
+  partes.forEach(p => {
+    h += `<span style="display:inline-block; margin:0 14px 4px 0; white-space:nowrap"><span style="display:inline-block; width:10px; height:10px; background:${p.col}; border-radius:2px; vertical-align:-1px"></span>&nbsp;${esc(p.n)} <b style="color:${INF.ink}">${p.v}</b></span>`;
+  });
+  return h + '</div></td></tr></table>';
+}
+function infPill(k) {
+  const [c, s] = HEX_ESTADO[k] || ['#555', '#eee'];
+  return `<span style="display:inline-block; background:${s}; color:${c}; font-weight:700; font-size:12px; padding:3px 9px; border-radius:20px; white-space:nowrap">${esc(nombreEstado(k))}</span>`;
+}
+function infEstacionBadge(t, n, nombre) {
+  const tp = TIPOS_ESTACION[t] || TIPOS_ESTACION.c;
+  return `<table cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr>
+    <td style="background:${tp.color}; color:${tp.ink}; font-weight:700; font-size:12px; text-align:center; width:30px; height:22px; border:1px solid #1A1A1A">${n}</td>
+    <td style="padding-left:8px; font-size:12.5px; font-weight:700; color:${INF.ink}; white-space:nowrap">${esc(nombre)}</td></tr></table>`;
+}
+async function infFotoImg(id, anchoPdf, anchoPantalla, pdf) {
+  const src = await fotoLeer(id);
+  if (!src) return '';
+  if (!pdf) return `<img src="${src}" alt="Foto" style="width:${anchoPantalla}px; max-width:100%; height:auto; border-radius:8px; display:block">`;
+  const a = await achicarFoto(src, anchoPdf);
+  return a ? `<img src="${a.src}" alt="Foto" width="${a.w}" height="${a.h}" style="width:${a.w}px; height:${a.h}px">` : '';
+}
+function linkMapa(gps) {
+  return gps ? `<a href="https://www.google.com/maps?q=${gps.lat.toFixed(6)},${gps.lon.toFixed(6)}" style="color:${INF.azul}; font-size:11.5px">Ver en el mapa</a>` : '';
+}
+async function infPlanos(plano, celda, leyendaHtml, pdf, subtitulo) {
+  if (!plano) return '';
+  let h = `<div style="page-break-before:always"></div>` + infSeccion('Planos de la planta', subtitulo);
+  h += `<div style="font-family:Arial, Helvetica, sans-serif; padding:0 20px 6px; font-size:12px; color:${INF.ink2}">${leyendaHtml}</div>`;
+  for (let i = 0; i < plano.hojas.length; i++) {
+    const hj = plano.hojas[i];
+    h += `<div style="font-family:Arial, Helvetica, sans-serif; padding:12px 20px 4px; font-size:13px; font-weight:700; color:${INF.ink}">Hoja ${i + 1} · ${esc(hj.nombre)}</div><div style="padding:0 20px 8px">`;
+    if (pdf) {
+      // Ancho natural = ancho impreso: el conversor de Google descarta imágenes más anchas que la hoja.
+      const W = 660, H = Math.round(W * hj.vb[3] / hj.vb[2]);
+      const png = await svgAPng(svgHoja(hj, celda, { ancho: W }), W, H);
+      h += png ? `<img src="${png}" alt="Hoja ${i + 1}" width="${W}" height="${H}" style="width:${W}px; height:${H}px; border:1px solid ${INF.line}">` : '';
+    } else {
+      h += `<div style="border:1px solid ${INF.line}; border-radius:8px; overflow:hidden">${svgHoja(hj, celda)}</div>`;
+    }
+    h += '</div>';
+  }
+  return h;
+}
+function leyendaEstados(orden, extra) {
+  let h = orden.map(k => `<span style="display:inline-block; margin:0 12px 4px 0; white-space:nowrap"><span style="display:inline-block; min-width:14px; padding:0 3px; height:14px; line-height:14px; text-align:center; background:${k === 'B' ? HEX_ESTADO.B[1] : HEX_ESTADO[k][0]}; color:${k === 'B' ? HEX_ESTADO.B[0] : '#fff'}; font-size:10px; font-weight:700; border:1px solid #1A1A1A">${k}</span> ${esc(nombreEstado(k))}</span>`).join('');
+  return h + (extra || '');
+}
+function leyendaTipos(tipos) {
+  return tipos.map(t => `<span style="display:inline-block; margin:0 12px 4px 0; white-space:nowrap"><span style="display:inline-block; width:14px; height:12px; background:${TIPOS_ESTACION[t].color}; border:1px solid #1A1A1A; vertical-align:-1px"></span> ${TIPOS_ESTACION[t].plural}</span>`).join('');
+}
+function infObs(titulo, txt) {
+  if (!txt) return '';
+  return infSeccion(titulo) + `<div style="font-family:Arial, Helvetica, sans-serif; margin:0 20px; padding:12px 14px; background:${INF.soft}; border-radius:10px; font-size:13px; color:${INF.ink}; line-height:1.45">${esc(txt)}</div>`;
+}
+async function infGaleria(fotos, pdf) {
+  if (!fotos.length) return '';
+  let h = infSeccion('Fotos del recorrido', 'Cada foto quedó sellada con fecha, hora, estación y ubicación GPS.');
+  h += `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate; border-spacing:12px; font-family:Arial, Helvetica, sans-serif; padding:0 8px">`;
+  for (let i = 0; i < fotos.length; i += 2) {
+    h += '<tr>';
+    for (let j = i; j < i + 2; j++) {
+      const f = fotos[j];
+      if (!f) { h += '<td style="width:50%"></td>'; continue; }
+      h += `<td style="width:50%; vertical-align:top">${await infFotoImg(f.id, 318, 360, pdf)}<div style="font-size:12px; font-weight:700; color:${INF.ink}; margin-top:5px">${esc(f.tit)}</div><div style="font-size:11.5px; color:${INF.ink2}">${esc(f.sub)}</div></td>`;
+    }
+    h += '</tr>';
+  }
+  return h + '</table>';
+}
+
+// Todas las estaciones de un registro con su detalle, en orden de plano.
+function filasRegistro(r) {
+  const plano = planoDePlanta(r.plantaNombre);
+  const det = r.det || {};
+  const filas = [];
+  const agregar = (clase, n, k) => {
+    const d = det[(clase === 'uv' ? 'u' : 'c') + n] || {};
+    const t = tipoPlanoDe(r, clase);
+    filas.push({ clase, n: Number(n), k, d, t, nombre: nombreEstacion(r, clase, n), u: ubicacionEn(plano, t, n) });
+  };
+  Object.keys(r.cebos || {}).forEach(n => agregar('cebo', n, r.cebos[n]));
+  Object.keys(r.uv || {}).forEach(n => agregar('uv', n, r.uv[n]));
+  filas.sort((a, b) => ((a.u ? a.u.hoja : 9) - (b.u ? b.u.hoja : 9)) || (a.clase < b.clase ? -1 : a.clase > b.clase ? 1 : 0) || a.n - b.n);
+  return filas;
+}
+function totalesProducto(filas) {
+  const tot = {};
+  filas.forEach(f => {
+    if (!f.d.prod) return;
+    const k = f.d.prod;
+    if (!tot[k]) tot[k] = { n: k, u: f.d.unidad || unidadDe(k), cant: 0, veces: 0 };
+    tot[k].veces++;
+    if (f.d.cant) tot[k].cant += f.d.cant;
+  });
+  return Object.values(tot).sort((a, b) => b.veces - a.veces);
+}
+const fmtNum = v => (Math.round(v * 10) / 10).toLocaleString('es-AR');
+function textoProducto(p) { return p.cant ? `${fmtNum(p.cant)} ${p.u}` : `${p.veces} ${p.veces === 1 ? 'vez' : 'veces'}`; }
+
+async function informeRegistro(r, pdf) {
+  const modelo = modeloPara(r.plantaNombre);
+  const plano = planoDePlanta(r.plantaNombre);
+  const jaulas = r.tipoTarea === 'jaulas';
+  const filas = filasRegistro(r);
+  const total = (r.cebosTotal || 0) + (r.uvTotal || 0);
+  const novedades = filas.filter(f => f.k !== 'B' || tieneExtras(f.d));
+  const conNovedad = filas.filter(f => f.k !== 'B').length;
+  const prods = totalesProducto(filas);
+  const fotos = filas.filter(f => f.d.foto);
+  const capturas = filas.filter(f => f.k === 'K').reduce((a, f) => a + (f.d.capt || 1), 0);
+  const tiempos = filas.map(f => f.d.t).filter(Boolean).sort();
+  const inicio = r.inicio || tiempos[0], fin = r.fin || r.fecha;
+  const min = inicio ? Math.max(1, Math.round((new Date(fin) - new Date(inicio)) / 60000)) : null;
+  const horario = inicio ? `${fHora(inicio)} a ${fHora(fin)} (${min} min)` : fHora(r.fecha);
+
+  let h = infCabecera('INFORME DE TAREA · SUPERVISIÓN', jaulas ? 'Jaulas para roedores' : 'Desratización',
+    `${r.plantaNombre || ''} · ${r.sectorNombre}`,
+    [['Fecha', fFecha(r.fecha)], ['Horario', horario], ['Operario', r.operario || ''], ['Firmó', r.firmante || (faltanFirmas(r) ? 'Sin firmar' : '—')]],
+    empresaDe(r));
+
+  const kp = [
+    { v: `${filas.length}/${total}`, l: 'Estaciones revisadas', s: total ? Math.round(filas.length / total * 100) + '% del recorrido' : '' , color: filas.length < total ? HEX_ESTADO.C[0] : INF.ink },
+    { v: String(conNovedad), l: 'Con novedad', s: conNovedad ? 'ver detalle abajo' : 'todo en orden', color: conNovedad ? HEX_ESTADO.N[0] : HEX_ESTADO.B[0] },
+  ];
+  if (jaulas) kp.push({ v: String(capturas), l: 'Roedores capturados', s: capturas ? `en ${filas.filter(f => f.k === 'K').length} jaulas` : 'sin capturas', color: capturas ? HEX_ESTADO.K[0] : INF.ink });
+  else if (prods.length === 1) kp.push({ v: textoProducto(prods[0]), l: 'Producto aplicado', s: prods[0].n });
+  else kp.push({ v: prods.length ? String(prods.reduce((a, p) => a + p.veces, 0)) : '0', l: 'Reposiciones', s: prods.length ? prods.length + ' productos distintos' : 'no se aplicó producto' });
+  kp.push({ v: String(fotos.length), l: 'Fotos', s: fotos.length ? 'con fecha, hora y GPS' : 'sin fotos' });
+  h += infKpis(kp);
+
+  h += infSeccion('Estado de las estaciones');
+  const ordenC = jaulas ? ESTADOS_JAULA : ESTADOS_CEBO;
+  h += infBarraEstados(jaulas ? 'Jaulas' : (gruposDe(r).length > 1 ? 'Estaciones de cebado' : 'Puntos de cebado'), r.cebosTotal, contarEstados(r.cebos || {}), ordenC);
+  if (r.uvTotal) h += infBarraEstados(modelo.uvGrupo === 'PLACAS ADHESIVAS' ? 'Placas adhesivas' : 'Trampas UV', r.uvTotal, contarEstados(r.uv || {}), estadosUVDe(r.plantaNombre));
+
+  h += infSeccion('Novedades por estación', novedades.length ? 'Estaciones con algún problema o con algo hecho por el operario.' : '');
+  if (!novedades.length) {
+    h += `<div style="font-family:Arial, Helvetica, sans-serif; margin:0 20px; padding:12px 14px; background:${HEX_ESTADO.B[1]}; color:${HEX_ESTADO.B[0]}; border-radius:10px; font-size:13.5px; font-weight:700">Sin novedades: todas las estaciones revisadas están en buen estado.</div>`;
+  } else {
+    const th = `font-size:10.5px; letter-spacing:.5px; font-weight:700; color:${INF.ink3}; text-align:left; padding:8px 8px; border-bottom:1.5px solid ${INF.line}`;
+    h += `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; margin:0 0 0 0; padding:0 12px"><tr>
+      <th style="${th}">ESTACIÓN</th><th style="${th}">ESTADO</th><th style="${th}">DÓNDE</th><th style="${th}">QUÉ SE HIZO</th><th style="${th}">HORA</th><th style="${th}">FOTO</th></tr>`;
+    for (const f of novedades) {
+      const td = `padding:8px 8px; border-bottom:1px solid ${INF.line}; vertical-align:top; font-size:12.5px; color:${INF.ink}`;
+      const hecho = [];
+      if (f.d.prod) hecho.push(`<b>${esc(f.d.prod)}</b>${f.d.cant ? ' · ' + fmtNum(f.d.cant) + ' ' + esc(f.d.unidad || unidadDe(f.d.prod)) : ''}`);
+      if (f.k === 'K') hecho.push(`<b>${f.d.capt || 1}</b> ${(f.d.capt || 1) === 1 ? 'roedor capturado' : 'roedores capturados'}`);
+      if (f.d.nota) hecho.push(`<span style="color:${INF.ink2}">“${esc(f.d.nota)}”</span>`);
+      h += `<tr><td style="${td}">${infEstacionBadge(f.t, f.n, f.nombre)}</td><td style="${td}">${infPill(f.k)}</td>
+        <td style="${td}">${f.u ? `Hoja ${f.u.hoja} · ${esc(f.u.nombreHoja)}${f.u.zona ? `<br><span style="color:${INF.ink2}">${esc(f.u.zona)}</span>` : ''}` : '—'}${f.d.gps ? '<br>' + linkMapa(f.d.gps) : ''}</td>
+        <td style="${td}">${hecho.join('<br>') || `<span style="color:${INF.ink3}">—</span>`}</td>
+        <td style="${td}; white-space:nowrap">${f.d.t ? fHora(f.d.t) : '—'}</td>
+        <td style="${td}">${f.d.foto ? await infFotoImg(f.d.foto, 120, 120, pdf) : `<span style="color:${INF.ink3}">—</span>`}</td></tr>`;
+    }
+    h += '</table>';
+  }
+  if (prods.length) {
+    h += infSeccion('Productos utilizados', 'Total del recorrido');
+    h += `<table cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; margin:0 20px">`;
+    prods.forEach(p => {
+      h += `<tr><td style="padding:6px 18px 6px 0; font-size:13px; color:${INF.ink}; border-bottom:1px solid ${INF.line}">${esc(p.n)}</td><td style="padding:6px 18px 6px 0; font-size:13px; font-weight:700; color:${INF.ink}; border-bottom:1px solid ${INF.line}; text-align:right">${p.cant ? fmtNum(p.cant) + ' ' + esc(p.u) : '—'}</td><td style="padding:6px 0; font-size:12px; color:${INF.ink2}; border-bottom:1px solid ${INF.line}">${p.veces} ${p.veces === 1 ? 'estación' : 'estaciones'}</td></tr>`;
+    });
+    h += '</table>';
+  }
+  h += infObs('Observaciones del operario', r.obs);
+
+  if (plano) {
+    const tC = tipoPlanoDe(r, 'cebo'), tU = r.uvTotal ? tipoPlanoDe(r, 'uv') : null;
+    const celda = (t, n) => {
+      let k;
+      if (t === tC) k = (r.cebos || {})[n];
+      else if (tU && t === tU) k = (r.uv || {})[n];
+      else return { dim: true };
+      if (!k) return { txt: '–', fill: '#FFFFFF', ink: '#9AA09C' };
+      const [col, soft] = HEX_ESTADO[k];
+      return k === 'B' ? { txt: 'B', fill: soft, ink: col } : { txt: k, fill: col, ink: '#FFFFFF', ring: col };
+    };
+    const orden = Array.from(new Set(ordenC.concat(tU ? estadosUVDe(r.plantaNombre) : [])));
+    const tipos = [tC].concat(tU ? [tU] : []);
+    const ley = leyendaTipos(tipos) + '<br>' + leyendaEstados(orden, `<span style="display:inline-block; margin:0 12px 4px 0">– Sin revisar</span><span style="display:inline-block">Las demás estaciones aparecen atenuadas</span>`);
+    h += await infPlanos(plano, celda, ley, pdf, 'Cada estación muestra el estado en que quedó. Las que tienen novedad están remarcadas.');
+  }
+  h += await infGaleria(fotos.map(f => ({ id: f.d.foto, tit: `${f.nombre} · ${nombreEstado(f.k)}`, sub: textoUbicacion(f.u) || '' })), pdf);
+  return h;
+}
+
+function numPlanoUV(modelo, i) {
+  const np = modelo.monitoreoUV && modelo.monitoreoUV.numPlano;
+  return np && np[i] ? np[i] : i + 1;
+}
+function estadoEquipoUV(d) {
+  if (!d) return null;
+  if (d.func !== 'SI' || d.placa !== 'SI') return { k: 'mal', txt: '✕', col: HEX_ESTADO.N[0], n: d.func !== 'SI' ? 'No funciona' : 'Sin placa' };
+  if (d.estado !== 'Buena') return { k: 'atn', txt: '!', col: HEX_ESTADO.C[0], n: 'Placa ' + d.estado.toLowerCase() };
+  return { k: 'ok', txt: '✓', col: HEX_ESTADO.B[0], n: 'En orden' };
+}
+const insectosDe = d => (d.moscas || 0) + (d.polillas || 0) + (d.gorgojos || 0) + (d.otros || 0);
+
+async function informeMonitoreo(m, pdf) {
+  const modelo = modeloPara(m.plantaNombre);
+  const plano = planoDePlanta(m.plantaNombre);
+  const filas = m.ubicaciones.map((ub, i) => ({ ub, i, num: numPlanoUV(modelo, i), d: m.equipos[i + 1] || null }));
+  const rev = filas.filter(f => f.d);
+  const func = rev.filter(f => f.d.func === 'SI').length;
+  const insect = rev.reduce((a, f) => a + insectosDe(f.d), 0);
+  const placas = rev.filter(f => f.d.placa !== 'SI' || f.d.estado !== 'Buena').length;
+  let h = infCabecera('INFORME DE TAREA · SUPERVISIÓN', 'Monitoreo de trampas UV', `${m.plantaNombre} · frecuencia ${String(m.frecuencia || '').toLowerCase()}`,
+    [['Fecha', fFecha(m.fecha)], ['Hora', fHora(m.fecha)], ['Técnico', m.operario || ''], ['Firmó', m.firmante || (faltanFirmas(m) ? 'Sin firmar' : '—')]], empresaDe(m));
+  h += infKpis([
+    { v: `${rev.length}/${filas.length}`, l: 'Equipos revisados' },
+    { v: `${func}/${rev.length || filas.length}`, l: 'Funcionando', color: func < rev.length ? HEX_ESTADO.N[0] : HEX_ESTADO.B[0] },
+    { v: String(insect), l: 'Insectos capturados', s: 'suma de todas las placas' },
+    { v: String(placas), l: 'Placas a cambiar', color: placas ? HEX_ESTADO.C[0] : INF.ink },
+  ]);
+  h += infSeccion('Equipo por equipo');
+  const th = `font-size:10.5px; letter-spacing:.5px; font-weight:700; color:${INF.ink3}; text-align:left; padding:8px 6px; border-bottom:1.5px solid ${INF.line}`;
+  h += `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; padding:0 14px"><tr><th style="${th}">EQUIPO</th><th style="${th}">ESTADO</th><th style="${th}">TUBOS</th><th style="${th}">MOSCAS</th><th style="${th}">POLILLAS</th><th style="${th}">GORGOJOS</th><th style="${th}">OTROS</th><th style="${th}">TOTAL</th></tr>`;
+  filas.forEach(f => {
+    const td = `padding:8px 6px; border-bottom:1px solid ${INF.line}; font-size:12.5px; color:${INF.ink}; vertical-align:top`;
+    const e = estadoEquipoUV(f.d);
+    h += `<tr><td style="${td}">${infEstacionBadge('u', f.num, f.ub)}</td>
+      <td style="${td}">${e ? `<span style="color:${e.col}; font-weight:700">${e.txt} ${esc(e.n)}</span>` : `<span style="color:${INF.ink3}">Sin revisar</span>`}${f.d && f.d.obs ? `<br><span style="color:${INF.ink2}">“${esc(f.d.obs)}”</span>` : ''}</td>
+      <td style="${td}">${f.d ? esc(f.d.tubos) + ' encendidos' + (f.d.tuboSup || f.d.tuboInf ? '<br><span style="color:' + INF.ink2 + '">cambio: ' + [f.d.tuboSup ? 'sup.' : '', f.d.tuboInf ? 'inf.' : ''].filter(Boolean).join(' y ') + '</span>' : '') : '—'}</td>
+      <td style="${td}">${f.d ? f.d.moscas || 0 : '—'}</td><td style="${td}">${f.d ? f.d.polillas || 0 : '—'}</td><td style="${td}">${f.d ? f.d.gorgojos || 0 : '—'}</td><td style="${td}">${f.d ? f.d.otros || 0 : '—'}</td>
+      <td style="${td}; font-weight:700">${f.d ? insectosDe(f.d) : '—'}</td></tr>`;
+  });
+  h += '</table>';
+  // insectos por equipo: barras horizontales (una sola serie)
+  const max = Math.max(1, ...rev.map(f => insectosDe(f.d)));
+  h += infSeccion('Insectos capturados por equipo');
+  h += `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; margin:0 20px; width:auto">`;
+  rev.forEach(f => {
+    const v = insectosDe(f.d);
+    h += `<tr><td style="padding:4px 12px 4px 0; font-size:12px; color:${INF.ink2}; white-space:nowrap">UV ${f.num} · ${esc(f.ub)}</td><td style="padding:4px 0; width:330px"><table cellspacing="0" cellpadding="0" style="border-collapse:collapse"><tr><td style="width:${Math.max(2, Math.round(v / max * 300))}px; height:14px; background:${INF.azul}"></td><td style="padding-left:6px; font-size:12px; font-weight:700; color:${INF.ink}">${v}</td></tr></table></td></tr>`;
+  });
+  h += '</table>';
+  h += infObs('Observaciones y propuestas de mejora', m.obs);
+  if (plano) {
+    const porNum = {};
+    filas.forEach(f => { porNum[f.num] = f; });
+    const celda = (t, n) => {
+      if (t !== 'u') return { dim: true };
+      const f = porNum[n];
+      const e = f ? estadoEquipoUV(f.d) : null;
+      if (!e) return { txt: '–', fill: '#FFFFFF', ink: '#9AA09C' };
+      return e.k === 'ok' ? { txt: e.txt, fill: HEX_ESTADO.B[1], ink: e.col } : { txt: e.txt, fill: e.col, ink: '#FFFFFF', ring: e.col };
+    };
+    const ley = leyendaTipos(['u']) + `<br><span style="color:${HEX_ESTADO.B[0]}; font-weight:700">✓</span> En orden &nbsp; <span style="color:${HEX_ESTADO.C[0]}; font-weight:700">!</span> Placa saturada o para reemplazo &nbsp; <span style="color:${HEX_ESTADO.N[0]}; font-weight:700">✕</span> No funciona o sin placa`;
+    h += await infPlanos(plano, celda, ley, pdf, 'Ubicación de cada equipo UV y cómo quedó.');
+  }
+  return h;
+}
+
+async function informePalomas(p, pdf) {
+  const plano = planoDePlanta(p.plantaNombre);
+  let h = infCabecera('INFORME DE TAREA · SUPERVISIÓN', 'Jaulas para palomas', p.plantaNombre,
+    [['Fecha', fFecha(p.fecha)], ['Hora', fHora(p.fecha)], ['Operario', p.operario || ''], ['Tarea', 'Control de palomas']], empresaDe(p));
+  h += infKpis([{ v: String(p.capturadas || 0), l: 'Palomas capturadas', color: p.capturadas ? HEX_ESTADO.K[0] : INF.ink, s: p.capturadas ? 'en esta visita' : 'sin capturas en esta visita' }]);
+  h += infObs('Observaciones del operario', p.obs);
+  if (plano) h += await infPlanos(plano, null, leyendaTipos(['c', 'a', 'u', 'j']), pdf, 'Plano de referencia de la planta.');
+  return h;
+}
+async function informeOrden(o, pdf) {
+  const plano = planoDePlanta(o.plantaNombre);
+  let h = infCabecera('INFORME DE TAREA · SUPERVISIÓN', 'Servicio esporádico', `${o.plantaNombre || ''} · Orden N° ${o.numero}`,
+    [['Fecha', fFecha(o.fecha)], ['Hora', fHora(o.fecha)], ['Operario', o.operario || ''], ['Firmó', o.firmante || (faltanFirmas(o) ? 'Sin firmar' : '—')]], empresaDe(o));
+  h += infSeccion('Trabajo realizado');
+  const fila = (l, v) => v ? `<tr><td style="padding:7px 18px 7px 0; font-size:12px; font-weight:700; color:${INF.ink3}; vertical-align:top; white-space:nowrap">${esc(l.toUpperCase())}</td><td style="padding:7px 0; font-size:13.5px; color:${INF.ink}">${esc(v)}</td></tr>` : '';
+  h += `<table cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; margin:0 20px">${fila('Tarea', o.tipo)}${fila('Sectores', (o.sectores || []).join(', '))}${fila('Detalle', o.sectoresDetalle)}${fila('Producto', o.producto)}${fila('Dosis', o.dosis)}</table>`;
+  h += infObs('Observaciones', o.obs);
+  if (plano) h += await infPlanos(plano, null, leyendaTipos(['c', 'a', 'u', 'j']), pdf, 'Plano de referencia de la planta.');
+  return h;
+}
+async function informeHTML(tipo, obj, modo) {
+  const pdf = modo === 'pdf';
+  let h;
+  if (tipo === 'monitoreo') h = await informeMonitoreo(obj, pdf);
+  else if (tipo === 'palomas') h = await informePalomas(obj, pdf);
+  else if (tipo === 'orden') h = await informeOrden(obj, pdf);
+  else h = await informeRegistro(obj, pdf);
+  h += `<div style="font-family:Arial, Helvetica, sans-serif; padding:22px 20px 20px; font-size:11px; color:${INF.ink3}">Generado por el sistema de control de plagas de ADC Fumigación el ${fFecha(hoyISO(), true)} h</div>`;
+  return h;
+}
+function tituloInforme(tipo, obj) {
+  if (tipo === 'monitoreo') return 'Monitoreo de trampas UV';
+  if (tipo === 'palomas') return 'Jaulas para palomas';
+  if (tipo === 'orden') return 'Servicio esporádico N° ' + obj.numero;
+  return obj.tipoTarea === 'jaulas' ? 'Jaulas para roedores' : 'Desratización';
+}
+
+let informeActual = null;
+async function abrirInforme(tipo, obj, volver) {
+  informeActual = { tipo, obj, volver: volver || 'scr-menu' };
+  $('infEyebrow').textContent = (obj.plantaNombre || '') + ' · ' + fFecha(obj.fecha, true);
+  $('infTitle').textContent = 'Informe · ' + tituloInforme(tipo, obj);
+  $('infBody').innerHTML = '<p class="lead">Armando el informe…</p>';
+  const btn = $('infEnviar');
+  btn.disabled = false;
+  btn.textContent = obj.informeUrl ? 'Enviar al supervisor por WhatsApp ›' : 'Enviar al supervisor por WhatsApp';
+  go('scr-informe');
+  try {
+    $('infBody').innerHTML = `<div class="inf-wrap">${await informeHTML(tipo, obj, 'pantalla')}</div>`;
+  } catch (e) {
+    $('infBody').innerHTML = '<p class="lead">No se pudo armar el informe.</p>';
+  }
+}
+function volverDeInforme() {
+  const v = informeActual ? informeActual.volver : 'scr-menu';
+  if (v === 'detalle' && detalleActual) {
+    const d = detalleActual;
+    ({ registro: abrirDetalleRegistro, orden: abrirDetalleOrden, monitoreo: abrirDetalleMonitoreo, palomas: abrirDetallePalomas })[d.tipo](d.obj);
+  } else go(v);
+}
+function textoInforme(tipo, obj) {
+  const l = [`*Informe de tarea · ${tituloInforme(tipo, obj)}*`, `${obj.plantaNombre || ''}`, `${fFecha(obj.fecha, true)} · ${obj.operario || ''}`, ''];
+  if (tipo === 'registro') {
+    const filas = filasRegistro(obj);
+    const total = (obj.cebosTotal || 0) + (obj.uvTotal || 0);
+    const nov = filas.filter(f => f.k !== 'B');
+    l.push(`✅ ${filas.length}/${total} estaciones revisadas`);
+    if (nov.length) {
+      l.push(`⚠️ ${nov.length} con novedad:`);
+      nov.slice(0, 12).forEach(f => l.push(`• ${f.nombre}: ${nombreEstado(f.k).toLowerCase()}${f.u ? ' (' + textoUbicacion(f.u, true) + ')' : ''}${f.d.prod ? ' · ' + f.d.prod + (f.d.cant ? ' ' + fmtNum(f.d.cant) + ' ' + (f.d.unidad || '') : '') : ''}`));
+      if (nov.length > 12) l.push(`• y ${nov.length - 12} más`);
+    } else l.push('Sin novedades.');
+    const fotos = filas.filter(f => f.d.foto).length;
+    if (fotos) l.push(`📷 ${fotos} ${fotos === 1 ? 'foto' : 'fotos'} con fecha, hora y GPS`);
+  } else if (tipo === 'monitoreo') {
+    const ev = Object.values(obj.equipos);
+    l.push(`✅ ${ev.length}/${obj.ubicaciones.length} equipos revisados · ${ev.filter(d => d.func === 'SI').length} funcionando`);
+    l.push(`🪰 ${ev.reduce((a, d) => a + insectosDe(d), 0)} insectos capturados`);
+  } else if (tipo === 'palomas') {
+    l.push(obj.capturadas ? `🕊 ${obj.capturadas} palomas capturadas` : 'Sin capturas de palomas.');
+  } else {
+    l.push(`${obj.tipo} · ${(obj.sectores || []).join(', ')}`);
+  }
+  if (obj.informeUrl) l.push('', '📄 Informe completo con planos y fotos: ' + obj.informeUrl);
+  return l.join('\n');
+}
+function abrirWhatsAppInforme(tipo, obj) {
+  const num = String(DB.config.waSupervisor || '').replace(/\D/g, '');
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(textoInforme(tipo, obj)), '_blank');
+}
+function documentoInforme(cuerpo, titulo) {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(titulo)}</title></head><body style="margin:0; background:#FFFFFF">${cuerpo}</body></html>`;
+}
+async function enviarInforme(btn) {
+  if (!informeActual) return;
+  const { tipo, obj } = informeActual;
+  if (obj.informeUrl) { abrirWhatsAppInforme(tipo, obj); return; }
+  if (!DB.config.gasUrl) {
+    confirmar('Falta configurar el envío', 'Para mandar el informe en PDF hace falta la dirección del servicio de Google (Ajustes → Envío automático). ¿Querés mandar solo el resumen por WhatsApp?', () => abrirWhatsAppInforme(tipo, obj), 'Mandar el resumen');
+    return;
+  }
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Generando el PDF del informe…';
+  try {
+    const titulo = `Informe ${tituloInforme(tipo, obj)} - ${obj.plantaNombre || ''} - ${fFecha(obj.fecha).replace(/\//g, '-')}`;
+    const html = documentoInforme(await informeHTML(tipo, obj, 'pdf'), titulo);
+    const res = await fetch(DB.config.gasUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ clave: CLAVE_ENVIO, tipo: 'informe', nombre: titulo + '.pdf', html }),
+    });
+    const j = await res.json();
+    if (!j || !j.ok) throw new Error((j && j.error) || 'respuesta inválida');
+    if (typeof j.pdfUrl === 'string' && j.pdfUrl.indexOf('https://drive.google.com/') === 0) obj.informeUrl = j.pdfUrl;
+    persistir();
+    btn.disabled = false;
+    btn.textContent = 'Abrir WhatsApp para enviarlo ›';
+    toast('Informe listo ✓ Tocá el botón para mandarlo por WhatsApp');
+  } catch (e) {
+    btn.disabled = false; btn.textContent = original;
+    if (/desconocido/i.test(String(e.message))) {
+      confirmar('Falta actualizar el servicio de Google', 'El servicio todavía no tiene la versión que arma el informe en PDF (hay que implementarla como "Nueva versión"). ¿Mandar por ahora solo el resumen por WhatsApp?', () => abrirWhatsAppInforme(tipo, obj), 'Mandar el resumen');
+    } else toast('No se pudo generar el informe. Revisá la conexión e intentá de nuevo.');
+  }
+}
+
+/* ============ tablero del supervisor ============ */
+let tablero = { plantaId: null, semanas: 8, ejemplo: false };
+const AZUL = ['#cde2fb', '#86b6ef', '#3987e5', '#1c5cab'];   // rampa secuencial (consumo)
+
+function pedirPinSupervisor(cb) {
+  pinModo = 'supervisor';
+  $('pinTit').textContent = 'Acceso del supervisor';
+  $('pinTxt').textContent = 'El tablero es para el supervisor. Ingresá el PIN.';
+  pinCb = cb;
+  $('pinInput').value = '';
+  $('pinError').style.display = 'none';
+  $('pinVeil').classList.add('on');
+  setTimeout(() => $('pinInput').focus(), 120);
+}
+function abrirTablero() {
+  pedirPinSupervisor(() => {
+    if (!tablero.plantaId || !DB.plantas.some(p => p.id === tablero.plantaId)) {
+      const conPlano = DB.plantas.find(p => planoDePlanta(p.nombre));
+      tablero.plantaId = (conPlano || DB.plantas[0] || {}).id || null;
+    }
+    renderTablero();
+    go('scr-tablero');
+  });
+}
+function lunesDe(d) {
+  const x = new Date(d); x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return x;
+}
+function rnd32(seed) {
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+// Datos de ejemplo para la presentación: se generan al vuelo, no se guardan.
+function generarEjemplo(planta) {
+  const modelo = modeloPara(planta.nombre);
+  const plano = planoDePlanta(planta.nombre);
+  const al = rnd32(20261016);
+  const sDes = DB.sectores.find(s => s.plantaId === planta.id && s.tipo !== 'jaulas');
+  const sJau = sectorJaulasDe(planta);
+  const nCebos = sDes ? sDes.cebos : 50, nUV = sDes ? sDes.uv : 0, nJ = sJau ? sJau.cebos : 0;
+  const caliente = { 44: .6, 45: .55, 46: .5, 47: .45, 48: .4, 39: .35, 40: .3, 26: .45, 25: .35, 10: .3, 49: .5, 50: .45, 1: .3, 2: .25 };
+  const jCal = { 14: .45, 15: .4, 16: .35, 24: .3, 25: .3, 27: .25 };
+  const pBloque = productoSugerido('C', 'cebo'), pPorta = productoSugerido('N', 'cebo'), pPlaca = productoSugerido('X', 'uv');
+  const regs = [], mons = [], pals = [];
+  const hoy = lunesDe(new Date());
+  for (let w = 11; w >= 0; w--) {
+    const base = new Date(hoy); base.setDate(base.getDate() - w * 7 + 1); base.setHours(9, 0, 0, 0);
+    const iso = (min) => new Date(base.getTime() + min * 60000).toISOString();
+    const cebos = {}, uv = {}, det = {};
+    for (let n = 1; n <= nCebos; n++) {
+      const p = caliente[n] != null ? caliente[n] * (0.8 + 0.4 * Math.sin(w / 2 + n)) : 0.06;
+      const r = al();
+      let k = 'B';
+      if (r < p) k = 'C'; else if (r < p + 0.015) k = 'D'; else if (r < p + 0.025) k = 'N'; else if (r < p + 0.03) k = 'O';
+      cebos[n] = k;
+      const d = { t: iso(n * 0.9) };
+      if (k === 'C' && pBloque) Object.assign(d, { prod: pBloque, unidad: unidadDe(pBloque), cant: al() < 0.5 ? 20 : 40 });
+      if ((k === 'N' || k === 'D') && pPorta) Object.assign(d, { prod: pPorta, unidad: unidadDe(pPorta), cant: 1 });
+      det['c' + n] = d;
+    }
+    for (let n = 1; n <= nUV; n++) {
+      const r = al();
+      const k = r < 0.12 ? 'X' : r < 0.14 ? 'D' : 'B';
+      uv[n] = k;
+      const d = { t: iso(46 + n * 0.5) };
+      if (k !== 'B' && pPlaca) Object.assign(d, { prod: pPlaca, unidad: unidadDe(pPlaca), cant: 1 });
+      det['u' + n] = d;
+    }
+    if (sDes) regs.push({ id: 'ej-r' + w, ejemplo: true, fecha: iso(62), inicio: iso(0), fin: iso(62), operario: 'Ejemplo', plantaId: planta.id, plantaNombre: planta.nombre, sectorId: sDes.id, sectorNombre: sDes.nombre, cebosTotal: nCebos, uvTotal: nUV, grupos: null, cebos, uv, det, tipoTarea: 'desratizacion', obs: '' });
+    if (sJau) {
+      const jc = {}, jd = {};
+      for (let n = 1; n <= nJ; n++) {
+        const p = jCal[n] != null ? jCal[n] : 0.04;
+        const r = al();
+        const k = r < p ? 'K' : r < p + 0.02 ? 'D' : 'B';
+        jc[n] = k;
+        jd['c' + n] = k === 'K' ? { t: iso(80 + n), capt: al() < 0.75 ? 1 : 2 } : { t: iso(80 + n) };
+      }
+      regs.push({ id: 'ej-j' + w, ejemplo: true, fecha: iso(115), inicio: iso(80), fin: iso(115), operario: 'Ejemplo', plantaId: planta.id, plantaNombre: planta.nombre, sectorId: sJau.id, sectorNombre: sJau.nombre, cebosTotal: nJ, uvTotal: 0, grupos: null, cebos: jc, uv: {}, det: jd, tipoTarea: 'jaulas', etiquetaEstacion: 'JAULA', obs: '' });
+    }
+    if (modelo.monitoreoUV) {
+      const eq = {};
+      modelo.monitoreoUV.equipos.forEach((ub, i) => {
+        const dep = /dep/i.test(ub) ? 2.2 : 1;
+        eq[i + 1] = { func: al() < 0.05 ? 'NO' : 'SI', tubos: '2', placa: 'SI', estado: al() < 0.15 ? 'Saturada' : 'Buena',
+          moscas: Math.round(al() * 14 * dep), polillas: Math.round(al() * 9 * dep), gorgojos: Math.round(al() * 6 * dep), otros: Math.round(al() * 3), tuboSup: false, tuboInf: false, obs: '' };
+      });
+      mons.push({ id: 'ej-m' + w, ejemplo: true, fecha: iso(130), operario: 'Ejemplo', plantaId: planta.id, plantaNombre: planta.nombre, frecuencia: modelo.monitoreoUV.frecuencia, ubicaciones: modelo.monitoreoUV.equipos.slice(), equipos: eq, obs: '' });
+    }
+    if (modelo.palomas) pals.push({ id: 'ej-p' + w, ejemplo: true, fecha: iso(150), operario: 'Ejemplo', plantaId: planta.id, plantaNombre: planta.nombre, capturadas: Math.round(al() * 3), obs: '' });
+  }
+  return { registros: regs, monitoreos: mons, palomas: pals, plano };
+}
+function datosTablero(planta) {
+  const ej = tablero.ejemplo;
+  const src = ej ? generarEjemplo(planta) : {
+    registros: DB.registros.filter(r => r.plantaId === planta.id || (!r.plantaId && r.plantaNombre === planta.nombre)),
+    monitoreos: (DB.monitoreos || []).filter(m => m.plantaId === planta.id),
+    palomas: (DB.palomas || []).filter(p => p.plantaId === planta.id),
+  };
+  const desde = lunesDe(new Date()); desde.setDate(desde.getDate() - (tablero.semanas - 1) * 7);
+  const en = x => new Date(x.fecha) >= desde;
+  return { registros: src.registros.filter(en), monitoreos: src.monitoreos.filter(en), palomas: src.palomas.filter(en), desde };
+}
+
+// Gráficos: SVG a mano, una sola serie, valores rotulados, grilla tenue.
+function svgBarrasV(datos, opts) {
+  const W = 640, H = 220, mL = 34, mR = 8, mT = 22, mB = 30;
+  const max = Math.max(1, ...datos.map(d => d.v));
+  const paso = max <= 5 ? 1 : Math.ceil(max / 4 / 5) * 5;
+  const top = Math.ceil(max / paso) * paso;
+  const iw = W - mL - mR, ih = H - mT - mB;
+  const bw = Math.min(42, iw / datos.length * 0.62);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.titulo)}" font-family="inherit">`;
+  for (let v = 0; v <= top; v += paso) {
+    const y = mT + ih - v / top * ih;
+    s += `<line x1="${mL}" x2="${W - mR}" y1="${y}" y2="${y}" stroke="#E6E3DA" stroke-width="1"/><text x="${mL - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="#8B958F">${v}</text>`;
+  }
+  datos.forEach((d, i) => {
+    const cx = mL + iw / datos.length * (i + 0.5);
+    const h = d.v / top * ih, x = cx - bw / 2, y = mT + ih - h, r = Math.min(4, bw / 2, h);
+    if (h > 0) s += `<path d="M${x} ${y + h}V${y + r}Q${x} ${y} ${x + r} ${y}H${x + bw - r}Q${x + bw} ${y} ${x + bw} ${y + r}V${y + h}Z" fill="${opts.color || INF.azul}"><title>${esc(d.tip || d.label + ': ' + d.v)}</title></path>`;
+    s += `<rect x="${cx - iw / datos.length / 2}" y="${mT}" width="${iw / datos.length}" height="${ih}" fill="transparent"><title>${esc(d.tip || d.label + ': ' + d.v)}</title></rect>`;
+    if (d.v > 0) s += `<text x="${cx}" y="${y - 6}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#22302B">${fmtNum(d.v)}</text>`;
+    s += `<text x="${cx}" y="${H - 10}" text-anchor="middle" font-size="11" fill="#5C6963">${esc(d.label)}</text>`;
+  });
+  return s + `<line x1="${mL}" x2="${W - mR}" y1="${mT + ih}" y2="${mT + ih}" stroke="#8B958F" stroke-width="1"/></svg>`;
+}
+function svgBarrasH(datos, opts) {
+  const W = 640, fila = 30, mL = opts.mL || 210, mR = 46;
+  const H = datos.length * fila + 8;
+  const max = Math.max(1, ...datos.map(d => d.v));
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.titulo)}" font-family="inherit">`;
+  datos.forEach((d, i) => {
+    const y = 4 + i * fila, bh = 14, w = Math.max(2, d.v / max * (W - mL - mR)), r = Math.min(4, w / 2);
+    s += `<text x="${mL - 10}" y="${y + bh / 2 + 4.5}" text-anchor="end" font-size="12.5" fill="#5C6963">${esc(d.label)}</text>`;
+    s += `<path d="M${mL} ${y}H${mL + w - r}Q${mL + w} ${y} ${mL + w} ${y + r}V${y + bh - r}Q${mL + w} ${y + bh} ${mL + w - r} ${y + bh}H${mL}Z" fill="${opts.color || INF.azul}"><title>${esc(d.tip || d.label + ': ' + d.v)}</title></path>`;
+    s += `<text x="${mL + w + 7}" y="${y + bh / 2 + 4.5}" font-size="12" font-weight="700" fill="#22302B">${esc(d.txt != null ? d.txt : fmtNum(d.v))}</text>`;
+  });
+  return s + '</svg>';
+}
+function vizCard(titulo, sub, cuerpo) {
+  return `<div class="card viz-card"><h3>${esc(titulo)}</h3>${sub ? `<p class="sub">${esc(sub)}</p>` : ''}<div class="viz">${cuerpo}</div></div>`;
+}
+
+function renderTablero() {
+  // filtros
+  const pc = $('tabPlantas'); pc.innerHTML = '';
+  DB.plantas.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'chip sm' + (p.id === tablero.plantaId ? ' on' : '');
+    b.textContent = p.nombre;
+    b.onclick = () => { tablero.plantaId = p.id; renderTablero(); };
+    pc.appendChild(b);
+  });
+  document.querySelectorAll('#tabSemanas .chip').forEach(c => c.classList.toggle('on', Number(c.dataset.s) === tablero.semanas));
+  $('tabEjemplo').classList.toggle('on', tablero.ejemplo);
+  $('tabEjemplo').textContent = tablero.ejemplo ? '✓ Datos de ejemplo' : 'Datos de ejemplo';
+  $('tabDemoBanner').hidden = !tablero.ejemplo;
+  const planta = DB.plantas.find(p => p.id === tablero.plantaId);
+  const cuerpo = $('tabCuerpo');
+  if (!planta) { cuerpo.innerHTML = '<p class="lead">No hay plantas cargadas.</p>'; return; }
+  const plano = planoDePlanta(planta.nombre);
+  const { registros, monitoreos, palomas, desde } = datosTablero(planta);
+  const desrat = registros.filter(r => r.tipoTarea !== 'jaulas');
+  const jaulas = registros.filter(r => r.tipoTarea === 'jaulas');
+  if (!registros.length && !monitoreos.length && !palomas.length) {
+    cuerpo.innerHTML = `<div class="card"><p style="font-weight:650">Todavía no hay tareas de ${esc(planta.nombre)} en esta tablet para el período elegido.</p><p class="lead" style="font-size:15px">Cuando los operarios terminen recorridos acá vas a ver el consumo, las capturas y el mapa de la planta. Para ver cómo queda, activá “Datos de ejemplo”.</p></div>`;
+    return;
+  }
+  // semanas del período
+  const semanas = [];
+  for (let i = 0; i < tablero.semanas; i++) { const d = new Date(desde); d.setDate(d.getDate() + i * 7); semanas.push(d); }
+  const idxSemana = f => Math.floor((lunesDe(f) - desde) / (7 * 86400000));
+  const etSemana = d => d.toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' });
+  // consumo por estación de cebado (marcas C) y producto
+  const consumo = {}, prods = {};
+  let eventosC = 0, gramos = 0;
+  const porSemanaC = semanas.map(() => 0);
+  desrat.forEach(r => {
+    Object.keys(r.cebos || {}).forEach(n => {
+      if (r.cebos[n] === 'C') { consumo[n] = (consumo[n] || 0) + 1; eventosC++; const i = idxSemana(new Date(r.fecha)); if (i >= 0 && i < semanas.length) porSemanaC[i]++; }
+    });
+    filasRegistro(r).forEach(f => {
+      if (!f.d.prod) return;
+      const p = prods[f.d.prod] || (prods[f.d.prod] = { n: f.d.prod, u: f.d.unidad || unidadDe(f.d.prod), cant: 0, veces: 0 });
+      p.veces++; p.cant += f.d.cant || 0;
+      if ((p.u || '').trim() === 'g') gramos += f.d.cant || 0;
+    });
+  });
+  const capturasJ = {}, porSemanaJ = semanas.map(() => 0);
+  let capturas = 0;
+  jaulas.forEach(r => (filasRegistro(r).forEach(f => {
+    if (f.k !== 'K') return;
+    const c = f.d.capt || 1; capturas += c; capturasJ[f.n] = (capturasJ[f.n] || 0) + c;
+    const i = idxSemana(new Date(r.fecha)); if (i >= 0 && i < semanas.length) porSemanaJ[i] += c;
+  })));
+  const modelo = modeloPara(planta.nombre);
+  const insPorEquipo = {};
+  let insectos = 0;
+  monitoreos.forEach(m => m.ubicaciones.forEach((ub, i) => {
+    const d = m.equipos[i + 1]; if (!d) return;
+    const k = `UV ${numPlanoUV(modelo, i)} · ${ub}`;
+    insPorEquipo[k] = (insPorEquipo[k] || 0) + insectosDe(d); insectos += insectosDe(d);
+  }));
+  const palomasTot = palomas.reduce((a, p) => a + (p.capturadas || 0), 0);
+  // novedades abiertas: faltantes / deteriorados del último recorrido
+  const ultimo = desrat.slice().sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0];
+  const abiertas = ultimo ? Object.keys(ultimo.cebos).filter(n => ['N', 'D'].includes(ultimo.cebos[n])) : [];
+
+  const kpi = (v, l, s, color) => `<div class="kpi"><div class="v"${color ? ` style="color:${color}"` : ''}>${esc(v)}</div><div class="l">${esc(l)}</div>${s ? `<div class="s">${esc(s)}</div>` : ''}</div>`;
+  let h = '<div class="kpis">';
+  h += kpi(String(desrat.length + jaulas.length), 'Recorridos', `${desrat.length} desratización · ${jaulas.length} jaulas`);
+  h += kpi(String(eventosC), 'Cebos consumidos', `en ${Object.keys(consumo).length} estaciones distintas`, eventosC ? 'var(--warn)' : null);
+  h += kpi(gramos ? fmtNum(gramos / 1000 >= 1 ? gramos / 1000 : gramos) + (gramos >= 1000 ? ' kg' : ' g') : '0', 'Cebo repuesto', 'producto aplicado en el período');
+  if (jaulas.length) h += kpi(String(capturas), 'Roedores capturados', `en ${Object.keys(capturasJ).length} jaulas`, capturas ? 'var(--cap)' : null);
+  if (monitoreos.length) h += kpi(String(insectos), 'Insectos en trampas UV', `${monitoreos.length} monitoreos`);
+  if (palomas.length) h += kpi(String(palomasTot), 'Palomas capturadas', `${palomas.length} visitas`);
+  h += kpi(String(abiertas.length), 'Novedades abiertas', ultimo ? 'faltantes o rotas en el último recorrido' : 'sin recorridos', abiertas.length ? 'var(--bad)' : 'var(--ok)');
+  h += '</div>';
+
+  h += vizCard('Consumo de cebo por semana', 'Cantidad de estaciones que se encontraron con el cebo consumido.',
+    svgBarrasV(semanas.map((d, i) => ({ label: etSemana(d), v: porSemanaC[i], tip: `Semana del ${etSemana(d)}: ${porSemanaC[i]} consumos` })), { titulo: 'Consumo de cebo por semana' }));
+
+  if (plano) {
+    // zonas: dónde se consume más
+    const zonas = {};
+    Object.keys(consumo).forEach(n => {
+      const u = ubicacionEn(plano, 'c', n);
+      const z = u ? (u.zona ? u.zona.replace(/^cerca de /, '') : 'Exterior') + ` (hoja ${u.hoja})` : 'Sin ubicar';
+      zonas[z] = (zonas[z] || 0) + consumo[n];
+    });
+    const zl = Object.keys(zonas).map(k => ({ label: k, v: zonas[k] })).sort((a, b) => b.v - a.v).slice(0, 8);
+    if (zl.length) h += vizCard('¿Dónde se consume más?', 'Consumos por zona del plano en el período.', svgBarrasH(zl, { titulo: 'Consumo por zona', mL: 250 }));
+    // mapa de consumo
+    const maxC = Math.max(1, ...Object.values(consumo));
+    // hasta 4 tramos de la rampa; con pocos consumos cada tramo es un número exacto
+    const cortes = Array.from(new Set([1, 2, 3, 4].map(i => Math.ceil(maxC * i / 4)))).filter(x => x >= 1);
+    const paso = v => v <= 0 ? -1 : cortes.findIndex(c => v <= c) + (4 - cortes.length);
+    const celda = (t, n) => {
+      if (t !== 'c') return { dim: true };
+      const v = consumo[n] || 0;
+      if (!v) return { txt: '·', fill: '#FFFFFF', ink: '#9AA09C' };
+      const p = paso(v);
+      return { txt: String(v), fill: AZUL[p], ink: p >= 2 ? '#FFFFFF' : '#0d366b', ring: v === maxC ? '#0d366b' : null };
+    };
+    let mapa = '';
+    plano.hojas.forEach((hj, i) => {
+      if (!hj.est.some(e => e[0] === 'c')) return;
+      mapa += `<div class="plano-hoja-tit">Hoja ${i + 1} · ${esc(hj.nombre)}</div><div class="plano-box">${svgHoja(hj, celda)}</div>`;
+    });
+    let rampa = '<div class="rampa"><span>Veces consumido:</span><i style="background:#fff; border:1px solid var(--line)"></i>0';
+    cortes.forEach((c, i) => {
+      const desdeV = i ? cortes[i - 1] + 1 : 1;
+      rampa += `<i style="background:${AZUL[i + 4 - cortes.length]}"></i>${desdeV === c ? c : desdeV + '–' + c}`;
+    });
+    rampa += '</div>';
+    h += vizCard('Mapa de consumo', 'Cada cebo muestra cuántas veces se encontró consumido. Remarcado: el que más consume.', rampa + mapa);
+  }
+  const top = Object.keys(consumo).map(n => ({ n, v: consumo[n] })).sort((a, b) => b.v - a.v).slice(0, 8);
+  if (top.length) {
+    h += vizCard('Estaciones que más consumen', null, svgBarrasH(top.map(t => {
+      const u = ubicacionEn(plano, 'c', t.n);
+      return { label: `Cebo ${t.n}` + (u ? ` · ${(u.zona || 'exterior').replace(/^cerca de /, '')}` : ''), v: t.v, txt: `${t.v} ${t.v === 1 ? 'vez' : 'veces'}` };
+    }), { titulo: 'Estaciones que más consumen', mL: 250 }));
+  }
+  const pl = Object.values(prods).sort((a, b) => b.veces - a.veces);
+  if (pl.length) {
+    let t = '<table class="tab-tabla"><tr><th>Producto</th><th>Cantidad</th><th>Reposiciones</th></tr>';
+    pl.forEach(p => { t += `<tr><td>${esc(p.n)}</td><td class="n">${p.cant ? fmtNum(p.cant) + ' ' + esc(p.u) : '—'}</td><td class="n">${p.veces}</td></tr>`; });
+    h += vizCard('Productos utilizados', 'Total del período, de todos los recorridos.', t + '</table>');
+  }
+  if (jaulas.length) h += vizCard('Roedores capturados en jaulas por semana', null,
+    svgBarrasV(semanas.map((d, i) => ({ label: etSemana(d), v: porSemanaJ[i] })), { titulo: 'Capturas por semana' }));
+  const ie = Object.keys(insPorEquipo).map(k => ({ label: k, v: insPorEquipo[k] })).sort((a, b) => b.v - a.v);
+  if (ie.length) h += vizCard('Insectos capturados por equipo UV', 'Suma de moscas, polillas, gorgojos y otros en el período.', svgBarrasH(ie, { titulo: 'Insectos por equipo', mL: 250 }));
+  cuerpo.innerHTML = h;
+}
+function tableroSemanas(chip) { tablero.semanas = Number(chip.dataset.s); renderTablero(); }
+function tableroEjemplo() { tablero.ejemplo = !tablero.ejemplo; renderTablero(); }
+
+/* ============ ajustes: productos ============ */
+function renderProductos() {
+  const l = $('listaProductos'); if (!l) return;
+  l.innerHTML = '';
+  productos().forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'ajuste-item';
+    d.innerHTML = `<span class="nom">${esc(p.n)}</span><span class="meta">${esc(p.u)}</span>`;
+    const b = document.createElement('button'); b.className = 'mini-btn rojo'; b.textContent = 'Quitar';
+    b.onclick = () => { DB.config.productos = productos().filter((_, j) => j !== i); persistir(); renderProductos(); };
+    d.appendChild(b); l.appendChild(d);
+  });
+}
+function agregarProducto() {
+  const n = $('nuevoProducto').value.trim(), u = $('nuevoProductoU').value.trim() || 'u.';
+  if (!n) return;
+  DB.config.productos = productos().concat([{ n, u }]);
+  persistir(); $('nuevoProducto').value = ''; $('nuevoProductoU').value = '';
+  renderProductos(); toast('Producto agregado');
+}
+function cambiarPinSupervisor() {
+  const nuevo = prompt('Nuevo PIN del supervisor (4 a 8 dígitos):');
+  if (nuevo === null) return;
+  if (!/^\d{4,8}$/.test(nuevo)) { toast('El PIN debe tener entre 4 y 8 dígitos'); return; }
+  DB.config.supPin = nuevo; persistir(); toast('PIN del supervisor actualizado');
 }
 
 /* ============ arranque ============ */
