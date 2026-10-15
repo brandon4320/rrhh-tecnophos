@@ -131,17 +131,20 @@ export default function EquiposClient({
 
   // Secciones a mostrar: tabla de secciones ∪ categorías usadas por equipos
   // (por si quedó algún equipo con categoría sin fila de sección)
+  // El llamador pasa un literal nuevo en cada render; sin aplanarlo a texto, la
+  // identidad del arreglo cambia siempre y el memo de abajo no memoriza nada.
+  const excluidas = excluirCategorias.join('|')
   const nombresSecciones = useMemo(() => {
     // Con `soloCategoria` la pantalla es la de esa categoría: se muestra siempre,
     // aunque todavía no haya ningún ítem cargado (si no, no habría dónde crear el primero).
     if (soloCategoria) return [soloCategoria]
     const set = new Set<string>(secciones.map((s) => s.nombre))
     for (const e of equipos) set.add(e.categoria || 'Equipos de medición')
-    for (const fuera of excluirCategorias) set.delete(fuera)
+    for (const fuera of excluidas ? excluidas.split('|') : []) set.delete(fuera)
     return [...set].sort((a, b) =>
       a === 'Equipos de medición' ? -1 : b === 'Equipos de medición' ? 1 : a.localeCompare(b, 'es')
     )
-  }, [secciones, equipos, soloCategoria, excluirCategorias])
+  }, [secciones, equipos, soloCategoria, excluidas])
 
   async function handleCrearSeccion() {
     const nombre = nombreSeccion.trim()
@@ -471,6 +474,11 @@ export default function EquiposClient({
     router.refresh()
   }
 
+  /** Cómo se llama una unidad de esta sección en los textos de la pantalla. */
+  function unidadDe(seccion: string) {
+    return esPala(seccion) ? { una: 'pala', la: 'la pala', plural: 'palas' } : { una: 'ítem', la: 'el ítem', plural: 'ítems' }
+  }
+
   function renderEquipoCard(eq: EquipoConCerts) {
     const isOpen = expandedId === eq.id
     const isAddingHere = addingTo === eq.id
@@ -680,14 +688,16 @@ export default function EquiposClient({
 
         return (
           <div key={nombre}>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-foreground">{nombre}</h2>
+            <div className={clsx('flex items-center mb-3', soloCategoria ? 'justify-end' : 'justify-between')}>
+              {/* Con `soloCategoria` el nombre ya es el título de la página: repetirlo
+                  acá deja "Palas cargadoras" dos veces, una debajo de la otra. */}
+              {!soloCategoria && <h2 className="text-base font-semibold text-foreground">{nombre}</h2>}
               {canEdit && !agregandoAca && (
                 <button
                   onClick={() => abrirAltaItem(nombre)}
                   className="text-xs font-medium text-primary hover:text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg transition-colors"
                 >
-                  + Agregar ítem
+                  + Agregar {unidadDe(nombre).una}
                 </button>
               )}
             </div>
@@ -700,7 +710,9 @@ export default function EquiposClient({
                   className="bg-card rounded-xl border border-primary/30 p-4"
                 >
                   <p className="text-sm font-medium text-foreground mb-3">
-                    {editandoItem ? `Editar ${esPala(nombre) ? 'la pala' : 'el ítem'}` : `${esPala(nombre) ? 'Nueva pala' : `Nuevo ítem en ${nombre}`}`}
+                    {editandoItem
+                      ? `Editar ${unidadDe(nombre).la}`
+                      : esPala(nombre) ? 'Nueva pala' : `Nuevo ítem en ${nombre}`}
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
@@ -791,7 +803,7 @@ export default function EquiposClient({
                     >
                       {savingItem
                         ? (editandoItem ? 'Guardando...' : 'Creando...')
-                        : (editandoItem ? 'Guardar cambios' : (esPala(nombre) ? 'Crear pala' : 'Crear ítem'))}
+                        : (editandoItem ? 'Guardar cambios' : `Crear ${unidadDe(nombre).una}`)}
                     </button>
                     <button type="button" onClick={cerrarAltaItem} className="text-xs text-muted-foreground px-3 py-2">
                       Cancelar
@@ -805,8 +817,10 @@ export default function EquiposClient({
               {items.length === 0 && !agregandoAca && (
                 <div className="bg-card rounded-xl border border-dashed border-border px-5 py-6 text-center">
                   <p className="text-sm text-muted-foreground">
-                    Sin ítems en esta sección.
-                    {canEdit && ' Agregá el primero con "+ Agregar ítem".'}
+                    {soloCategoria
+                      ? `Todavía no hay ${unidadDe(nombre).plural} cargadas.`
+                      : 'Sin ítems en esta sección.'}
+                    {canEdit && ` Agregá la primera con "+ Agregar ${unidadDe(nombre).una}".`}
                   </p>
                   {canEdit && !soloCategoria && secciones.some((s) => s.nombre === nombre) && (
                     <button
