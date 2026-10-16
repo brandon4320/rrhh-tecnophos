@@ -158,12 +158,30 @@ describe('estado del checklist (por período de calendario)', () => {
     expect(estadoChecklist(chk('2026-09-25'), 30, '2026-10-04')).toMatchObject({ estado: 'vencido', venceEn: -1 })
     expect(estadoChecklist(chk('2026-08-25'), 30, '2026-10-02')).toMatchObject({ estado: 'vencido', limite: '2026-09-03' })
   })
+  it('hecho unos días antes de que arranque la quincena, ya cuenta para esa (no ser estrictos)', () => {
+    // El caso real: AE169KB lo hizo el 14/10 y el 16 le pedía otro.
+    expect(estadoChecklist(chk('2026-10-14'), 15, '2026-10-16')).toMatchObject({ estado: 'al_dia', proximo: '2026-11-01', venceEn: 16 })
+    expect(estadoChecklist(chk('2026-10-12'), 15, '2026-10-16').estado).toBe('al_dia')
+    // Antes de eso ya no: el 11 es de la quincena del 1 al 14.
+    expect(estadoChecklist(chk('2026-10-11'), 15, '2026-10-16')).toMatchObject({ estado: 'vence_pronto', limite: '2026-10-17' })
+    // A fin de mes cuenta para la quincena del 1.
+    expect(estadoChecklist(chk('2026-10-30'), 15, '2026-11-02')).toMatchObject({ estado: 'al_dia', proximo: '2026-11-15' })
+    expect(estadoChecklist(chk('2026-02-26'), 15, '2026-03-01').estado).toBe('al_dia')
+    // Hecho antes, el mismo día sigue al día y el próximo toca después de la quincena que cubrió.
+    expect(estadoChecklist(chk('2026-10-13'), 15, '2026-10-13')).toMatchObject({ estado: 'al_dia', proximo: '2026-11-01' })
+    // Mensual: los últimos días del mes cuentan para el que viene.
+    expect(estadoChecklist(chk('2026-09-29'), 30, '2026-10-20')).toMatchObject({ estado: 'al_dia', proximo: '2026-11-01' })
+  })
+  it('uno solo por mes no alcanza: la quincena que queda sin hacer sigue vencida', () => {
+    // Último del 20/09: la quincena del 1/10 vence el 3 y el 10 está vencido (hacerlo el 13 la cubre tarde).
+    expect(estadoChecklist(chk('2026-09-20'), 15, '2026-10-10')).toMatchObject({ estado: 'vencido', limite: '2026-10-03' })
+  })
   it('los días se cuentan en hora de Argentina', () => {
-    // 23:00 AR del 30/09 = 02:00 UTC del 01/10: es de la quincena anterior.
-    expect(estadoChecklist('2026-10-01T02:00:00Z', 15, '2026-10-01').estado).toBe('vence_pronto')
-    // 22:00 AR del 14/10 = 01:00 UTC del 15/10: cubre la quincena del 1 al 14.
-    expect(estadoChecklist('2026-10-15T01:00:00Z', 15, '2026-10-14').estado).toBe('al_dia')
-    expect(estadoChecklist('2026-10-15T01:00:00Z', 15, '2026-10-15').estado).toBe('vence_pronto')
+    // 23:00 AR del 27/09 = 02:00 UTC del 28/09: es del 27, todavía no cuenta para la quincena del 1.
+    expect(estadoChecklist('2026-09-28T02:00:00Z', 15, '2026-10-01').estado).toBe('vence_pronto')
+    // 22:00 AR del 11/10 = 01:00 UTC del 12/10: es del 11, cubre la quincena del 1 al 14 y no la del 15.
+    expect(estadoChecklist('2026-10-12T01:00:00Z', 15, '2026-10-11').estado).toBe('al_dia')
+    expect(estadoChecklist('2026-10-12T01:00:00Z', 15, '2026-10-15').estado).toBe('vence_pronto')
   })
 })
 

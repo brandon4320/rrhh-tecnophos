@@ -16,7 +16,7 @@ import type { EstadoVencimiento } from '@/types'
 import type { ResumenVehiculo, Semaforo } from '@/modules/flota/resumen'
 import {
   ESTADO_CHECKLIST_LABEL, RESULTADO_LABEL, TIPOS_MANTENIMIENTO, TIPOS_VEHICULO, TIPO_VEHICULO_LABEL, fotosPara, seccionesPara, tipoDe,
-  GRACIA_CHECKLIST_DIAS, checklistMensual, frecuenciaChecklist, itemPorId, nombreMantenimiento,
+  ADELANTO_CHECKLIST_DIAS, GRACIA_CHECKLIST_DIAS, checklistMensual, frecuenciaChecklist, itemPorId, nombreMantenimiento,
   type EstadoChecklist, type EstadoMantenimiento, type Resultado, type TipoVehiculo,
 } from '@/modules/flota/reglas'
 
@@ -636,7 +636,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
                   {num(datos.cada) != null && checklistMensual(num(datos.cada)!)
                     ? 'Mensual: toca el día 1 de cada mes (con menos de 28 días pasa a quincenal).'
                     : 'Quincenal: toca los días 1 y 15 (con 28 días o más pasa a mensual).'}{' '}
-                  Hay {GRACIA_CHECKLIST_DIAS} días para hacerlo antes de que quede vencido.
+                  Hay {GRACIA_CHECKLIST_DIAS} días para hacerlo antes de que quede vencido, y hecho hasta {ADELANTO_CHECKLIST_DIAS} días antes ya cuenta.
                 </p>
               )}
               {vehiculo.kmActualizadoAt && <p className="text-xs text-muted-foreground">Km actualizados el {fmtFechaAR(vehiculo.kmActualizadoAt)}</p>}

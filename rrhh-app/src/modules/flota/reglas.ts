@@ -446,6 +446,11 @@ export function kmPorDia(lecturas: LecturaKm[], hoy: string = diaClaveAR(new Dat
 // calendario (por si la empresa pasa a mensual). Hecho en cualquier día del
 // período, el período queda cubierto. Los primeros días de cada período sin
 // checklist son de gracia ("toca hacerlo"); después, vencido.
+//
+// No se es estricto con la fecha (pedido de Brandon, 16/10): hecho en los
+// últimos días antes de que arranque un período (el 13 o el 14 para la quincena
+// del 15), ya cuenta para ese período. Lo que importa es que se haga. Hacer uno
+// solo por mes no alcanza igual: el período que queda sin hacer se ve vencido.
 
 export type EstadoChecklist = 'al_dia' | 'vence_pronto' | 'vencido' | 'nunca'
 
@@ -458,6 +463,9 @@ export const ESTADO_CHECKLIST_LABEL: Record<EstadoChecklist, string> = {
 
 /** Días al comienzo de cada período para hacer el checklist antes de que quede vencido. */
 export const GRACIA_CHECKLIST_DIAS = 3
+
+/** Días antes de que empiece un período en los que el checklist ya cuenta para ese período. */
+export const ADELANTO_CHECKLIST_DIAS = 3
 
 export function checklistMensual(cadaDias: number): boolean {
   return cadaDias >= 28
@@ -482,6 +490,16 @@ export function periodoChecklist(dia: string, cadaDias: number): PeriodoChecklis
   return Number(dia.slice(8, 10)) < 15
     ? { desde: `${mes}-01`, hasta: `${mes}-14`, mensual: false }
     : { desde: `${mes}-15`, hasta: finDeMes, mensual: false }
+}
+
+/**
+ * Hasta qué período deja al día un checklist hecho ese día: el suyo o, si se hizo
+ * en los últimos `ADELANTO_CHECKLIST_DIAS` antes de que arranque el siguiente, ese.
+ */
+export function periodoCubierto(dia: string, cadaDias: number): PeriodoChecklist {
+  const propio = periodoChecklist(dia, cadaDias)
+  const siguiente = periodoChecklist(sumarDias(propio.hasta, 1), cadaDias)
+  return dia >= sumarDias(siguiente.desde, -ADELANTO_CHECKLIST_DIAS) ? siguiente : propio
 }
 
 /** Último día para hacer el checklist de un período sin que quede vencido. */
@@ -525,14 +543,17 @@ export function estadoChecklist(
 
   const diaUltimo = diaClaveAR(ultimoAt)
   const diasDesde = diasEntre(diaUltimo, hoy)
-  if (diaUltimo >= periodo.desde) {
-    return { estado: 'al_dia', diasDesde, periodo, proximo, limite: null, venceEn: diasEntre(hoy, proximo) }
+  const cubierto = periodoCubierto(diaUltimo, cadaDias)
+  if (cubierto.desde >= periodo.desde) {
+    // Hecho un poco antes de que arrancara el período siguiente: el próximo toca después de ese.
+    const siguiente = sumarDias(cubierto.hasta, 1)
+    return { estado: 'al_dia', diasDesde, periodo, proximo: siguiente, limite: null, venceEn: diasEntre(hoy, siguiente) }
   }
 
-  // El primer período que quedó sin checklist es el siguiente al del último. Si
-  // es el actual, todavía puede estar en la gracia; si es uno anterior (se
+  // El primer período que quedó sin checklist es el siguiente al último cubierto.
+  // Si es el actual, todavía puede estar en la gracia; si es uno anterior (se
   // saltearon quincenas enteras), está vencido desde entonces.
-  const primeroSinHacer = periodoChecklist(sumarDias(periodoChecklist(diaUltimo, cadaDias).hasta, 1), cadaDias)
+  const primeroSinHacer = periodoChecklist(sumarDias(cubierto.hasta, 1), cadaDias)
   const limite = limiteDelPeriodo(primeroSinHacer)
   const venceEn = diasEntre(hoy, limite)
   return { estado: venceEn >= 0 ? 'vence_pronto' : 'vencido', diasDesde, periodo, proximo, limite, venceEn }

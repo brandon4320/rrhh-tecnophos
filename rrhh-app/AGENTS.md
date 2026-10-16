@@ -297,6 +297,10 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
     ≥ 28, el mes. Hecho en cualquier día del período, queda al día; los primeros
     `GRACIA_CHECKLIST_DIAS` (3) de un período sin checklist son "Toca hacerlo" (`vence_pronto`) y
     después "Vencido". Si se salteó un período entero, está vencido aunque el nuevo esté en gracia.
+    **Sin ser estrictos con la fecha** (Brandon, 16/10/2026): hecho en los últimos
+    `ADELANTO_CHECKLIST_DIAS` (3) antes de que arranque un período, ya cuenta para ese período
+    (`periodoCubierto`): el del 14 cubre la quincena del 15. Uno solo por mes no alcanza igual,
+    porque el período que queda sin hacer se ve vencido hasta que se hace.
   - **Envío idempotente**: el celular genera un `envioId` (uuid) al empezar el borrador y el server
     lo usa como `id` del checklist / novedad; un reintento con el mismo id (la respuesta se perdió
     por la señal) devuelve lo ya guardado sin duplicar novedades ni avisos. El borrador vive en
