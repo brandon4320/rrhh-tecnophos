@@ -838,10 +838,16 @@ function estadosUVDe(plantaNombre) {
   return m.tuboLuminico ? ESTADOS_UV.concat(['T']) : ESTADOS_UV;
 }
 
+// Operarios reales con los que arranca cualquier dispositivo nuevo.
+const OPERARIOS_INICIALES = ['Nicolas', 'Damian'];
+// Lista de fábrica de versiones anteriores: si un dispositivo la tiene sin
+// tocar, se reemplaza por la real. Si el administrador la editó, se respeta.
+const OPERARIOS_DE_FABRICA = ['Cristian', 'Marcos', 'Rodrigo'];
+
 function datosIniciales() {
   return {
     v: 1,
-    operarios: ['Cristian', 'Marcos', 'Rodrigo'],
+    operarios: OPERARIOS_INICIALES.slice(),
     plantas: [
       { id: 'p1', nombre: 'Frigorífico Cabildo', mail: '' },
     ],
@@ -864,6 +870,8 @@ function datosIniciales() {
 let DB;
 function migrar(db) {
   if (!db.operarios) db.operarios = [];
+  if (db.operarios.length === OPERARIOS_DE_FABRICA.length && OPERARIOS_DE_FABRICA.every((n, i) => db.operarios[i] === n))
+    db.operarios = OPERARIOS_INICIALES.slice();
   if (!db.registros) db.registros = [];
   if (!db.ordenes) db.ordenes = [];
   if (!db.monitoreos) db.monitoreos = [];
