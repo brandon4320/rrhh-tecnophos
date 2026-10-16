@@ -348,6 +348,12 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
     manda siempre `nombreLibre`.
   - **Conductor habitual**: también se escribe a mano (`vehiculos.conductor_nombre`, migración 26).
     `conductor_id` quedó sin uso; no volver a la lista de empleados.
+  - **Sacar un vehículo de la flota** = `vehiculos.activo = false`, **nunca borrar la fila**: todas
+    las consultas filtran `activo` (incluida la del QR público), así que desaparece de las pantallas
+    y su QR deja de abrir, pero los checklists y la documentación quedan. Además `vehiculo_checklists`
+    y `vehiculo_novedades` tienen FK `on delete restrict`: un vehículo con historial **no se puede**
+    borrar. Todavía no hay UI para esto: se hace por SQL (ver
+    `supabase/flota_elementos_obligatorios_2026_10_16.sql`, baja de AD778EL).
   - **Documentos desde el QR**: la pantalla del QR muestra seguro/VTV con "Ver documento"; abre
     `/api/v/<token>/documento/<archivoId>`, que solo firma archivos de certificados de ESE vehículo
     (302 a una URL de R2 de 5 min, inline con el nombre original) — para mostrarlo en un control.
