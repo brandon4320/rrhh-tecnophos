@@ -16,7 +16,7 @@ import type { EstadoVencimiento } from '@/types'
 import type { ResumenVehiculo, Semaforo } from '@/modules/flota/resumen'
 import {
   ESTADO_CHECKLIST_LABEL, RESULTADO_LABEL, TIPOS_MANTENIMIENTO, TIPOS_VEHICULO, TIPO_VEHICULO_LABEL, fotosPara, seccionesPara, tipoDe,
-  ADELANTO_CHECKLIST_DIAS, GRACIA_CHECKLIST_DIAS, checklistMensual, frecuenciaChecklist, itemPorId, nombreMantenimiento,
+  ADELANTO_CHECKLIST_DIAS, GRACIA_CHECKLIST_DIAS, checklistMensual, etiquetaItem, frecuenciaChecklist, nombreMantenimiento,
   type EstadoChecklist, type EstadoMantenimiento, type Resultado, type TipoVehiculo,
 } from '@/modules/flota/reglas'
 
@@ -448,7 +448,12 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
                   const fotos = comoMapa(c.fotos)
                   const anterior = checklists[idx + 1]
                   const fotosAnt = anterior ? comoMapa(anterior.fotos) : {}
-                  const excepciones = secciones.flatMap((s) => s.items.filter((i) => respuestas[i.id] && respuestas[i.id] !== 'ok'))
+                  // Lo que no dio bien, más lo respondido en ítems que ya no se piden (checklists viejos).
+                  const pedidos = new Set(secciones.flatMap((s) => s.items.map((i) => i.id)))
+                  const excepciones: { id: string }[] = [
+                    ...secciones.flatMap((s) => s.items.filter((i) => respuestas[i.id] && respuestas[i.id] !== 'ok')),
+                    ...Object.keys(respuestas).filter((id) => !pedidos.has(id) && respuestas[id] && respuestas[id] !== 'ok').map((id) => ({ id })),
+                  ]
                   return (
                     <li key={c.id}>
                       <button type="button" onClick={() => setAbierto(isOpen ? null : c.id)} className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-muted/40">
@@ -475,7 +480,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
                                   <span className={cn('mt-0.5 shrink-0 rounded px-1.5 text-[11px] font-medium', respuestas[i.id] === 'no_ok' ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning')}>
                                     {respuestas[i.id] === 'no_ok' ? 'Mal' : 'Obs.'}
                                   </span>
-                                  <span>{itemPorId(i.id)?.label ?? i.id}{notas[i.id] && <span className="text-muted-foreground"> — {notas[i.id]}</span>}</span>
+                                  <span>{etiquetaItem(i.id)}{notas[i.id] && <span className="text-muted-foreground"> — {notas[i.id]}</span>}</span>
                                 </li>
                               ))}
                             </ul>

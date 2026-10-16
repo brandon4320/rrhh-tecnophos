@@ -231,9 +231,6 @@ const SECCIONES_DEF: SeccionDef[] = [
     titulo: 'Elementos obligatorios',
     items: [
       { id: 'matafuegos', label: 'Matafuegos cargado, con precinto y carga vigente', critico: true },
-      { id: 'balizas_triangulo', label: 'Dos balizas triangulares', critico: false },
-      { id: 'chaleco', label: 'Chaleco reflectivo', critico: false },
-      { id: 'botiquin', label: 'Botiquín', critico: false },
       { id: 'gato_llave', label: 'Gato y llave de rueda', critico: false },
     ],
   },
@@ -258,9 +255,6 @@ const SECCIONES_DEF: SeccionDef[] = [
       { id: 'mampara', label: 'Separación entre cabina y carga sin aberturas', critico: false, para: CON_COMPARTIMENTO },
       { id: 'puertas_carga', label: 'Puertas de carga cierran y traban', critico: false, para: CON_COMPARTIMENTO },
       { id: 'caja_cobertor', label: 'Tapa o lona de la caja en buen estado', critico: false, para: ['pickup'] },
-      { id: 'productos_envases', label: 'Productos en envases originales, cerrados y secos', critico: true, para: TODOS },
-      { id: 'carga_sujeta', label: 'Carga sujeta y bien estibada', critico: false, para: TODOS },
-      { id: 'kit_derrames', label: 'Kit para derrames a bordo', critico: false },
       { id: 'epp', label: 'EPP a bordo (máscara, guantes, antiparras)', critico: false },
     ],
   },
@@ -279,6 +273,18 @@ const SECCIONES_DEF: SeccionDef[] = [
       },
     ],
   },
+]
+
+// Sacados del checklist a pedido de Brandon (16/10/2026): no se piden más. Quedan acá solo para que
+// los checklists viejos que los respondieron se sigan leyendo con su nombre. Como no están en
+// `itemPorId`, el servidor ignora sus respuestas si llegan de un borrador viejo.
+const ITEMS_RETIRADOS: ItemChecklist[] = [
+  { id: 'balizas_triangulo', label: 'Dos balizas triangulares', critico: false },
+  { id: 'chaleco', label: 'Chaleco reflectivo', critico: false },
+  { id: 'botiquin', label: 'Botiquín', critico: false },
+  { id: 'productos_envases', label: 'Productos en envases originales, cerrados y secos', critico: true },
+  { id: 'carga_sujeta', label: 'Carga sujeta y bien estibada', critico: false },
+  { id: 'kit_derrames', label: 'Kit para derrames a bordo', critico: false },
 ]
 
 const aItem = (i: ItemDef, tipo: TipoVehiculo): ItemChecklist => ({ id: i.id, label: i.labelSegun?.[tipo] ?? i.label, critico: i.critico })
@@ -304,6 +310,11 @@ const ITEM_POR_ID = new Map(ITEMS_CHECKLIST.map((i) => [i.id, i]))
 
 export function itemPorId(id: string): ItemChecklist | undefined {
   return ITEM_POR_ID.get(id)
+}
+
+/** Nombre de un ítem para mostrar un checklist guardado (incluye los que ya no se piden). */
+export function etiquetaItem(id: string): string {
+  return ITEM_POR_ID.get(id)?.label ?? ITEMS_RETIRADOS.find((i) => i.id === id)?.label ?? id
 }
 
 export type Respuesta = 'ok' | 'obs' | 'no_ok'
