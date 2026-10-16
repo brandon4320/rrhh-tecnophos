@@ -322,7 +322,7 @@
   <section class="screen" id="scr-menu">
     <div class="screen-head">
       <div class="eyebrow" id="menuPlanta"></div>
-      <h1>¿Qué vas a hacer?</h1>
+      <h1>¿Qué tarea vas a hacer?</h1>
     </div>
     <div id="avisos" class="stack" style="margin-bottom:12px"></div>
     <div class="stack">
@@ -1110,19 +1110,8 @@ function renderMenu() {
     btns.append(bc, bd); div.appendChild(btns);
     av.appendChild(div);
   }
-  const total = DB.registros.length + DB.ordenes.length;
-  if (total > 0) {
-    const dias = DB.ultimoRespaldo ? Math.floor((Date.now() - new Date(DB.ultimoRespaldo)) / 86400000) : null;
-    if (dias === null || dias >= 7) {
-      const div = document.createElement('div');
-      div.className = 'alert suave';
-      div.innerHTML = `<span>💾</span><span>${dias === null ? 'Todavía no hiciste ninguna copia de seguridad.' : 'Hace ' + dias + ' días que no exportás una copia de seguridad.'} </span>`;
-      const b = document.createElement('button'); b.className = 'mini-btn'; b.style.flex = 'none'; b.textContent = 'Exportar ahora';
-      b.onclick = () => exportarRespaldo();
-      div.appendChild(b);
-      av.appendChild(div);
-    }
-  }
+  // El recordatorio de copia de seguridad se sacó del menú (hacía ruido);
+  // la copia se sigue exportando desde Ajustes → Copia de seguridad.
 }
 
 /* ============ desratización: sectores ============ */
