@@ -289,9 +289,11 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   - **El contenido del checklist vive en código** (`modules/flota/reglas.ts`: `FOTOS_CHECKLIST`,
     `SECCIONES_CHECKLIST`, con tests). Sumar o sacar un ítem es editar la lista; las respuestas se
     guardan por id, así que **no le cambies el id a un ítem existente**. Para **sacar** un ítem,
-    movelo a `ITEMS_RETIRADOS` (no lo borres): deja de pedirse y el servidor ignora sus respuestas,
-    pero los checklists viejos lo siguen mostrando con su nombre (`etiquetaItem`). El 16/10/2026 se
-    sacaron balizas, chaleco, botiquín, kit para derrames, envases y carga estibada. "Mal" en un ítem `critico`
+    movelo a `ITEMS_RETIRADOS` (no lo borres): deja de pedirse, el servidor ignora sus respuestas y
+    el historial no lo muestra (solo lista los ítems vigentes). El 16/10/2026 se sacaron balizas,
+    chaleco, botiquín, kit para derrames, envases y carga estibada, y se limpiaron sus respuestas y
+    novedades ya guardadas (copia en `respaldo.flota_checklists_items_retirados_20261016` y
+    `respaldo.flota_novedades_items_retirados_20261016`). "Mal" en un ítem `critico`
     abre una novedad grave y avisa al instante. **"No apta" = tiene novedades graves ABIERTAS**
     (`resumen.ts::noApta`), no "el último checklist dio no apto": se limpia cuando la oficina las
     resuelve. Un ítem que ya tiene una novedad abierta no abre otra en el checklist siguiente.

@@ -448,12 +448,8 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
                   const fotos = comoMapa(c.fotos)
                   const anterior = checklists[idx + 1]
                   const fotosAnt = anterior ? comoMapa(anterior.fotos) : {}
-                  // Lo que no dio bien, más lo respondido en ítems que ya no se piden (checklists viejos).
-                  const pedidos = new Set(secciones.flatMap((s) => s.items.map((i) => i.id)))
-                  const excepciones: { id: string }[] = [
-                    ...secciones.flatMap((s) => s.items.filter((i) => respuestas[i.id] && respuestas[i.id] !== 'ok')),
-                    ...Object.keys(respuestas).filter((id) => !pedidos.has(id) && respuestas[id] && respuestas[id] !== 'ok').map((id) => ({ id })),
-                  ]
+                  // Solo lo que se pide hoy: lo que se sacó del checklist no vuelve a aparecer como alerta.
+                  const excepciones = secciones.flatMap((s) => s.items.filter((i) => respuestas[i.id] && respuestas[i.id] !== 'ok'))
                   return (
                     <li key={c.id}>
                       <button type="button" onClick={() => setAbierto(isOpen ? null : c.id)} className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-muted/40">

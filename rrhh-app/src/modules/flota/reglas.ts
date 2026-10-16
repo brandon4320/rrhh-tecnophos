@@ -275,9 +275,10 @@ const SECCIONES_DEF: SeccionDef[] = [
   },
 ]
 
-// Sacados del checklist a pedido de Brandon (16/10/2026): no se piden más. Quedan acá solo para que
-// los checklists viejos que los respondieron se sigan leyendo con su nombre. Como no están en
-// `itemPorId`, el servidor ignora sus respuestas si llegan de un borrador viejo.
+// Sacados del checklist a pedido de Brandon (16/10/2026): no se piden ni se muestran más. Sus
+// respuestas se borraron de los checklists guardados (copia en
+// respaldo.flota_checklists_items_retirados_20261016). Como no están en `itemPorId`, el servidor
+// ignora sus respuestas si llegan de un borrador viejo.
 const ITEMS_RETIRADOS: ItemChecklist[] = [
   { id: 'balizas_triangulo', label: 'Dos balizas triangulares', critico: false },
   { id: 'chaleco', label: 'Chaleco reflectivo', critico: false },
