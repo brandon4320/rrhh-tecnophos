@@ -231,6 +231,8 @@ const SECCIONES_DEF: SeccionDef[] = [
     titulo: 'Elementos obligatorios',
     items: [
       { id: 'matafuegos', label: 'Matafuegos cargado, con precinto y carga vigente', critico: true },
+      // Volvió el 16/10/2026: se compraron balizas para toda la flota (Agustín).
+      { id: 'balizas_triangulo', label: 'Dos balizas triangulares', critico: false },
       { id: 'gato_llave', label: 'Gato y llave de rueda', critico: false },
     ],
   },
@@ -280,7 +282,6 @@ const SECCIONES_DEF: SeccionDef[] = [
 // respaldo.flota_checklists_items_retirados_20261016). Como no están en `itemPorId`, el servidor
 // ignora sus respuestas si llegan de un borrador viejo.
 const ITEMS_RETIRADOS: ItemChecklist[] = [
-  { id: 'balizas_triangulo', label: 'Dos balizas triangulares', critico: false },
   { id: 'chaleco', label: 'Chaleco reflectivo', critico: false },
   { id: 'botiquin', label: 'Botiquín', critico: false },
   { id: 'productos_envases', label: 'Productos en envases originales, cerrados y secos', critico: true },
