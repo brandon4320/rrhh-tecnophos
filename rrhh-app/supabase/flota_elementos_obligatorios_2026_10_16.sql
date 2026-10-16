@@ -40,67 +40,77 @@ begin;
 -- AF540SP · 2026-10-14 · balizas_triangulo: no_ok -> ok · resultado observaciones (sin cambio)
 update public.vehiculo_checklists set
   respuestas  = respuestas || '{"balizas_triangulo":"ok"}'::jsonb,
-  notas_items = notas_items || '{"chaleco":"no tiene","botiquin":"no tiene","gato_llave":"no tiene","kit_derrames":"no tiene","caja_cobertor":"sin picaporte y sistema de cierre de cupula","balizas_triangulo":"no tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
+  notas_items = notas_items || '{"balizas_triangulo":"no tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
   resultado   = 'observaciones'
 where id = 'd52a94ff-5465-4cae-98c1-3fa65804373b';
 
 -- AG048TW · 2026-10-14 · balizas_triangulo: no_ok -> ok · resultado observaciones (sin cambio)
 update public.vehiculo_checklists set
   respuestas  = respuestas || '{"balizas_triangulo":"ok"}'::jsonb,
-  notas_items = notas_items || '{"botiquin":"No tiene","matafuegos":"No tiene","parabrisas":"Astilla por piedra","kit_derrames":"No tiene","caja_cobertor":"Pistones dañando","balizas_triangulo":"No tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
+  notas_items = notas_items || '{"balizas_triangulo":"No tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
   resultado   = 'observaciones'
 where id = '431a245e-dbc1-49f7-b181-b979729c6b28';
 
 -- AI433DK · 2026-10-14 · matafuegos: obs -> ok | balizas_triangulo: obs -> ok · resultado observaciones (sin cambio)
 update public.vehiculo_checklists set
   respuestas  = respuestas || '{"matafuegos":"ok","balizas_triangulo":"ok"}'::jsonb,
-  notas_items = notas_items || '{"botiquin":"Sin botiquín","matafuegos":"No cuenta con matafuego fijo. · Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego.","kit_derrames":"No cuenta con kit","caja_cobertor":"N/A","balizas_triangulo":"Sin balizas. · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares.","productos_envases":"Sin productos"}'::jsonb,
+  notas_items = notas_items || '{"matafuegos":"No cuenta con matafuego fijo. · Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego.","balizas_triangulo":"Sin balizas. · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
   resultado   = 'observaciones'
 where id = '71b6c151-0a60-4a57-8d61-e32e8011c34d';
 
 -- AH797GH · 2026-10-15 · matafuegos: obs -> ok | balizas_triangulo: obs -> ok · resultado observaciones -> ok
 update public.vehiculo_checklists set
   respuestas  = respuestas || '{"matafuegos":"ok","balizas_triangulo":"ok"}'::jsonb,
-  notas_items = notas_items || '{"botiquin":"Sin botiquín","carga_sujeta":"Sin carga","kit_derrames":"No cuenta con Kit","balizas_triangulo":"Sin balizas · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares.","productos_envases":"Sin productos","matafuegos":"Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego."}'::jsonb,
+  notas_items = notas_items || '{"matafuegos":"Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego.","balizas_triangulo":"Sin balizas · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
   resultado   = 'ok'
 where id = 'baa5425d-1186-4ec9-8e06-dd65f002a055';
 
 -- AE268VT · 2026-10-15 · matafuegos: obs -> ok | balizas_triangulo: obs -> ok · resultado observaciones (sin cambio)
 update public.vehiculo_checklists set
   respuestas  = respuestas || '{"matafuegos":"ok","balizas_triangulo":"ok"}'::jsonb,
-  notas_items = notas_items || '{"auxilio":"Sin dibujo, pinchada. No sirve más.","botiquin":"No tiene","luces_giro":"Giro lado conductor con falla.","matafuegos":"No tiene fijo. · Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego.","caja_limpia":"Falta limpieza","kit_derrames":"No tiene","refrigerante":"Nivel bajo, se completo.","cabina_limpia":"Falta limpieza de asientos (llegó de rosario en ese estado)","caja_cobertor":"No tiene tapa,ni lona","luces_posicion":"No funciona. Foco quemado.","cubiertas_danos":"Con agujeros","balizas_triangulo":"No tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares.","cubiertas_presion":"Sin presion","cubiertas_desgaste":"No"}'::jsonb,
+  notas_items = notas_items || '{"matafuegos":"No tiene fijo. · Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego.","balizas_triangulo":"No tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
   resultado   = 'observaciones'
 where id = 'eaec0496-b38a-4287-bfd5-846ebf5b678e';
 
 -- AG491JU · 2026-10-15 · matafuegos: no_ok -> ok | balizas_triangulo: no_ok -> ok · resultado no_apto -> observaciones
 update public.vehiculo_checklists set
   respuestas  = respuestas || '{"matafuegos":"ok","balizas_triangulo":"ok"}'::jsonb,
-  notas_items = notas_items || '{"epp":"No tiene","chaleco":"No tiene","botiquin":"No tiene","gato_llave":"No tiene","matafuegos":"No tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego.","parabrisas":"Tiene una fisura muy chica en el parabrisas","kit_derrames":"No tiene","puertas_carga":"Puerta lateral, al abrirla a tope se traba","balizas_triangulo":"No tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
+  notas_items = notas_items || '{"matafuegos":"No tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego.","balizas_triangulo":"No tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
   resultado   = 'observaciones'
 where id = '67c5ddc9-6783-400c-9e8a-6d454af2661b';
 
 -- AH797GK · 2026-10-15 · matafuegos: obs -> ok | balizas_triangulo: obs -> ok · resultado observaciones (sin cambio)
 update public.vehiculo_checklists set
   respuestas  = respuestas || '{"matafuegos":"ok","balizas_triangulo":"ok"}'::jsonb,
-  notas_items = notas_items || '{"espejos":"Lado conductor roto el espejo. Carcasa en buen estado.","botiquin":"Faltante","matafuegos":"Faltante · Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego.","kit_derrames":"Sin kit","luces_posicion":"Óptica trasera lado acompañante rota.","balizas_triangulo":"Faltante · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares.","agua_limpiaparabrisas":"Se completo faltante"}'::jsonb,
+  notas_items = notas_items || '{"matafuegos":"Faltante · Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego.","balizas_triangulo":"Faltante · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
   resultado   = 'observaciones'
 where id = 'fccb4d7d-4873-499a-91c4-ba26bea7a7d3';
 
 -- AD113UY · 2026-10-16 · matafuegos: no_ok -> ok | balizas_triangulo: obs -> ok · resultado no_apto -> observaciones
+-- OJO: este checklist es de HOY (11:43 hs).
+--   matafuegos: lo que reportó quien manejaba fue "Vencido y sin presion".
+--   balizas_triangulo: lo que reportó quien manejaba fue "No tiene".
+-- Si todavía no se cambió en ESTA unidad, salteá este update y corré el resto.
 update public.vehiculo_checklists set
   respuestas  = respuestas || '{"matafuegos":"ok","balizas_triangulo":"ok"}'::jsonb,
-  notas_items = notas_items || '{"auxilio":"Rotura x hierro, no se puede vulcanizar","botiquin":"No tiene","escobillas":"Sorrinos no funcionan","gato_llave":"Falta acople para rueda de auxilio","matafuegos":"Vencido y sin presion · Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego.","caja_limpia":"Con restos","kit_derrames":"No tiene","caja_cobertor":"No tiene","balizas_triangulo":"No tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
+  notas_items = notas_items || '{"matafuegos":"Vencido y sin presion · Actualizado 16/10/2026 desde Gestión: la unidad tiene matafuego.","balizas_triangulo":"No tiene · Actualizado 16/10/2026 desde Gestión: la unidad tiene balizas triangulares."}'::jsonb,
   resultado   = 'observaciones'
 where id = '1a86fcd0-528c-4fc5-9cf0-f7acde29542d';
 
 -- Las novedades abiertas por esos dos ítems quedan resueltas (es lo que saca a
 -- una unidad de "No apta para circular").
+--
+-- El corte por fecha NO es decorativo: sin él, correr este archivo dentro de un
+-- mes cerraría un matafuego descargado reportado la semana que viene, y encima
+-- le dejaría escrito que se compró en octubre. Solo se cierra lo que ya estaba
+-- abierto cuando se compraron.
 update public.vehiculo_novedades set
   estado      = 'resuelta',
   resolucion  = 'Se compraron matafuegos y balizas triangulares para toda la flota. Actualizado desde Gestión el 16/10/2026.',
   resuelta_at = now()
 where item in ('matafuegos', 'balizas_triangulo')
-  and estado = 'abierta';
+  and estado = 'abierta'
+  and created_at <= '2026-10-16T23:59:59-03:00';
 
 -- ------------------------------------------------------------
 -- 2. Baja de AD778EL
