@@ -5,7 +5,7 @@ import { getSesion } from '@/lib/auth/session'
 import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
 import { EstadoPill } from '@/components/ui/estado-pill'
 import { cargarFlota } from '@/modules/flota/queries'
-import { resumirVehiculo, type ResumenVehiculo, type Semaforo } from '@/modules/flota/resumen'
+import { compararPorUrgencia, resumirVehiculo, type ResumenVehiculo, type Semaforo } from '@/modules/flota/resumen'
 import { ESTADO_CHECKLIST_LABEL, fmtDia } from '@/modules/flota/reglas'
 import type { EstadoVencimiento } from '@/types'
 
@@ -61,11 +61,8 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
 
   const filas = flota
     .map((v) => ({ v, r: resumirVehiculo(v), empresa: nombreEmpresa.get(v.empresa_id) }))
-    .sort((a, b) =>
-      SEMAFORO[a.r.semaforo].orden - SEMAFORO[b.r.semaforo].orden ||
-      (a.empresa?.nombre ?? '').localeCompare(b.empresa?.nombre ?? '') ||
-      a.v.patente.localeCompare(b.v.patente)
-    )
+    // Arriba lo que hay que resolver (no apta, checklist sin hacer, vencidos, novedades); abajo lo que está en orden.
+    .sort((a, b) => compararPorUrgencia({ r: a.r, empresa: a.empresa?.nombre, patente: a.v.patente }, { r: b.r, empresa: b.empresa?.nombre, patente: b.v.patente }))
 
   const cuenta = (s: Semaforo) => filas.filter((f) => f.r.semaforo === s).length
   const sinDatos = filas.filter(({ v }) => !v.marca || !v.modelo || !v.anio).length

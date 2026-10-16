@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resumirVehiculo, mensajeResumenDiario, type DatosVehiculo } from './resumen'
+import { compararPorUrgencia, resumirVehiculo, mensajeResumenDiario, type DatosVehiculo } from './resumen'
 
 const HOY = '2026-10-05' // lunes: quincena del 1 al 14, ya pasada la gracia (1 al 3)
 
@@ -146,5 +146,20 @@ describe('mensaje del resumen diario', () => {
   it('un vehículo con el checklist desactivado no aparece por el checklist', () => {
     const r = resumirVehiculo(base({ checklists: [], checklist_activo: false }), HOY)
     expect(mensajeResumenDiario(empresa, [{ patente: 'AD113UY', checklistActivo: false, r }], HOY, 'https://x')).toBeNull()
+  })
+})
+
+describe('orden de la lista por urgencia', () => {
+  const fila = (patente: string, extra: Partial<DatosVehiculo>) => ({ patente, r: resumirVehiculo(base({ patente, ...extra }), HOY) })
+  it('arriba lo que hay que resolver o no se hizo; abajo lo que está al día', () => {
+    const alDia = fila('AA000AA', {})
+    const conObs = fila('AB000AB', { checklists: [{ created_at: '2026-10-01T10:00:00-03:00', km: 86_000, km_inconsistente: false, resultado: 'observaciones' }] })
+    const sinChecklist = fila('AC000AC', { checklists: [] })
+    const vencido = fila('AD000AD', { checklists: [{ created_at: '2026-09-20T10:00:00-03:00', km: 86_000, km_inconsistente: false, resultado: 'ok' }] })
+    const noApta = fila('AE000AE', { novedades: [{ gravedad: 'alta', titulo: 'Frenos', created_at: '2026-10-01T10:00:00-03:00' }] })
+    const novedad = fila('AF000AF', { novedades: [{ gravedad: 'media', titulo: 'Escobillas', created_at: '2026-10-01T10:00:00-03:00' }] })
+    const porVencer = fila('AG000AG', { certificados: [{ nombre: 'VTV', fecha_vencimiento: '2026-10-20', alerta_dias: 30 }] })
+    const orden = [alDia, conObs, porVencer, novedad, vencido, sinChecklist, noApta].sort(compararPorUrgencia).map((f) => f.patente)
+    expect(orden).toEqual(['AE000AE', 'AC000AC', 'AD000AD', 'AF000AF', 'AG000AG', 'AB000AB', 'AA000AA'])
   })
 })

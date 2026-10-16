@@ -40,6 +40,12 @@ export interface ResumenVehiculo {
   semaforo: Semaforo
   /** Motivos del semáforo, en orden de gravedad, para mostrar o mandar. */
   motivos: string[]
+  /**
+   * Para ordenar la lista (0 = lo más urgente): no apta · checklist sin hacer (vencido o nunca) ·
+   * service o documento vencido · novedades para resolver · toca hacer el checklist · algo por
+   * vencer · al día con observaciones en el último checklist · al día sin nada (abajo de todo).
+   */
+  prioridad: number
 }
 
 /**
@@ -165,5 +171,31 @@ export function resumirVehiculo(d: DatosVehiculo, hoy: string = diaClaveAR(new D
     novedades: { abiertas: d.novedades.length, altas, masVieja },
     semaforo: rojos.length ? 'rojo' : amarillos.length ? 'amarillo' : 'verde',
     motivos: [...rojos, ...amarillos],
+    prioridad: prioridadDe({
+      noApta,
+      checklistSinHacer: d.checklist_activo && (chk.estado === 'vencido' || chk.estado === 'nunca'),
+      vencido: mantenimientos.some((m) => m.estado === 'vencido') || documentos.some((x) => x.estado === 'vencido'),
+      novedades: d.novedades.length > 0,
+      tocaChecklist: d.checklist_activo && chk.estado === 'vence_pronto',
+      porVencer: mantenimientos.some((m) => m.estado === 'proximo') || documentos.some((x) => x.estado === 'proximo'),
+      conObservaciones: ultimo?.resultado === 'observaciones' || ultimo?.resultado === 'no_apto',
+    }),
   }
+}
+
+/** Ver `ResumenVehiculo.prioridad`: lo primero que aplica, de lo más urgente a lo que está en orden. */
+function prioridadDe(f: { noApta: boolean; checklistSinHacer: boolean; vencido: boolean; novedades: boolean; tocaChecklist: boolean; porVencer: boolean; conObservaciones: boolean }): number {
+  const orden = [f.noApta, f.checklistSinHacer, f.vencido, f.novedades, f.tocaChecklist, f.porVencer, f.conObservaciones]
+  const i = orden.indexOf(true)
+  return i < 0 ? orden.length : i
+}
+
+/** Lista de flota por urgencia: prioridad, después la que tiene más cosas, después empresa y patente. */
+export function compararPorUrgencia(a: { r: ResumenVehiculo; empresa?: string; patente: string }, b: { r: ResumenVehiculo; empresa?: string; patente: string }): number {
+  return (
+    a.r.prioridad - b.r.prioridad ||
+    b.r.motivos.length - a.r.motivos.length ||
+    (a.empresa ?? '').localeCompare(b.empresa ?? '') ||
+    a.patente.localeCompare(b.patente)
+  )
 }
