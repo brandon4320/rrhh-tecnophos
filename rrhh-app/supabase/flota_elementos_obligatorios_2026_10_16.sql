@@ -29,7 +29,12 @@
 --    pero no se pierde el registro. No tenía checklists, novedades, services ni
 --    documentación cargada.
 --
--- Se puede correr más de una vez.
+-- ⚠ YA SE CORRIÓ (16/10/2026) y quedó PARCIALMENTE DESHECHO: la oficina pasó
+--   después el detalle y la compra no había alcanzado para toda la flota. Lo
+--   que vale hoy es `flota_matafuegos_estado_real_2026_10_16.sql`, que corrige
+--   este archivo. NO lo vuelvas a correr solo: le taparía otra vez el matafuego
+--   vencido a la Amarok AD113UY y daría por resuelta la novedad de la Berlingo.
+--   Si hiciera falta rehacer todo desde cero, corré los dos en orden.
 -- ============================================================
 
 begin;
