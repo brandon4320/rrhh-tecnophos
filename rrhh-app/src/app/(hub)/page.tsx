@@ -31,6 +31,10 @@ const CHECKLIST_MAQUINARIA_URL = 'https://checklist.serviwhite.com/admin'
 // ERP de Serviwhite (alquiler y venta de módulos): otro repo, con su propio login.
 // La raíz redirige sola al login si no hay sesión.
 const SERVIWHITE_ERP_URL = 'https://gestion.serviwhite.com/'
+// El Sistema de Gestión Comercial nuevo (otro proyecto, en Cloudflare; repo comercial-tecnophos), con
+// su propio login. `?empresa=` abre esa empresa (la suma a las que se miran). El módulo /comercial
+// de acá es el CRM viejo: queda en el código pero el inicio ya no lo ofrece.
+const CRM_URL = 'https://crm.tecnophos.com.ar/'
 // Recorrido de limpieza de baños: vive en el ERP de Serviwhite (arma el recorrido
 // y el link del encargado). Se pide con el mismo login del ERP.
 const SERVIWHITE_LIMPIEZA_URL = 'https://gestion.serviwhite.com/limpieza'
@@ -56,7 +60,6 @@ export default async function HubPage() {
   if (modulos.length === 1) redirect(modulos[0].href)
 
   const puedeRrhh = modulos.some((m) => m.key === 'rrhh')
-  const puedeComercial = modulos.some((m) => m.key === 'comercial')
 
   const marcas = MARCAS.map((m) => ({
     ...m,
@@ -204,13 +207,11 @@ export default async function HubPage() {
                     </Link>
                   )}
 
-                  {puedeComercial && (
-                    <Link href="/comercial" className={filaCls}>
-                      <BriefcaseBusiness className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
-                      <span className="min-w-0 flex-1 truncate">Gestión Comercial</span>
-                      <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
-                    </Link>
-                  )}
+                  <a href={`${CRM_URL}?empresa=${marca.key}`} target="_blank" rel="noopener noreferrer" className={filaCls}>
+                    <BriefcaseBusiness className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                    <span className="min-w-0 flex-1 truncate">Gestión Comercial</span>
+                    <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
+                  </a>
                 </div>
               </div>
             ))}
