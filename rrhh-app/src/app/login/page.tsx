@@ -1,18 +1,12 @@
 import { redirect } from 'next/navigation'
-import { Building2, AlertCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizeUsername, usernameToInternalEmail } from '@/lib/auth-helpers'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { BandaLogin, PortadaLogin } from './Portada'
+import { BotonEntrar, CampoClave } from './Campos'
 
 /** Solo rutas internas ("/algo", nunca "//otro-sitio" ni URLs absolutas). */
 function destinoSeguro(v: unknown): string {
@@ -75,70 +69,53 @@ export default async function LoginPage({
 
   const errorMessage =
     params.error === 'missing'
-      ? 'Completá usuario y contraseña.'
+      ? 'Completá el usuario y la contraseña.'
       : params.error === 'invalid'
-        ? 'Credenciales incorrectas.'
+        ? 'El usuario o la contraseña no coinciden. Revisalos y probá de nuevo.'
         : null
 
   return (
-    <div className="grid min-h-[100dvh] place-items-center bg-background px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Building2 className="size-6" />
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Gestión</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Tecnophos · ADC</p>
+    <div className="min-h-[100dvh] bg-background lg:grid lg:grid-cols-[minmax(0,1.12fr)_minmax(0,1fr)] lg:gap-3 lg:p-3">
+      <PortadaLogin />
+      <BandaLogin />
+      <div className="flex min-h-[calc(100dvh-min(280px,32dvh))] flex-col px-5 lg:min-h-0 lg:px-10">
+        <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-start pt-8 pb-10 lg:justify-center lg:py-10">
+          <h2 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Entrar</h2>
+          <p className="mt-1.5 text-[15px] text-muted-foreground">Con tu usuario (nombre.apellido) o tu correo.</p>
+
+          <form action={loginAction} className="mt-7 grid gap-4">
+            {next && <input type="hidden" name="next" value={next} />}
+            <div className="grid gap-1.5">
+              <Label htmlFor="identifier" className="text-[13px]">Usuario o correo</Label>
+              <Input
+                id="identifier"
+                name="identifier"
+                required
+                placeholder="nombre.apellido"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                className="h-12 text-[15px]"
+              />
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="password" className="text-[13px]">Contraseña</Label>
+              <CampoClave />
+            </div>
+
+            {errorMessage && (
+              <div className="flex items-center gap-2 rounded-xl bg-destructive/10 px-3 py-2.5 text-[13px] text-destructive" role="alert">
+                <AlertCircle className="size-4 shrink-0" />
+                {errorMessage}
+              </div>
+            )}
+
+            <BotonEntrar />
+          </form>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Iniciar sesión</CardTitle>
-            <CardDescription>Ingresá con tu usuario o email.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={loginAction} className="grid gap-4">
-              {next && <input type="hidden" name="next" value={next} />}
-              <div className="grid gap-2">
-                <Label htmlFor="identifier">Usuario o email</Label>
-                <Input
-                  id="identifier"
-                  name="identifier"
-                  required
-                  placeholder="nombre.apellido"
-                  autoComplete="username"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                />
-              </div>
-
-              {errorMessage && (
-                <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                  <AlertCircle className="size-4 shrink-0" />
-                  {errorMessage}
-                </div>
-              )}
-
-              <Button type="submit" className="w-full">
-                Ingresar
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Sistema interno, uso exclusivo autorizado
-        </p>
+        <p className="pb-8 text-center text-xs text-muted-foreground">¿Problemas para entrar? Pedile ayuda a Brandon.</p>
       </div>
     </div>
   )
