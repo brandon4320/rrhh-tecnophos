@@ -95,12 +95,15 @@ export default async function AdminUsuariosPage({
 
     if (perfil?.rol !== 'admin') redirect('/dashboard')
 
+    // El empleado es opcional: un usuario puede ser alguien que no está en la nómina (un socio,
+    // un asesor, el contador). Sin empleado, el nombre se escribe a mano.
     const empleadoId = String(formData.get('empleado_id') ?? '').trim()
+    const nombreLibre = String(formData.get('nombre') ?? '').trim().replace(/\s+/g, ' ')
     const username = normalizeUsername(String(formData.get('username') ?? ''))
     const password = String(formData.get('password') ?? '').trim()
     const rol = String(formData.get('rol') ?? 'usuario').trim() as 'admin' | 'usuario'
 
-    if (!empleadoId || !username || !password) {
+    if ((!empleadoId && !nombreLibre) || !username || !password) {
       redirect('/admin/usuarios?error=missing_fields')
     }
 
@@ -108,17 +111,18 @@ export default async function AdminUsuariosPage({
       redirect('/admin/usuarios?error=missing_service_role')
     }
 
-    const { data: empleado } = await supabase
-      .from('empleados')
-      .select('id, nombre, apellido')
-      .eq('id', empleadoId)
-      .single()
-
-    if (!empleado) {
-      redirect('/admin/usuarios?error=employee_not_found')
+    let empleado: { id: string; nombre: string | null; apellido: string | null } | null = null
+    if (empleadoId) {
+      const { data } = await supabase
+        .from('empleados')
+        .select('id, nombre, apellido')
+        .eq('id', empleadoId)
+        .single()
+      if (!data) redirect('/admin/usuarios?error=employee_not_found')
+      empleado = data
     }
 
-    const nombrePerfil = [empleado.nombre, empleado.apellido].filter(Boolean).join(' ')
+    const nombrePerfil = empleado ? [empleado.nombre, empleado.apellido].filter(Boolean).join(' ') : nombreLibre
     const internalEmail = usernameToInternalEmail(username)
     const admin = createAdminClient()
 
@@ -132,7 +136,7 @@ export default async function AdminUsuariosPage({
         email_confirm: true,
         user_metadata: {
           nombre: nombrePerfil,
-          empleado_id: empleado.id,
+          ...(empleado ? { empleado_id: empleado.id } : {}),
           username,
         },
       })
@@ -269,7 +273,7 @@ export default async function AdminUsuariosPage({
 
   const errorMessage =
     params.error === 'missing_fields'
-      ? 'Completá empleado, username y contraseña.'
+      ? 'Completá el username, la contraseña y elegí un empleado o escribí el nombre.'
       : params.error === 'missing_service_role'
         ? 'Falta configurar SUPABASE_SERVICE_ROLE_KEY en el entorno del proyecto.'
         : params.error === 'employee_not_found'
@@ -324,9 +328,11 @@ export default async function AdminUsuariosPage({
         <form action={crearUsuario} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-1.5">Empleado</label>
-              <select name="empleado_id" required defaultValue="" className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="" disabled>Seleccionar empleado</option>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Empleado <span className="font-normal text-muted-foreground">(opcional)</span>
+              </label>
+              <select name="empleado_id" defaultValue="" className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                <option value="">No es un empleado (escribí el nombre abajo)</option>
                 {(empleados ?? []).map((empleado: any) => {
                   const nombreCompleto = [empleado.nombre, empleado.apellido].filter(Boolean).join(' ')
                   return (
@@ -336,6 +342,13 @@ export default async function AdminUsuariosPage({
                   )
                 })}
               </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Nombre y apellido <span className="font-normal text-muted-foreground">(si no elegiste un empleado)</span>
+              </label>
+              <input type="text" name="nombre" autoComplete="off" className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Marcelo Pérez" />
             </div>
 
             <div>
