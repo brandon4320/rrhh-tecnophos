@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type KeyboardEvent } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { ChevronRight, Plus, Search } from 'lucide-react'
 import { Monograma } from '@/components/ui/monograma'
@@ -27,8 +27,9 @@ export interface FilaEmpleado {
 
 interface Props {
   filas: FilaEmpleado[]
-  empresas: { id: string; nombre: string; slug: string }[]
   empresaSel: { id: string; nombre: string; slug: string } | null
+  /** "ADC S.R.L., Serviwhite" o "todas las empresas": lo tildado en el selector del menú. */
+  alcance: string
   puedeEditar: boolean
 }
 
@@ -42,9 +43,8 @@ function reemplazarParam(clave: string, valor: string | null) {
   } catch { /* la URL es cosmética */ }
 }
 
-export default function EmpleadosClient({ filas: filasServer, empresas, empresaSel, puedeEditar }: Props) {
+export default function EmpleadosClient({ filas: filasServer, empresaSel, alcance, puedeEditar }: Props) {
   const router = useRouter()
-  const pathname = usePathname()
   const searchParams = useSearchParams()
   // Las filas salen SIEMPRE de las props (cambiar de empresa o router.refresh las
   // renueva); lo único local es lo reactivado acá, para verlo al instante.
@@ -81,18 +81,6 @@ export default function EmpleadosClient({ filas: filasServer, empresas, empresaS
     setVerBajas(bajasSi)
     setSeleccion(0)
     reemplazarParam('baja', bajasSi ? '1' : null)
-  }
-
-  function cambiarEmpresa(slug: string) {
-    const p = new URLSearchParams(searchParams.toString())
-    if (slug) p.set('empresa', slug)
-    else p.delete('empresa')
-    if (busqueda.trim()) p.set('q', busqueda)
-    else p.delete('q')
-    if (verBajas) p.set('baja', '1')
-    else p.delete('baja')
-    const qs = p.toString()
-    router.push(`${pathname}${qs ? `?${qs}` : ''}`)
   }
 
   function mover(i: number) {
@@ -146,7 +134,7 @@ export default function EmpleadosClient({ filas: filasServer, empresas, empresaS
           <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Empleados</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {visibles.length} {visibles.length === 1 ? 'resultado' : 'resultados'}
-            {empresaSel ? ` · ${empresaSel.nombre}` : ' · todas las empresas'}
+            {` · ${alcance}`}
           </p>
         </div>
         {puedeEditar && (
@@ -175,19 +163,6 @@ export default function EmpleadosClient({ filas: filasServer, empresas, empresaS
             className="min-h-10 w-full rounded-[10px] border border-input bg-card py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
           />
         </div>
-        <select
-          value={empresaSel?.slug ?? ''}
-          onChange={(e) => cambiarEmpresa(e.target.value)}
-          aria-label="Empresa"
-          className="min-h-10 rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
-        >
-          <option value="">Todas las empresas</option>
-          {empresas.map((e) => (
-            <option key={e.id} value={e.slug}>
-              {e.nombre}
-            </option>
-          ))}
-        </select>
         <div className="inline-flex items-center gap-1 rounded-xl bg-muted p-1">
           {[
             { bajasSi: false, label: `Activos · ${activos}` },

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { filtroEmpresas } from '@/lib/empresas-vistas'
 import { ChevronRight, MessageCircle, PencilLine, Printer } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSesion } from '@/lib/auth/session'
@@ -40,9 +41,13 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
   ])
   const canEdit = tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)
   const lista = empresas ?? []
+  // Una o varias empresas (lo tildado en el selector del menú); null = todas.
+  const filtro = filtroEmpresas(empresa, lista.map((e) => e.slug))
   // Quien ve una sola empresa (acceso limitado a una sede) cae directo en la suya.
-  const empresaSel = (empresa ? lista.find((e) => e.slug === empresa) : undefined) ?? (lista.length === 1 ? lista[0] : undefined)
+  const empresaSel = (filtro?.length === 1 ? lista.find((e) => e.slug === filtro[0]) : undefined) ?? (lista.length === 1 ? lista[0] : undefined)
+  // Más de una empresa: la tabla con la columna de empresa (como "todas"), filtrada a las elegidas.
   const todas = !empresaSel
+  const alcance = filtro && filtro.length > 1 ? lista.filter((e) => filtro.includes(e.slug)).map((e) => e.nombre).join(', ') : 'todas las empresas'
   const nombreEmpresa = new Map(lista.map((e) => [e.id, e]))
 
   let flota
@@ -61,6 +66,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
 
   const filas = flota
     .map((v) => ({ v, r: resumirVehiculo(v), empresa: nombreEmpresa.get(v.empresa_id) }))
+    .filter((f) => !filtro || filtro.length === 1 || (f.empresa && filtro.includes(f.empresa.slug)))
     // Arriba lo que hay que resolver (no apta, checklist sin hacer, vencidos, novedades); abajo lo que está en orden.
     .sort((a, b) => compararPorUrgencia({ r: a.r, empresa: a.empresa?.nombre, patente: a.v.patente }, { r: b.r, empresa: b.empresa?.nombre, patente: b.v.patente }))
 
@@ -73,7 +79,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
         <div>
           <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Flota</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {filas.length} {filas.length === 1 ? 'vehículo' : 'vehículos'} · {todas ? 'todas las empresas' : empresaSel.nombre}
+            {filas.length} {filas.length === 1 ? 'vehículo' : 'vehículos'} · {todas ? alcance : empresaSel.nombre}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

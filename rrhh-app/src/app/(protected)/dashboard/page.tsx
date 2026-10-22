@@ -7,6 +7,8 @@ import { Monograma } from '@/components/ui/monograma'
 import { EstadoBadgeSuave } from '@/components/ui/estado-pill'
 import { SegmentedLocal } from '@/components/ui/segmented-local'
 import { TZ_AR } from '@/lib/fechas-ar'
+import { filtroEmpresas, slugsDe } from '@/lib/empresas-vistas'
+import { traerTodo } from '@/lib/paginar'
 import {
   ALERTA_DIAS_MAX, VENTANA_ALERTA_HABITUAL, empresaDeCertificado, fechaMasDias, hrefCertificado, titularCertificado,
   unirPorId,
@@ -27,10 +29,13 @@ const CERT_COLUMNAS = `
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; empresa?: string }>
 }) {
   const sp = await searchParams
   const supabase = await createClient()
+  // Algunas empresas tildadas en el selector del menú (?empresa=a,b): el total "Al día" ya no
+  // sale de los dos counts globales, sino de una lista liviana de certificados con su empresa.
+  const pedidas = slugsDe(sp.empresa)
 
   // Cota gruesa del fetch (el estado exacto lo decide getEstadoVencimiento):
   // vencido = fecha < hoy, por vencer = dentro de SU alerta_dias. Todas las
@@ -38,7 +43,7 @@ export default async function DashboardPage({
   // (+1 de holgura); los certificados con una alerta más larga (si alguien la
   // carga) se traen aparte hasta el máximo que admite el formulario. Antes se
   // traía un año entero de certificados para quedarse con un mes.
-  const [{ data: certsMes }, { data: certsAlertaLarga }, { data: empresas }, { data: empleados }, { count: certsSinEmpleado }, { count: certsEmpleadosActivos }] = await Promise.all([
+  const [{ data: certsMes }, { data: certsAlertaLarga }, { data: empresas }, { data: empleados }, { count: certsSinEmpleado }, { count: certsEmpleadosActivos }, livianos] = await Promise.all([
     supabase
       .from('certificados')
       .select(CERT_COLUMNAS)
@@ -65,7 +70,23 @@ export default async function DashboardPage({
       .select('id, empleados!inner(activo)', { count: 'exact', head: true })
       .not('fecha_vencimiento', 'is', null)
       .eq('empleados.activo', true),
+    pedidas.length
+      ? traerTodo((d, h) =>
+          supabase
+            .from('certificados')
+            .select('id, empresa_id, empleado:empleados(activo, empresa_id), vehiculo:vehiculos(empresa_id), equipo:equipos(empresa_id)')
+            .not('fecha_vencimiento', 'is', null)
+            .order('id')
+            .range(d, h)
+        )
+      : Promise.resolve({ data: null, error: null }),
   ])
+
+  const filtro = filtroEmpresas(sp.empresa, (empresas ?? []).map((e) => e.slug))
+  const idsFiltro = filtro ? new Set((empresas ?? []).filter((e) => filtro.includes(e.slug)).map((e) => e.id)) : null
+  const enFiltro = (empresaId: string | null | undefined) => !idsFiltro || (!!empresaId && idsFiltro.has(empresaId))
+  /** Un link a otra pantalla general conservando las empresas elegidas. */
+  const conEmpresas = (href: string) => (filtro ? `${href}${href.includes('?') ? '&' : '?'}empresa=${filtro.join(',')}` : href)
 
   const certs = unirPorId(certsMes ?? [], certsAlertaLarga ?? []).sort((a, b) =>
     (a.fecha_vencimiento ?? '').localeCompare(b.fecha_vencimiento ?? '')
@@ -75,6 +96,7 @@ export default async function DashboardPage({
     // El borrado de empleados es lógico (activo=false): sus certificados
     // quedan en la base pero no deben contar ni listarse acá.
     .filter((c) => !c.empleado || c.empleado.activo !== false)
+    .filter((c) => enFiltro(c.empleado?.empresa_id ?? c.vehiculo?.empresa_id ?? c.equipo?.empresa_id ?? c.empresa?.id))
     .map((c) => ({
       ...c,
       estado: getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias),
@@ -82,7 +104,16 @@ export default async function DashboardPage({
   const vencidos = conEstado.filter((c) => c.estado === 'vencido')
   const proximos = conEstado.filter((c) => c.estado === 'proximo')
   // El fetch está acotado: el total con fecha sale de los counts.
-  const totalConFecha = (certsSinEmpleado ?? 0) + (certsEmpleadosActivos ?? 0)
+  const totalConFecha = idsFiltro && livianos.data
+    ? livianos.data.filter((c) => {
+        const empleado = Array.isArray(c.empleado) ? c.empleado[0] : c.empleado
+        const vehiculo = Array.isArray(c.vehiculo) ? c.vehiculo[0] : c.vehiculo
+        const equipo = Array.isArray(c.equipo) ? c.equipo[0] : c.equipo
+        if (empleado && empleado.activo === false) return false
+        return enFiltro(empleado?.empresa_id ?? vehiculo?.empresa_id ?? equipo?.empresa_id ?? c.empresa_id)
+      }).length
+    : (certsSinEmpleado ?? 0) + (certsEmpleadosActivos ?? 0)
+  const empleadosVistos = (empleados ?? []).filter((e) => enFiltro(e.empresa_id))
   const alDia = totalConFecha - vencidos.length - proximos.length
   const total = Math.max(1, totalConFecha)
 
@@ -91,7 +122,7 @@ export default async function DashboardPage({
 
   const tab = sp.tab === 'vencidos' ? 'vencidos' : sp.tab === 'proximos' ? 'proximos' : 'todos'
 
-  const byEmpresa = (empresas ?? []).map((emp) => {
+  const byEmpresa = (empresas ?? []).filter((emp) => enFiltro(emp.id)).map((emp) => {
     const propios = conEstado.filter((c) => {
       const empId = c.empleado?.empresa_id ?? c.vehiculo?.empresa_id ?? c.equipo?.empresa_id ?? c.empresa?.id ?? null
       return empId === emp.id
@@ -190,13 +221,13 @@ export default async function DashboardPage({
 
           <div className="mt-5 grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:divide-x sm:divide-border">
             <div className="sm:pr-6">
-              <Link href="/empleados" className={kpiLink}>
-                <p className="text-3xl font-semibold tabular-nums">{empleados?.length ?? 0}</p>
+              <Link href={conEmpresas('/empleados')} className={kpiLink}>
+                <p className="text-3xl font-semibold tabular-nums">{empleadosVistos.length}</p>
                 <p className="mt-0.5 text-sm text-muted-foreground">Empleados</p>
               </Link>
             </div>
             <div className="sm:px-6">
-              <Link href="/vencimientos?estado=vencido" className={kpiLink}>
+              <Link href={conEmpresas('/vencimientos?estado=vencido')} className={kpiLink}>
                 <p className={`text-3xl font-semibold tabular-nums ${vencidos.length > 0 ? 'text-danger' : ''}`}>
                   {vencidos.length}
                 </p>
@@ -204,7 +235,7 @@ export default async function DashboardPage({
               </Link>
             </div>
             <div className="sm:px-6">
-              <Link href="/vencimientos?estado=proximo" className={kpiLink}>
+              <Link href={conEmpresas('/vencimientos?estado=proximo')} className={kpiLink}>
                 <p className={`text-3xl font-semibold tabular-nums ${proximos.length > 0 ? 'text-warning' : ''}`}>
                   {proximos.length}
                 </p>
@@ -212,7 +243,7 @@ export default async function DashboardPage({
               </Link>
             </div>
             <div className="sm:pl-6">
-              <Link href="/vencimientos?estado=vigente" className={kpiLink}>
+              <Link href={conEmpresas('/vencimientos?estado=vigente')} className={kpiLink}>
                 <p className="text-3xl font-semibold tabular-nums text-success">{alDia}</p>
                 <p className="mt-0.5 text-sm text-muted-foreground">Al día</p>
               </Link>
@@ -245,7 +276,7 @@ export default async function DashboardPage({
                 </p>
               </div>
               <Link
-                href="/vencimientos?estado=vencido"
+                href={conEmpresas('/vencimientos?estado=vencido')}
                 className="mt-5 inline-flex items-center justify-between gap-2 rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.97]"
               >
                 Revisar vencimientos
@@ -263,7 +294,7 @@ export default async function DashboardPage({
                 </p>
               </div>
               <Link
-                href="/vencimientos"
+                href={conEmpresas('/vencimientos')}
                 className="mt-5 inline-flex items-center justify-between gap-2 rounded-[10px] border border-border-strong bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-[background-color,transform] hover:bg-muted active:scale-[0.97]"
               >
                 Ver vencimientos
@@ -283,9 +314,9 @@ export default async function DashboardPage({
             className="mt-4"
             inicial={tab}
             tabs={[
-              { key: 'todos', label: 'Todos', content: listaAlertas([...vencidos, ...proximos], '/vencimientos') },
-              { key: 'vencidos', label: 'Vencidos', content: listaAlertas(vencidos, '/vencimientos?estado=vencido') },
-              { key: 'proximos', label: 'Próximos', content: listaAlertas(proximos, '/vencimientos?estado=proximo') },
+              { key: 'todos', label: 'Todos', content: listaAlertas([...vencidos, ...proximos], conEmpresas('/vencimientos')) },
+              { key: 'vencidos', label: 'Vencidos', content: listaAlertas(vencidos, conEmpresas('/vencimientos?estado=vencido')) },
+              { key: 'proximos', label: 'Próximos', content: listaAlertas(proximos, conEmpresas('/vencimientos?estado=proximo')) },
             ]}
           />
         </div>
@@ -337,9 +368,9 @@ export default async function DashboardPage({
 
             <div className="mt-4 space-y-4">
               {[
-                { label: 'Al día', count: alDia, color: 'bg-success', href: '/vencimientos?estado=vigente' },
-                { label: 'Por vencer', count: proximos.length, color: 'bg-warning', href: '/vencimientos?estado=proximo' },
-                { label: 'Vencidos', count: vencidos.length, color: 'bg-danger', href: '/vencimientos?estado=vencido' },
+                { label: 'Al día', count: alDia, color: 'bg-success', href: conEmpresas('/vencimientos?estado=vigente') },
+                { label: 'Por vencer', count: proximos.length, color: 'bg-warning', href: conEmpresas('/vencimientos?estado=proximo') },
+                { label: 'Vencidos', count: vencidos.length, color: 'bg-danger', href: conEmpresas('/vencimientos?estado=vencido') },
               ].map((f) => (
                 <Link key={f.label} href={f.href} className="block rounded-lg transition-opacity hover:opacity-80">
                   <div className="mb-1.5 flex items-center justify-between">

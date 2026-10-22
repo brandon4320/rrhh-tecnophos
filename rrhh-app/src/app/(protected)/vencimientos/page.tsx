@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { filtroEmpresas } from '@/lib/empresas-vistas'
 import { getEstadoVencimiento, diasHastaVencimiento } from '@/types'
 import { traerTodo } from '@/lib/paginar'
 import {
@@ -71,12 +72,15 @@ export default async function VencimientosPage({
     (a, b) => (a.fecha_vencimiento ?? '').localeCompare(b.fecha_vencimiento ?? '')
   )
 
+  // Una o varias empresas (el selector del menú); null = todas.
+  const filtro = filtroEmpresas(empresa, (empresas ?? []).map((e) => e.slug))
+
   const filas: FilaVencimiento[] = []
   for (const c of certs) {
     // Borrado lógico: certificados de empleados dados de baja no se listan
     if (c.empleado && c.empleado.activo === false) continue
     const emp = empresaDeCertificado(c)
-    if (empresa && emp.slug !== empresa) continue
+    if (filtro && !filtro.includes(emp.slug ?? '')) continue
     if (tipo && (c.tipo?.id ?? '') !== tipo) continue
     const est = getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias)
     if (est === 'sin_fecha') continue
@@ -102,7 +106,6 @@ export default async function VencimientosPage({
       incluyeVigentes={necesitaTodo}
       empresa={empresa}
       tipo={tipo}
-      empresas={empresas ?? []}
       tipos={tipos ?? []}
     />
   )

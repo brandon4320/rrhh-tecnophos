@@ -1,16 +1,16 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { cerrarSesion } from '@/app/actions/sesion'
 import { cn } from '@/lib/utils'
 import { Monograma } from '@/components/ui/monograma'
+import { paramEmpresas, slugsDe } from '@/lib/empresas-vistas'
 import {
   Activity,
   Bell,
-  Building2,
   CalendarClock,
   Check,
   ChevronsUpDown,
@@ -43,15 +43,6 @@ export interface EmpresaNav {
   total: number
 }
 
-/**
- * Portal del selector: todas las empresas juntas, una empresa real (RRHH) o una
- * entrada virtual (ARCOR).
- */
-type Portal =
-  | { tipo: 'todas'; id: 'todas'; slug: 'todas'; nombre: string; total: number; empresas: number }
-  | (EmpresaNav & { tipo: 'empresa' })
-  | { tipo: 'extra'; id: string; slug: string; nombre: string; subtitulo: string; logo: string; href: string }
-
 interface Props {
   empresas: EmpresaNav[]
   /** Muestra la entrada virtual "Tecnophos - ARCOR" (ver modules/arcor/acceso.ts). */
@@ -60,64 +51,71 @@ interface Props {
   children: React.ReactNode
 }
 
+/** Lo último elegido en el selector (slugs separados por coma; versiones viejas guardaban un slug o "todas"). */
 const STORAGE_KEY = 'empresa_activa'
-const TODAS = 'todas'
 
 /**
- * Pantallas que, sin `?empresa=`, muestran a TODAS las empresas. En ellas la
- * ausencia del filtro significa "todas", no "la última que elegiste": si no,
- * el selector decía ADC mientras la página listaba a todo el grupo.
+ * Pantallas generales: sin `?empresa=` muestran a TODAS las empresas y con `?empresa=a,b` a las
+ * tildadas. En ellas la ausencia del filtro significa "todas", no "lo último que elegiste".
  */
 const RUTAS_GLOBALES = ['/dashboard', '/empleados', '/vencimientos', '/flota']
 
 /** Pantallas que existen por empresa con `?empresa=slug`: cambiar de empresa te deja en la misma. */
-const RUTAS_POR_EMPRESA = ['/empleados', '/vencimientos', '/flota', '/stock', '/documentos', '/carpeta']
+const RUTAS_POR_EMPRESA = ['/empleados', '/vencimientos', '/flota', '/stock', '/documentos', '/carpeta', '/palas']
 
-// Isologos por empresa (las 3 sedes Tecnophos comparten marca)
-const LOGO_EMPRESA: Record<string, string> = {
-  'tecnophos-bb': '/logo-tecnophos-iso.png',
-  'tecnophos-rosario': '/logo-tecnophos-iso.png',
-  'tecnophos-necochea': '/logo-tecnophos-iso.png',
-  adc: '/logo-adc.png',
-  serviwhite: '/logo-serviwhite-iso.png',
-}
+/** Lo tildado se aplica después de un momento quieto (así prender dos no recarga dos veces), como en el CRM. */
+const ESPERA_SELECTOR = 650
 
-// Entrada virtual: no es una empresa de la tabla `empresas` (no tiene empleados ni
-// legajos), es la observabilidad del sistema externo de certificados ARCOR.
-const PORTAL_ARCOR: Portal = {
-  tipo: 'extra',
-  id: 'arcor',
-  slug: 'arcor',
-  nombre: 'Tecnophos - ARCOR',
-  subtitulo: 'Certificados de fumigación',
-  logo: '/logo-tecnophos-iso.png',
-  href: '/arcor',
+// Íconos de las marcas, los mismos del CRM (public/icono-*.png). Las 3 sedes de Tecnophos comparten el suyo.
+function iconoDe(slug: string): string | null {
+  if (slug.startsWith('tecnophos') || slug === 'arcor') return '/icono-tecnophos.png'
+  if (slug === 'adc') return '/icono-adc.png'
+  if (slug === 'serviwhite') return '/icono-serviwhite.png'
+  return null
 }
 
 const ROL_LABEL: Record<string, string> = { admin: 'Administrador', usuario: 'Usuario' }
 
-function LogoPortal({ portal, size }: { portal: Portal; size: 'sm' | 'md' }) {
-  const caja = size === 'md' ? 'size-8' : 'size-7'
-  if (portal.tipo === 'todas') {
-    return (
-      <span className={cn('inline-flex shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground', caja)}>
-        <Building2 className={size === 'md' ? 'size-[18px]' : 'size-4'} strokeWidth={1.75} />
-      </span>
-    )
-  }
-  const src = portal.tipo === 'extra' ? portal.logo : LOGO_EMPRESA[portal.slug]
-  if (!src) return <Monograma nombre={portal.nombre} size={size} />
+// Sin suscripción: el valor se vuelve a leer en cada render (localStorage no avisa cambios en la misma pestaña).
+const sinSuscripcion = () => () => {}
+function leerGuardada(): string | null {
+  try { return localStorage.getItem(STORAGE_KEY) } catch { return null }
+}
+
+/** El ícono de la empresa en un cuadradito blanco (IconoEmpresa del CRM). */
+function IconoEmpresa({ slug, nombre, tamano = 24 }: { slug: string; nombre: string; tamano?: number }) {
+  const src = iconoDe(slug)
+  if (!src) return <Monograma nombre={nombre} size="sm" className="rounded-[7px]" />
   return (
-    <span className={cn('inline-flex shrink-0 items-center justify-center rounded-lg border border-border bg-white', caja, size === 'md' ? 'p-1' : 'p-0.5')}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={portal.nombre} className="max-h-full max-w-full object-contain" />
+    <span className="grid shrink-0 place-items-center overflow-hidden rounded-[7px] border border-border bg-white" style={{ width: tamano, height: tamano }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- ícono chico, sin optimizar */}
+      <img src={src} alt="" draggable={false} className="size-[82%] select-none object-contain" />
     </span>
   )
 }
 
-/** Empleados del portal, para la cifra a la derecha de cada opción del selector (ARCOR no tiene). */
-function conteoDe(p: Portal): number | null {
-  return p.tipo === 'extra' ? null : p.total
+/** Los íconos de las elegidas encimados, como los avatares de un equipo (IconosEmpresas del CRM). */
+function IconosEmpresas({ lista, tamano = 24 }: { lista: { slug: string; nombre: string }[]; tamano?: number }) {
+  // Un ícono por marca: las tres sedes de Tecnophos se ven como una.
+  const unicos = lista.filter((e, i) => lista.findIndex((x) => (iconoDe(x.slug) ?? x.slug) === (iconoDe(e.slug) ?? e.slug)) === i)
+  return (
+    <span className="flex shrink-0 items-center" aria-hidden>
+      {unicos.map((e, i) => (
+        <span key={e.slug} className="relative rounded-[8px] bg-card p-px" style={{ marginLeft: i ? -tamano * 0.32 : 0, zIndex: unicos.length - i }}>
+          <IconoEmpresa slug={e.slug} nombre={e.nombre} tamano={tamano} />
+        </span>
+      ))}
+    </span>
+  )
+}
+
+/** La casilla del menú (Casilla del CRM). */
+function Casilla({ marcada }: { marcada: boolean }) {
+  return (
+    <span className={cn('flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border transition-colors duration-100', marcada ? 'border-primary bg-primary text-primary-foreground' : 'border-border-strong bg-card')} aria-hidden>
+      {marcada && <Check className="size-3" strokeWidth={3} />}
+    </span>
+  )
 }
 
 type Item = { key: string; label: string; href: string; icon: LucideIcon; active: boolean; external?: boolean }
@@ -129,143 +127,115 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
   const empresaEnQuery = searchParams.get('empresa')
   const router = useRouter()
   const { resolvedTheme, setTheme } = useTheme()
-  const [montado, setMontado] = useState(false)
-  const [selectorOpen, setSelectorOpen] = useState(false)
-  const [menuUsuario, setMenuUsuario] = useState(false)
-  const [preferida, setPreferida] = useState<string | null>(null)
-  // Optimista: al elegir un portal la sidebar cambia YA, sin esperar la navegación.
-  // `desde` es la URL al momento del click: cuando cambia (llegó la navegación, a
-  // destino o superada por otro click) se suelta el override — así ARCOR nunca
-  // queda pegado como activa fuera de /arcor.
-  const [pendiente, setPendiente] = useState<{ slug: string; desde: string } | null>(null)
-  // `navegando`: el cambio de portal está en curso (la pantalla vieja sigue hasta
-  // que llega la nueva): se atenúa y aparece una barra arriba para que se note.
+  // En el server no hay tema ni localStorage: lo que depende de eso espera al navegador.
+  const montado = useSyncExternalStore(sinSuscripcion, () => true, () => false)
+  const guardada = useSyncExternalStore(sinSuscripcion, leerGuardada, () => null)
+  // Cada menú queda abierto en la pantalla donde se abrió: cambiar de pantalla lo cierra solo.
+  const [selectorAbiertoEn, setSelectorAbiertoEn] = useState<string | null>(null)
+  const [usuarioAbiertoEn, setUsuarioAbiertoEn] = useState<string | null>(null)
+  const selectorOpen = selectorAbiertoEn === pathname
+  const menuUsuario = usuarioAbiertoEn === pathname
+  const setSelectorOpen = (abrir: boolean) => setSelectorAbiertoEn(abrir ? pathname : null)
+  const setMenuUsuario = (abrir: boolean) => setUsuarioAbiertoEn(abrir ? pathname : null)
+  // Lo tildado en el menú, a la vista YA (optimista). `desde` es la URL al tildar: cuando cambia
+  // (llegó la navegación) deja de valer y manda otra vez la URL.
+  const [tildadas, setTildadas] = useState<{ lista: string[]; desde: string } | null>(null)
+  const espera = useRef<number | undefined>(undefined)
+  // `navegando`: el cambio está en curso (la pantalla vieja sigue hasta que llega la nueva):
+  // se atenúa y aparece una barra arriba para que se note.
   const [navegando, startTransition] = useTransition()
   const urlActual = `${pathname}?${searchParams.toString()}`
 
-  useEffect(() => setMontado(true), [])
+  useEffect(() => () => window.clearTimeout(espera.current), [])
 
-  const portales = useMemo<Portal[]>(() => {
-    const lista: Portal[] = empresas.map((e) => ({ ...e, tipo: 'empresa' as const }))
-    // "Todas" solo tiene sentido si el usuario ve más de una (quien está limitado
-    // a una sede no necesita la opción).
-    if (empresas.length > 1) {
-      lista.unshift({
-        tipo: 'todas', id: TODAS, slug: TODAS, nombre: 'Todas las empresas',
-        total: empresas.reduce((acc, e) => acc + e.total, 0), empresas: empresas.length,
-      })
-    }
-    if (arcor) lista.push(PORTAL_ARCOR)
-    return lista
-  }, [empresas, arcor])
+  const todos = useMemo(() => empresas.map((e) => e.slug), [empresas])
+  const enArcor = pathname.startsWith('/arcor')
+  const slugEnPath = pathname.startsWith('/empresa/') ? pathname.split('/')[2] : null
 
-  const portalTodas = portales.find((p) => p.tipo === 'todas') ?? null
-  const enRutaGlobal = RUTAS_GLOBALES.includes(pathname)
+  // Lo que dice la URL: la empresa de la ruta, las del `?empresa=`, o todas en una pantalla general.
+  // null = la URL no dice nada (Usuarios, un legajo…): vale lo último elegido.
+  const elegidasUrl = useMemo<string[] | null>(() => {
+    if (slugEnPath && todos.includes(slugEnPath)) return [slugEnPath]
+    const pedidas = slugsDe(empresaEnQuery, todos)
+    if (pedidas.length) return pedidas
+    if (RUTAS_GLOBALES.includes(pathname)) return todos
+    return null
+  }, [slugEnPath, empresaEnQuery, pathname, todos])
 
-  // Preferencia recordada: la empresa del query, o "todas" en una pantalla global
-  // sin filtro, o lo último que quedó guardado.
+  // Recordar lo que dice la URL, para las pantallas que no dicen nada.
+  const recordar = elegidasUrl?.join(',') ?? null
   useEffect(() => {
-    try {
-      if (empresaEnQuery) {
-        setPreferida(empresaEnQuery)
-        localStorage.setItem(STORAGE_KEY, empresaEnQuery)
-        return
-      }
-      if (enRutaGlobal && portalTodas) {
-        setPreferida(TODAS)
-        localStorage.setItem(STORAGE_KEY, TODAS)
-        return
-      }
-      const guardada = localStorage.getItem(STORAGE_KEY)
-      if (guardada) setPreferida(guardada)
-    } catch { /* sin preferencia */ }
-  }, [pathname, empresaEnQuery, enRutaGlobal, portalTodas])
+    if (!recordar) return
+    try { localStorage.setItem(STORAGE_KEY, recordar) } catch { /* sin preferencia */ }
+  }, [recordar])
+  const preferidas = guardada === 'todas' ? todos : slugsDe(guardada, todos)
 
-  const slugEnPath = pathname.startsWith('/arcor')
-    ? 'arcor'
-    : pathname.startsWith('/empresa/')
-      ? pathname.split('/')[2]
-      : null
-
-  // La navegación optimista llegó (la URL cambió): soltar el override.
-  useEffect(() => {
-    if (pendiente && urlActual !== pendiente.desde) setPendiente(null)
-  }, [urlActual, pendiente])
-
-  // Cualquier navegación cierra los menús abiertos.
-  useEffect(() => {
-    setMenuUsuario(false)
-    setSelectorOpen(false)
-  }, [pathname])
-
-  const activa = useMemo<Portal | null>(() => {
-    const porPendiente = pendiente && portales.find((e) => e.slug === pendiente.slug)
-    if (porPendiente) return porPendiente
-    const porPath = slugEnPath && portales.find((e) => e.slug === slugEnPath)
-    if (porPath) return porPath
-    if (empresaEnQuery) {
-      const porQuery = portales.find((e) => e.slug === empresaEnQuery && e.tipo === 'empresa')
-      if (porQuery) return porQuery
-    }
-    if (enRutaGlobal && portalTodas) return portalTodas
-    // "Último usado" entre empresas o "todas": un portal virtual (ARCOR) recordado no
-    // puede colonizar /empleados, /admin, etc. y dejar la sidebar sin las vistas de RRHH.
-    const porPref = preferida && portales.find((e) => e.slug === preferida && e.tipo !== 'extra')
-    if (porPref) return porPref
-    return portalTodas ?? portales.find((e) => e.tipo === 'empresa') ?? portales[0] ?? null
-  }, [pendiente, slugEnPath, empresaEnQuery, enRutaGlobal, portalTodas, preferida, portales])
+  const elegidas = elegidasUrl ?? (preferidas.length ? preferidas : todos)
+  const vistas = tildadas && tildadas.desde === urlActual ? tildadas.lista : elegidas
+  const empresasVistas = empresas.filter((e) => vistas.includes(e.slug))
+  const una = vistas.length === 1 ? empresas.find((e) => e.slug === vistas[0]) ?? null : null
+  // El `?empresa=` de las pantallas generales con lo que se mira (null = todas).
+  const paramVistas = paramEmpresas(vistas, todos)
+  const conVistas = (ruta: string) => (paramVistas ? `${ruta}?empresa=${paramVistas}` : ruta)
 
   function handleLogout() {
     startTransition(() => cerrarSesion())
   }
 
-  /** La URL actual con otra empresa (o sin empresa = todas), conservando los filtros. */
-  function conEmpresa(slug: string | null): string {
+  /** La URL actual con otro `?empresa=` (null = sin filtro), conservando los demás filtros. */
+  function conEmpresa(valor: string | null): string {
     const sp = new URLSearchParams(searchParams.toString())
     sp.delete('empresa')
-    if (slug) sp.set('empresa', slug)
+    if (valor) sp.set('empresa', valor)
     const q = sp.toString()
     return q ? `${pathname}?${q}` : pathname
   }
 
-  /** A dónde ir al elegir un portal: la MISMA pantalla, si existe para el destino. */
-  function destino(p: Portal): string {
-    if (p.tipo === 'extra') return p.href
-    const enDocumentacion = pathname.startsWith('/empresa/') && searchParams.get('vista') === 'documentacion'
-    if (p.tipo === 'todas') return RUTAS_GLOBALES.includes(pathname) ? conEmpresa(null) : '/dashboard'
-    if (RUTAS_POR_EMPRESA.includes(pathname)) return conEmpresa(p.slug)
-    if (enDocumentacion) return `/empresa/${p.slug}?vista=documentacion`
-    return `/empresa/${p.slug}`
-  }
-
-  function cambiarPortal(p: Portal) {
-    if (p.tipo !== 'extra') {
-      try { localStorage.setItem(STORAGE_KEY, p.slug) } catch { /* no-op */ }
-      setPreferida(p.slug)
+  /** A dónde ir con estas empresas: la MISMA pantalla si existe para ellas; si no, su portada. */
+  function destino(lista: string[]): string {
+    if (lista.length === 1 && !enArcor) {
+      const slug = lista[0]
+      if (RUTAS_POR_EMPRESA.includes(pathname)) return conEmpresa(slug)
+      if (slugEnPath && searchParams.get('vista') === 'documentacion') return `/empresa/${slug}?vista=documentacion`
+      return `/empresa/${slug}`
     }
-    setPendiente({ slug: p.slug, desde: urlActual })
-    setSelectorOpen(false)
-    startTransition(() => router.push(destino(p)))
+    if (lista.length === 1) return `/empresa/${lista[0]}`
+    const valor = paramEmpresas(lista, todos)
+    if (RUTAS_GLOBALES.includes(pathname)) return conEmpresa(valor)
+    return valor ? `/dashboard?empresa=${valor}` : '/dashboard'
   }
 
-  // Prefetch de los destinos al abrir el selector (solo el shell hasta el loading
-  // boundary: barato y hace el cambio casi instantáneo).
-  useEffect(() => {
-    if (!selectorOpen) return
-    for (const p of portales) router.prefetch(destino(p))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectorOpen, portales, router])
+  /** Tildar o destildar una empresa. La última tildada no se saca: siempre se mira al menos una. */
+  function tildar(slug: string) {
+    const base = vistas
+    const nuevas = base.includes(slug) ? base.filter((x) => x !== slug) : todos.filter((x) => x === slug || base.includes(x))
+    if (!nuevas.length) return
+    setTildadas({ lista: nuevas, desde: urlActual })
+    window.clearTimeout(espera.current)
+    espera.current = window.setTimeout(() => {
+      const ir = destino(nuevas)
+      if (ir === urlActual.replace(/\?$/, '') || (enArcor === false && nuevas.join() === elegidas.join())) {
+        setTildadas(null)
+        return
+      }
+      startTransition(() => router.push(ir))
+    }, ESPERA_SELECTOR)
+  }
+
+  function irArcor() {
+    setSelectorOpen(false)
+    startTransition(() => router.push('/arcor'))
+  }
 
   const esAdmin = sesion.rol === 'admin'
 
   // `usePathname()` no incluye la query: Resumen y Habilitaciones comparten pathname
   // y se distinguen por ?vista= (mismo criterio que `empresa/[slug]/page.tsx`).
-  const enEmpresa = activa?.tipo === 'empresa' && pathname === `/empresa/${activa.slug}`
+  const enEmpresa = !!una && pathname === `/empresa/${una.slug}`
   const enDocumentacion = searchParams.get('vista') === 'documentacion'
-  const sinEmpresa = !empresaEnQuery
 
   const grupos: Grupo[] = []
-  if (activa?.tipo === 'extra') {
+  if (enArcor && arcor) {
     grupos.push({
       titulo: null,
       items: [
@@ -277,26 +247,27 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
         { key: 'carga', label: 'Carga manual', href: ENLACES_ARCOR.cargar, icon: Upload, active: false, external: true },
       ],
     })
-  } else if (activa?.tipo === 'todas') {
-    // Solo lo que existe para el grupo entero. Habilitaciones, documentación
-    // mensual y stock son de cada empresa: se ven eligiendo una.
+  } else if (!una) {
+    // Varias (o todas): solo lo que existe para el grupo. Habilitaciones, documentación
+    // mensual y stock son de cada empresa: se ven tildando una sola.
     grupos.push(
       {
         titulo: null,
         items: [
-          { key: 'resumen', label: 'Resumen general', href: '/dashboard', icon: LayoutGrid, active: pathname.startsWith('/dashboard') },
-          { key: 'empleados', label: 'Empleados', href: '/empleados', icon: Users, active: pathname.startsWith('/empleados') && sinEmpresa },
-          { key: 'vencimientos', label: 'Vencimientos', href: '/vencimientos', icon: CalendarClock, active: pathname.startsWith('/vencimientos') && sinEmpresa },
+          { key: 'resumen', label: 'Resumen general', href: conVistas('/dashboard'), icon: LayoutGrid, active: pathname.startsWith('/dashboard') },
+          { key: 'empleados', label: 'Empleados', href: conVistas('/empleados'), icon: Users, active: pathname.startsWith('/empleados') },
+          { key: 'vencimientos', label: 'Vencimientos', href: conVistas('/vencimientos'), icon: CalendarClock, active: pathname.startsWith('/vencimientos') },
         ],
       },
       {
         titulo: 'Recursos',
         items: [
-          { key: 'flota', label: 'Flota', href: '/flota', icon: Truck, active: pathname.startsWith('/flota') },
+          { key: 'flota', label: 'Flota', href: conVistas('/flota'), icon: Truck, active: pathname.startsWith('/flota') },
         ],
       }
     )
-  } else if (activa?.tipo === 'empresa') {
+  } else {
+    const activa = una
     grupos.push(
       {
         titulo: null,
@@ -365,50 +336,83 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           <span className="text-[15px] font-semibold tracking-[-0.015em]">Gestión de Recursos</span>
         </Link>
 
-        {/* Selector: todo lo de abajo es de lo elegido acá */}
-        {activa && (
+        {/* Selector de empresas, el mismo del CRM (components/shell/SelectorEmpresa.tsx de
+            comercial-tecnophos): los íconos encimados y, al abrir, casillas para mirar una o varias.
+            Todo lo de abajo es de lo tildado acá. ARCOR va aparte, debajo de una raya. */}
+        {empresas.length > 0 && (
           <div className="relative mt-3">
-            <button
-              type="button"
-              onClick={() => setSelectorOpen((v) => !v)}
-              aria-expanded={selectorOpen}
-              aria-label={`Empresa: ${activa.nombre}. Cambiar`}
-              className="flex h-12 w-full cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-card px-2 text-left transition-colors hover:bg-muted"
-            >
-              <LogoPortal portal={activa} size="md" />
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{activa.nombre}</span>
-              <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
-            </button>
+            {(() => {
+              const nombre = enArcor ? 'Tecnophos - ARCOR' : una ? una.nombre : `${empresasVistas.length} empresas`
+              const cara = (
+                <>
+                  {enArcor ? <IconoEmpresa slug="arcor" nombre="ARCOR" /> : <IconosEmpresas lista={empresasVistas} />}
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium" title={empresasVistas.map((e) => e.nombre).join(', ')}>{nombre}</span>
+                </>
+              )
+              const clase = 'flex h-11 w-full items-center gap-2.5 rounded-xl border border-border bg-card px-2.5 text-left shadow-[0_1px_2px_rgb(23_22_31/0.04)]'
+              if (empresas.length === 1 && !arcor) return <div className={clase}>{cara}</div>
+              return (
+                <button
+                  type="button"
+                  onClick={() => setSelectorOpen(!selectorOpen)}
+                  aria-haspopup="menu"
+                  aria-expanded={selectorOpen}
+                  aria-label={`${una || enArcor ? 'Empresa' : 'Empresas'}: ${enArcor ? 'Tecnophos - ARCOR' : empresasVistas.map((e) => e.nombre).join(', ')}. Cambiar`}
+                  className={cn(clase, 'cursor-pointer transition-[background-color,transform] duration-150 hover:bg-muted active:scale-[0.98]')}
+                >
+                  {cara}
+                  <ChevronsUpDown className={cn('size-4 shrink-0 text-muted-foreground transition-colors', selectorOpen && 'text-foreground')} strokeWidth={1.75} aria-hidden />
+                </button>
+              )
+            })()}
 
             {selectorOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setSelectorOpen(false)} />
-                <div className="absolute inset-x-0 z-50 mt-2 max-h-[70dvh] overflow-y-auto rounded-xl border border-border bg-popover p-1.5 shadow-flotante">
-                  {portales.map((p, i) => {
-                    // Separadores: después de "Todas" y antes de las entradas virtuales.
-                    const anterior = portales[i - 1]
-                    const separa = !!anterior && (anterior.tipo === 'todas' || (p.tipo === 'extra' && anterior.tipo !== 'extra'))
+                <div role="menu" className="absolute left-0 z-50 mt-2 max-h-[70dvh] w-[280px] overflow-y-auto rounded-[14px] border border-border bg-popover p-1.5 shadow-flotante">
+                  {empresas.map((e) => {
+                    const marcada = !enArcor && vistas.includes(e.slug)
+                    // La última tildada no se puede sacar: siempre se mira al menos una.
+                    const fija = marcada && vistas.length === 1
                     return (
-                      <div key={p.id}>
-                        {separa && <div className="mx-2 my-1.5 h-px bg-border" />}
-                        <button
-                          type="button"
-                          onClick={() => cambiarPortal(p)}
-                          className="flex h-11 w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-2 text-left transition-colors hover:bg-muted"
-                        >
-                          <LogoPortal portal={p} size="sm" />
-                          <span className={cn('min-w-0 flex-1 truncate text-sm', p.id === activa.id && 'font-semibold')}>{p.nombre}</span>
-                          {p.id === activa.id ? (
-                            <Check className="size-4 shrink-0 text-primary" strokeWidth={2} />
-                          ) : (
-                            conteoDe(p) !== null && (
-                              <span className="shrink-0 text-xs tabular-nums text-muted-foreground" title="Empleados">{conteoDe(p)}</span>
-                            )
-                          )}
-                        </button>
-                      </div>
+                      <button
+                        key={e.id}
+                        type="button"
+                        role="menuitemcheckbox"
+                        aria-checked={marcada}
+                        aria-disabled={fija || undefined}
+                        onClick={() => !fija && tildar(e.slug)}
+                        className={cn(
+                          'flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-sm transition-colors duration-100',
+                          fija ? 'cursor-default' : 'cursor-pointer hover:bg-muted'
+                        )}
+                      >
+                        <Casilla marcada={marcada} />
+                        <span className="flex h-7 min-w-0 flex-1 items-center gap-2.5">
+                          <IconoEmpresa slug={e.slug} nombre={e.nombre} />
+                          <span className="truncate font-medium">{e.nombre}</span>
+                        </span>
+                      </button>
                     )
                   })}
+                  {arcor && (
+                    <>
+                      <div role="separator" className="my-1 h-px bg-border" />
+                      <button
+                        type="button"
+                        role="menuitem"
+                        aria-current={enArcor || undefined}
+                        onClick={irArcor}
+                        className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-sm transition-colors duration-100 hover:bg-muted"
+                      >
+                        <span className="flex h-7 min-w-0 flex-1 items-center gap-2.5">
+                          <IconoEmpresa slug="arcor" nombre="ARCOR" />
+                          <span className="truncate font-medium">Tecnophos - ARCOR</span>
+                        </span>
+                        {enArcor && <Check className="size-4 shrink-0 text-accent-foreground" strokeWidth={2} aria-hidden />}
+                      </button>
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -463,7 +467,7 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           )}
           <button
             type="button"
-            onClick={() => setMenuUsuario((v) => !v)}
+            onClick={() => setMenuUsuario(!menuUsuario)}
             aria-expanded={menuUsuario}
             className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-border p-2.5 text-left transition-colors hover:bg-muted"
           >

@@ -32,7 +32,6 @@ interface Props {
   incluyeVigentes: boolean
   empresa?: string
   tipo?: string
-  empresas: { id: string; nombre: string; slug: string }[]
   tipos: { id: string; nombre: string }[]
 }
 
@@ -67,7 +66,7 @@ function fmtFecha(f: string): string {
  * instantáneas y las cantidades de cada pestaña siguen a la búsqueda. Solo
  * Vigentes / Todos vuelven al server la primera vez (traen la tabla entera).
  */
-export default function VencimientosClient({ filas, vista: vistaInicial, incluyeVigentes, empresa, tipo, empresas, tipos }: Props) {
+export default function VencimientosClient({ filas, vista: vistaInicial, incluyeVigentes, empresa, tipo, tipos }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -136,7 +135,9 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
     } catch { /* la URL es cosmética */ }
   }
 
-  const hayFiltros = Boolean(empresa || tipo || vista !== 'pendientes' || busqueda)
+  // Las empresas se eligen en el menú de la izquierda (como en el CRM): "Limpiar" no las toca.
+  const hayFiltros = Boolean(tipo || vista !== 'pendientes' || busqueda)
+  const sinFiltros = empresa ? `${pathname}?empresa=${empresa}` : pathname
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
@@ -182,20 +183,6 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
         </div>
 
         <select
-          value={empresa ?? ''}
-          onChange={(e) => router.push(url({ empresa: e.target.value || undefined }))}
-          aria-label="Empresa"
-          className="min-h-10 rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
-        >
-          <option value="">Todas las empresas</option>
-          {empresas.map((e) => (
-            <option key={e.id} value={e.slug}>
-              {e.nombre}
-            </option>
-          ))}
-        </select>
-
-        <select
           value={tipo ?? ''}
           onChange={(e) => router.push(url({ tipo: e.target.value || undefined }))}
           aria-label="Tipo de certificado"
@@ -216,9 +203,9 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
               // La búsqueda y la pestaña son estado local: se limpian acá, no solo en la URL.
               setBusqueda('')
               setVista('pendientes')
-              // Empresa y tipo filtran en el server; si no hay, los datos ya alcanzan.
-              if (empresa || tipo) router.push(pathname)
-              else reemplazarUrl(pathname)
+              // El tipo filtra en el server; si no hay, los datos ya alcanzan.
+              if (tipo) router.push(sinFiltros)
+              else reemplazarUrl(sinFiltros)
             }}
             className="px-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
