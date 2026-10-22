@@ -19,6 +19,7 @@ import {
   ExternalLink,
   FolderOpen,
   FolderDown,
+  History,
   Home,
   KeyRound,
   LayoutGrid,
@@ -47,7 +48,8 @@ interface Props {
   empresas: EmpresaNav[]
   /** Muestra la entrada virtual "Tecnophos - ARCOR" (ver modules/arcor/acceso.ts). */
   arcor?: boolean
-  sesion: { nombre: string | null; email: string | null; rol: string }
+  /** superAdmin: admin sin empresa asignada (ve el Historial; misma regla que la RLS de `auditoria`). */
+  sesion: { nombre: string | null; email: string | null; rol: string; superAdmin?: boolean }
   children: React.ReactNode
 }
 
@@ -308,6 +310,8 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
       items: [
         { key: 'nuevo-empleado', label: 'Nuevo empleado', href: '/admin/empleados/nuevo', icon: UserPlus, active: pathname.startsWith('/admin/empleados') },
         { key: 'usuarios', label: 'Usuarios', href: '/admin/usuarios', icon: KeyRound, active: pathname.startsWith('/admin/usuarios') },
+        // Quién cargó o cambió cada cosa (tabla `auditoria`): solo el administrador general.
+        ...(sesion.superAdmin ? [{ key: 'historial', label: 'Historial', href: '/admin/historial', icon: History, active: pathname.startsWith('/admin/historial') }] : []),
       ],
     })
   }

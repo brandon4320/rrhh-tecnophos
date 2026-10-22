@@ -251,6 +251,15 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   carpeta con archivos se vea SIEMPRE: sacar una del subconjunto nunca esconde lo ya cargado. Son documentos de la EMPRESA: lo de cada persona sigue en `recibos_sueldo`
   (la carpeta "Recibos de sueldos" muestra cuántos empleados activos ya tienen el suyo y cuenta como
   completa si están todos). UI en `documentos/DocumentosClient.tsx`, API `/api/documentos`.
+- **Historial de cambios** (migración 28, 22/10/2026): tabla `auditoria` escrita por el trigger
+  `trg_auditoria` → `app_auditar()` (SECURITY DEFINER) en las tablas de Gestión de Recursos (empleados,
+  certificados, archivos, vehículos y flota, equipos, stock, documentación mensual, recibos, perfiles,
+  empresas, tipos, ajustes). Quién (`auth.uid()` + nombre congelado; null = sistema/formulario QR),
+  alta/cambio/baja, en los cambios solo los campos que cambiaron `{campo: [antes, después]}`, una
+  `etiqueta` legible congelada y `ref` con los ids para el link. Nunca frena un guardado (warning y
+  sigue), nunca guarda el token del QR. **Solo la lee el super admin** (RLS); nadie escribe a mano.
+  Pantalla: `/admin/historial` (texto en `src/modules/auditoria/reglas.ts`). **Tabla nueva de
+  Gestión de Recursos = sumarla al array de la migración 28** (y a `GRUPOS` en las reglas).
 - **Palas cargadoras** (migración 26, 15/10/2026): **NO hay tabla nueva**. Una pala es un
   `equipos` con `categoria = 'Palas cargadoras'` (`modules/palas/reglas.ts::CATEGORIA_PALAS`,
   con tests). El motivo es el constraint `check_owner` de `certificados`, que admite UN dueño

@@ -36,7 +36,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     <AppShell
       empresas={nav}
       arcor={puedeVerArcor(sesion)}
-      sesion={{ nombre: sesion.nombre, email: sesion.email, rol: sesion.rol }}
+      sesion={{ nombre: sesion.nombre, email: sesion.email, rol: sesion.rol, superAdmin: sesion.rol === 'admin' && !sesion.empresaAcceso }}
     >
       {children}
     </AppShell>
