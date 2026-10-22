@@ -15,12 +15,15 @@ export function Monograma({
   nombre,
   size = 'md',
   variant = 'neutral',
+  redondo = false,
   className,
 }: {
   nombre: string | null | undefined
   size?: keyof typeof SIZES
   /** accent: para la entidad activa/protagonista (tint índigo). */
   variant?: 'neutral' | 'accent'
+  /** Círculo, como las personas en el CRM (por defecto, cuadrado redondeado). */
+  redondo?: boolean
   className?: string
 }) {
   const iniciales = (nombre ?? '?')
@@ -34,7 +37,8 @@ export function Monograma({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-lg font-semibold',
+        'inline-flex shrink-0 items-center justify-center font-semibold',
+        redondo ? 'rounded-full' : 'rounded-lg',
         SIZES[size],
         variant === 'accent'
           ? 'bg-accent text-accent-foreground'

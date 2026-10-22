@@ -20,7 +20,7 @@ interface Props {
 }
 
 const inputCls =
-  'w-full px-3.5 py-2.5 rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+  'min-h-10 w-full px-3 py-2 rounded-[10px] border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring'
 
 /**
  * Comprobantes de sueldo del empleado: lista por año y carga manual.
@@ -171,7 +171,7 @@ export default function RecibosSueldo({ empleadoId, empresaSlug, recibos, canEdi
             <button
               onClick={handleSubir}
               disabled={saving || !file}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover disabled:opacity-50 active:scale-[0.97]"
             >
               <Upload className="size-3.5" strokeWidth={2} />
               {saving ? 'Subiendo...' : 'Cargar comprobante'}
@@ -203,7 +203,7 @@ export default function RecibosSueldo({ empleadoId, empresaSlug, recibos, canEdi
                 <span className="h-px flex-1 bg-border" />
                 <span className="text-[11px] tabular-nums text-muted-foreground">{g.items.length}</span>
               </div>
-              <div className="overflow-hidden rounded-xl border border-border bg-card">
+              <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-tarjeta">
                 <ul className="divide-y divide-border">
                   {g.items.map((r) => (
                     <li key={r.id} className="flex items-center gap-4 px-5 py-3">

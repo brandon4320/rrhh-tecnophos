@@ -36,7 +36,7 @@ export default async function ArcorAlertasPage() {
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Alertas</h1>
+          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Alertas</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             WhatsApp, crédito del lector, fallos de workflows, publicaciones y silencio del sistema
           </p>
@@ -47,7 +47,7 @@ export default async function ArcorAlertasPage() {
       <section className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight">Abiertas ahora</h2>
         {todasAbiertas.length === 0 ? (
-          <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-sm">
+          <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-sm shadow-tarjeta">
             <CircleCheck className="size-4 shrink-0 text-success" strokeWidth={1.75} />
             <span>Sin alertas abiertas. Las guardias de n8n reportan cada 2 horas; si algo se cae, aparece acá.</span>
           </div>
@@ -57,7 +57,7 @@ export default async function ArcorAlertasPage() {
       </section>
 
       {(vencidas.length > 0 || paraRevisar.length > 0) && (
-        <section id="publicaciones" className="scroll-mt-6 rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <section id="publicaciones" className="scroll-mt-6 rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
           <h2 className="text-lg font-semibold tracking-tight">Publicaciones en Colabora</h2>
           <p className="mb-4 text-sm text-muted-foreground">
             Lo que la cola de publicación no pudo cerrar
@@ -123,7 +123,7 @@ export default async function ArcorAlertasPage() {
         </section>
       )}
 
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
         <h2 className="text-lg font-semibold tracking-tight">Incidentes de los últimos 7 días</h2>
         <p className="mb-4 text-sm text-muted-foreground">
           Fallos puntuales sin estado (un workflow que falló, una conciliación que recuperó fotos, una lectura dudosa)

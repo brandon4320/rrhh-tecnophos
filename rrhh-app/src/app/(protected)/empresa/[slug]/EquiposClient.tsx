@@ -74,7 +74,7 @@ const ITEM_EMPTY = { nombre: '', tipo: '', numero_serie: '', marca: '', modelo: 
 // Sugerencias para el datalist de secciones nuevas
 const SECCIONES_SUGERIDAS = ['Equipos de medición', 'Matafuegos', 'Herramientas', 'Instalaciones']
 
-const inputCls = 'w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-card'
+const inputCls = 'min-h-10 w-full px-3 py-2 rounded-[10px] border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 bg-card focus:border-ring'
 
 function escCancela(cancelar: () => void) {
   return (e: KeyboardEvent) => {
@@ -516,7 +516,7 @@ export default function EquiposClient({
         key={eq.id}
         id={`equipo-${eq.id}`}
         className={clsx(
-          'scroll-mt-6 bg-card rounded-xl border overflow-hidden',
+          'scroll-mt-6 bg-card rounded-2xl border overflow-hidden shadow-tarjeta',
           abiertoInicial === eq.id ? 'border-primary/40' : 'border-border'
         )}
       >
@@ -612,7 +612,7 @@ export default function EquiposClient({
                             </button>
                             <button
                               onClick={() => handleDelete(eq.id, cert)}
-                              className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                              className="text-xs text-muted-foreground hover:text-danger transition-colors"
                             >
                               Eliminar
                             </button>
@@ -628,7 +628,7 @@ export default function EquiposClient({
                             <span key={a.id} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
                               <button type="button" onClick={() => abrirArchivo(a.path)} className="max-w-[160px] truncate text-left text-primary hover:underline">{a.nombre}</button>
                               {canEdit && (
-                                <button onClick={() => handleDeleteArchivo(eq.id, cert.id, a)} className="text-muted-foreground hover:text-red-500" aria-label="Eliminar archivo">×</button>
+                                <button onClick={() => handleDeleteArchivo(eq.id, cert.id, a)} className="text-muted-foreground hover:text-danger" aria-label="Eliminar archivo">×</button>
                               )}
                             </span>
                           ))}
@@ -668,7 +668,7 @@ export default function EquiposClient({
               <div className="mt-3 text-right">
                 <button
                   onClick={() => handleDeleteEquipo(eq)}
-                  className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                  className="text-xs text-muted-foreground hover:text-danger transition-colors"
                 >
                   Eliminar ítem
                 </button>
@@ -799,7 +799,7 @@ export default function EquiposClient({
                     <button
                       type="submit"
                       disabled={savingItem || !itemForm.nombre.trim()}
-                      className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
+                      className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-[10px] active:scale-[0.97]"
                     >
                       {savingItem
                         ? (editandoItem ? 'Guardando...' : 'Creando...')
@@ -825,7 +825,7 @@ export default function EquiposClient({
                   {canEdit && !soloCategoria && secciones.some((s) => s.nombre === nombre) && (
                     <button
                       onClick={() => handleEliminarSeccion(nombre)}
-                      className="mt-2 text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                      className="mt-2 text-xs text-muted-foreground hover:text-danger transition-colors"
                     >
                       Eliminar sección
                     </button>
@@ -866,7 +866,7 @@ export default function EquiposClient({
               <button
                 type="submit"
                 disabled={savingSeccion || !nombreSeccion.trim()}
-                className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
+                className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-[10px] active:scale-[0.97]"
               >
                 {savingSeccion ? 'Creando...' : 'Crear sección'}
               </button>
@@ -973,7 +973,7 @@ export default function EquiposClient({
           <button
             type="submit"
             disabled={saving || !form.tipo_id}
-            className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
+            className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-[10px] active:scale-[0.97]"
           >
             {saving ? 'Guardando...' : textoBoton}
           </button>

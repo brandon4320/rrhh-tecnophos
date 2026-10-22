@@ -50,7 +50,7 @@ export default async function PalasPage({ searchParams }: { searchParams: Promis
   if (error) {
     return (
       <div className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Palas cargadoras</h1>
+        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Palas cargadoras</h1>
         <div className="mt-6 rounded-2xl border border-danger/30 bg-danger-subtle px-5 py-4 text-sm text-danger">
           No se pudieron cargar las palas. Detalle técnico: {error.message}
         </div>
@@ -61,7 +61,7 @@ export default async function PalasPage({ searchParams }: { searchParams: Promis
   return (
     <div className="mx-auto max-w-5xl p-4 sm:p-6 lg:p-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Palas cargadoras</h1>
+        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Palas cargadoras</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           {empresaSel.nombre} · {palas?.length ?? 0}{' '}
           {(palas?.length ?? 0) === 1 ? 'unidad cargada' : 'unidades cargadas'}. Cada una con sus datos y su

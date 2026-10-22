@@ -143,7 +143,7 @@ export default function EmpleadosClient({ filas: filasServer, empresas, empresaS
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Empleados</h1>
+          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Empleados</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {visibles.length} {visibles.length === 1 ? 'resultado' : 'resultados'}
             {empresaSel ? ` · ${empresaSel.nombre}` : ' · todas las empresas'}
@@ -152,7 +152,7 @@ export default function EmpleadosClient({ filas: filasServer, empresas, empresaS
         {puedeEditar && (
           <Link
             href={hrefNuevo}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.97]"
           >
             <Plus className="size-4" strokeWidth={2.5} />
             Nuevo empleado
@@ -172,14 +172,14 @@ export default function EmpleadosClient({ filas: filasServer, empresas, empresaS
             autoFocus
             placeholder="Buscar por nombre, apellido o sector…"
             aria-label="Buscar empleados"
-            className="w-full rounded-xl border border-border bg-card py-2.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="min-h-10 w-full rounded-[10px] border border-input bg-card py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
           />
         </div>
         <select
           value={empresaSel?.slug ?? ''}
           onChange={(e) => cambiarEmpresa(e.target.value)}
           aria-label="Empresa"
-          className="rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="min-h-10 rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
         >
           <option value="">Todas las empresas</option>
           {empresas.map((e) => (
@@ -210,7 +210,7 @@ export default function EmpleadosClient({ filas: filasServer, empresas, empresaS
       </div>
 
       {/* Lista */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-tarjeta">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">

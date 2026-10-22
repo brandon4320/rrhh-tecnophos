@@ -144,7 +144,7 @@ export function MovimientosTabla({
           {movimientos.length === 0 ? 'Todavía no hay movimientos.' : 'Ningún movimiento coincide con los filtros.'}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
           <table className="w-full min-w-[820px] table-fixed text-sm">
             <thead>
               <tr className="border-b border-border">

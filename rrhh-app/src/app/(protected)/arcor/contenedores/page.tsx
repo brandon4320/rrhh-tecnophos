@@ -86,7 +86,7 @@ export default async function ArcorContenedoresPage({
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Contenedores</h1>
+          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Contenedores</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {total} {alcance}
             {lugar && ` · ${tituloLugar(lugar)}`}
@@ -115,7 +115,7 @@ export default async function ArcorContenedoresPage({
               defaultValue={q}
               placeholder="Contenedor, booking u OE…"
               aria-label="Buscar contenedor, booking u OE en todos los meses"
-              className="w-full rounded-xl border border-border bg-card py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="min-h-10 w-full rounded-[10px] border border-input bg-card py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
             />
           </div>
           <input type="hidden" name="mes" value={mesParam} />
@@ -123,7 +123,7 @@ export default async function ArcorContenedoresPage({
           {estado && <input type="hidden" name="estado" value={estado} />}
           <button
             type="submit"
-            className="rounded-xl border border-border bg-card px-3.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="rounded-[10px] border border-border-strong bg-card px-3.5 py-2 text-sm font-medium text-foreground transition-[background-color,transform] hover:bg-muted active:scale-[0.97]"
           >
             Buscar
           </button>

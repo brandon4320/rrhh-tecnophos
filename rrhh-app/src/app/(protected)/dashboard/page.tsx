@@ -179,13 +179,13 @@ export default async function DashboardPage({
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Dashboard</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">{hoyLargo}</p>
       </div>
 
       {/* ── Estado general + Atención ── */}
       <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
           <h2 className="text-lg font-semibold tracking-tight">Estado general</h2>
           <p className="text-sm text-muted-foreground">Lectura rápida de todas las empresas</p>
 
@@ -236,21 +236,21 @@ export default async function DashboardPage({
         </div>
 
         {/* Atención */}
-        <div className="flex flex-col justify-between rounded-2xl bg-surface-dark p-6 text-surface-dark-foreground">
+        <div className="flex flex-col justify-between rounded-2xl bg-zona p-6 text-zona-foreground">
           {vencidos.length > 0 ? (
             <>
               <div>
-                <EstadoBadgeSuave estado="vencido" label="ATENCIÓN" />
-                <p className="mt-3 text-2xl font-semibold tracking-tight">
-                  {vencidos.length} {vencidos.length === 1 ? 'certificado vencido' : 'certificados vencidos'}
+                <p className="text-2xl font-semibold tracking-tight">
+                  <span className="text-danger tabular-nums">{vencidos.length}</span>{' '}
+                  {vencidos.length === 1 ? 'certificado vencido' : 'certificados vencidos'}
                 </p>
-                <p className="mt-1 text-sm text-white/60">
+                <p className="mt-1 text-sm text-texto-2">
                   El caso más urgente venció hace {diasUrgente} {diasUrgente === 1 ? 'día' : 'días'}.
                 </p>
               </div>
               <Link
                 href="/vencimientos?estado=vencido"
-                className="mt-5 inline-flex items-center justify-between gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                className="mt-5 inline-flex items-center justify-between gap-2 rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.97]"
               >
                 Revisar vencimientos
                 <ArrowRight className="size-4" strokeWidth={2} />
@@ -259,9 +259,8 @@ export default async function DashboardPage({
           ) : (
             <>
               <div>
-                <EstadoBadgeSuave estado="vigente" label="EN ORDEN" />
-                <p className="mt-3 text-2xl font-semibold tracking-tight">Sin certificados vencidos</p>
-                <p className="mt-1 text-sm text-white/60">
+                <p className="text-2xl font-semibold tracking-tight">Sin certificados vencidos</p>
+                <p className="mt-1 text-sm text-texto-2">
                   {proximos.length > 0
                     ? `${proximos.length} por vencer dentro de su ventana de alerta.`
                     : 'Toda la documentación está vigente.'}
@@ -269,7 +268,7 @@ export default async function DashboardPage({
               </div>
               <Link
                 href="/vencimientos"
-                className="mt-5 inline-flex items-center justify-between gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/15"
+                className="mt-5 inline-flex items-center justify-between gap-2 rounded-[10px] border border-border-strong bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-[background-color,transform] hover:bg-muted active:scale-[0.97]"
               >
                 Ver vencimientos
                 <ArrowRight className="size-4" strokeWidth={2} />
@@ -281,7 +280,7 @@ export default async function DashboardPage({
 
       {/* ── Prioritarios + columna derecha ── */}
       <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
           <h2 className="text-lg font-semibold tracking-tight">Vencimientos prioritarios</h2>
           <p className="text-sm text-muted-foreground">Ordenados por urgencia</p>
 
@@ -298,7 +297,7 @@ export default async function DashboardPage({
 
         <div className="space-y-6">
           {/* Empresas */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
             <h2 className="text-lg font-semibold tracking-tight">Empresas</h2>
             <p className="text-sm text-muted-foreground">Comparación de estado</p>
 
@@ -339,7 +338,7 @@ export default async function DashboardPage({
           </div>
 
           {/* Distribución documental */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
             <h2 className="text-lg font-semibold tracking-tight">Distribución documental</h2>
             <p className="text-sm text-muted-foreground">Estado de los certificados</p>
 

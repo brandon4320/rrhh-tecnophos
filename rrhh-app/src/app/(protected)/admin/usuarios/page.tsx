@@ -301,12 +301,12 @@ export default async function AdminUsuariosPage({
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Usuarios</h1>
+        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Usuarios</h1>
       </div>
 
-      <div className="bg-card rounded-xl border border-border p-6">
+      <div className="bg-card rounded-2xl border border-border p-6 shadow-tarjeta">
         {!process.env.SUPABASE_SERVICE_ROLE_KEY && (
-          <div className="mb-5 rounded-lg border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-400">
+          <div className="mb-5 rounded-xl border border-warning/20 bg-warning-subtle px-4 py-3 text-sm text-warning-text">
             Para crear y gestionar usuarios desde esta pantalla necesitás definir <strong>SUPABASE_SERVICE_ROLE_KEY</strong> en las variables de entorno del proyecto.
           </div>
         )}
@@ -318,7 +318,7 @@ export default async function AdminUsuariosPage({
         )}
 
         {successMessage && (
-          <div className="mb-5 rounded-lg border border-emerald-500/30 bg-green-50 px-4 py-3 text-sm text-emerald-400">
+          <div className="mb-5 rounded-xl border border-success/20 bg-success-subtle px-4 py-3 text-sm text-success-text">
             {successMessage}
           </div>
         )}
@@ -335,17 +335,17 @@ export default async function AdminUsuariosPage({
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Username</label>
-              <input type="text" name="username" required className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="nombre.apellido" />
+              <input type="text" name="username" required className="min-h-10 w-full px-3 py-2 rounded-[10px] border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring" placeholder="nombre.apellido" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Contraseña</label>
-              <input type="text" name="password" required minLength={6} className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              <input type="text" name="password" required minLength={6} className="min-h-10 w-full px-3 py-2 rounded-[10px] border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Rol</label>
-              <select name="rol" defaultValue="usuario" className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+              <select name="rol" defaultValue="usuario" className="min-h-10 w-full px-3 py-2 rounded-[10px] border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring">
                 <option value="usuario">Usuario</option>
                 <option value="admin">Administrador</option>
               </select>
@@ -359,7 +359,7 @@ export default async function AdminUsuariosPage({
         </form>
       </div>
 
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-tarjeta">
         <div className="px-6 py-4 border-b border-border">
           <h2 className="text-lg font-medium text-foreground">Usuarios creados</h2>
         </div>
@@ -389,7 +389,7 @@ export default async function AdminUsuariosPage({
                     <input type="hidden" name="user_id" value={managedUser.id} />
                     <div>
                       <label className="block text-xs font-medium text-muted-foreground mb-1">Nueva contraseña</label>
-                      <input type="text" name="new_password" minLength={6} required className="px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                      <input type="text" name="new_password" minLength={6} required className="min-h-10 px-3 py-2 rounded-[10px] border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring" />
                     </div>
                     <button type="submit" className="px-3 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent">
                       Actualizar contraseña

@@ -75,27 +75,22 @@ export default async function HubPage() {
 
   const nombre = sesion.nombre ?? sesion.email ?? 'Usuario'
 
+  // Filas como el menú del CRM: 40px, radio 10, texto-2 que pasa a tinta al pasar.
   const filaCls =
-    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted'
+    'flex h-10 items-center gap-2.5 rounded-[10px] px-3 text-sm font-medium text-texto-2 transition-colors duration-150 hover:bg-muted hover:text-foreground'
 
   return (
     <div className="min-h-[100dvh] bg-background">
-      <header className="border-b bg-card">
+      {/* Barra de arriba como la del CRM: marca del grupo a la izquierda, la persona y salir a la derecha. */}
+      <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur-sm">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-tecnophos.svg" alt="Tecnophos" className="h-7 w-auto" />
-            <span className="h-8 w-px bg-border" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-adc.png" alt="ADC S.R.L. Fumigation" className="h-9 w-auto" />
-            <span className="h-8 w-px bg-border" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-serviwhite.png" alt="Serviwhite" className="hidden h-5 w-auto sm:inline-block" />
-            <span className="ml-1 hidden h-6 w-px bg-border sm:inline-block" />
-            <span className="hidden text-sm font-medium text-muted-foreground sm:inline">Gestión</span>
+          <div className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element -- svg chico, sin optimizar */}
+            <img src="/logo-grupo.svg" alt="" width={30} height={30} className="shrink-0 select-none" draggable={false} />
+            <span className="text-[15px] font-semibold tracking-[-0.015em]">Gestión</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="mr-2 hidden text-sm text-muted-foreground sm:inline">{nombre}</span>
+            <span className="mr-2 hidden text-sm text-texto-2 sm:inline">{nombre}</span>
             <ThemeToggle />
             <form action={logout}>
               <Button variant="ghost" size="sm" type="submit">
@@ -108,15 +103,12 @@ export default async function HubPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Hola, {nombre.split(' ')[0]}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Entrá al portal de cada empresa.</p>
-          </div>
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Hola, {nombre.split(' ')[0]}</h1>
           {puedeRrhh && (
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="inline-flex items-center gap-2 rounded-[10px] border border-border-strong bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-[background-color,transform] hover:bg-muted active:scale-[0.97]"
             >
               <LayoutDashboard className="size-4" strokeWidth={1.75} />
               Resumen general
@@ -125,31 +117,26 @@ export default async function HubPage() {
         </div>
 
         {marcas.length === 0 ? (
-          <div className="rounded-2xl border border-border bg-card py-10 text-center text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-border bg-card py-10 text-center text-sm text-muted-foreground shadow-tarjeta">
             No tenés portales asignados. Contactá al administrador.
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {marcas.map((marca) => (
-              <div key={marca.key} className="flex flex-col rounded-2xl border border-border bg-card p-5">
+              <div key={marca.key} className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
                 <div className="mb-4 flex items-center gap-3">
                   <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-white p-1.5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={marca.logo} alt={marca.nombre} className="max-h-full max-w-full object-contain" />
+                    <img src={marca.logo} alt="" className="max-h-full max-w-full object-contain" />
                   </span>
-                  <div>
-                    <p className="font-semibold tracking-tight">{marca.nombre}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {marca.sedes.length > 1 ? `${marca.sedes.length} sedes` : 'Portal de empresa'}
-                    </p>
-                  </div>
+                  <h2 className="text-base font-semibold tracking-tight">{marca.nombre}</h2>
                 </div>
 
                 <div className="flex-1 space-y-0.5">
                   {puedeRrhh &&
                     marca.sedes.map((sede) => (
                       <Link key={sede.id} href={`/empresa/${sede.slug}`} className={filaCls}>
-                        <IdCard className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                        <IdCard className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
                         <span className="min-w-0 flex-1 truncate">
                           {marca.sedes.length > 1 ? `RRHH · ${nombreSede(sede.nombre)}` : 'RRHH'}
                         </span>
@@ -159,7 +146,7 @@ export default async function HubPage() {
 
                   {marca.key === 'adc' && (
                     <a href={UNIPAR_APP_URL} target="_blank" rel="noopener noreferrer" className={filaCls}>
-                      <ClipboardList className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <ClipboardList className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
                       <span className="min-w-0 flex-1 truncate">Sistema limpieza - UNIPAR</span>
                       <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                     </a>
@@ -169,7 +156,7 @@ export default async function HubPage() {
                       (los datos viven en el dispositivo del operario, no usa Supabase). */}
                   {marca.key === 'adc' && (
                     <a href="/control-plagas.html" target="_blank" rel="noopener noreferrer" className={filaCls}>
-                      <Bug className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <Bug className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
                       <span className="min-w-0 flex-1 truncate">Control de Plagas</span>
                       <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                     </a>
@@ -177,7 +164,7 @@ export default async function HubPage() {
 
                   {marca.key === 'adc' && (
                     <a href={CHECKLIST_MAQUINARIA_URL} target="_blank" rel="noopener noreferrer" className={filaCls}>
-                      <ListChecks className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <ListChecks className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
                       <span className="min-w-0 flex-1 truncate">Checklist de maquinaria</span>
                       <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                     </a>
@@ -185,7 +172,7 @@ export default async function HubPage() {
 
                   {marca.key === 'serviwhite' && (
                     <a href={SERVIWHITE_ERP_URL} target="_blank" rel="noopener noreferrer" className={filaCls}>
-                      <Boxes className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <Boxes className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
                       <span className="min-w-0 flex-1 truncate">Sistema de gestión</span>
                       <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                     </a>
@@ -193,7 +180,7 @@ export default async function HubPage() {
 
                   {marca.key === 'serviwhite' && (
                     <a href={SERVIWHITE_LIMPIEZA_URL} target="_blank" rel="noopener noreferrer" className={filaCls}>
-                      <SprayCan className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <SprayCan className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
                       <span className="min-w-0 flex-1 truncate">Recorrido de limpieza</span>
                       <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                     </a>
@@ -201,14 +188,14 @@ export default async function HubPage() {
 
                   {marca.key === 'tecnophos' && puedeArcor && (
                     <Link href="/arcor" className={filaCls}>
-                      <Container className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                      <Container className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
                       <span className="min-w-0 flex-1 truncate">Contenedores - ARCOR</span>
                       <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                     </Link>
                   )}
 
                   <a href={`${CRM_URL}?empresa=${marca.key}`} target="_blank" rel="noopener noreferrer" className={filaCls}>
-                    <BriefcaseBusiness className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+                    <BriefcaseBusiness className="size-[18px] shrink-0" strokeWidth={1.75} aria-hidden />
                     <span className="min-w-0 flex-1 truncate">Gestión Comercial</span>
                     <ExternalLink className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
                   </a>

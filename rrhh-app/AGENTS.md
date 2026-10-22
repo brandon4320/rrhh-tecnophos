@@ -363,42 +363,55 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
 
 ---
 
-## 7. Sistema de diseño (rediseño 2026-07 — respetarlo)
+## 7. Sistema de diseño — UNA sola línea con el CRM (22/10/2026)
 
-Brandon rechazó explícitamente la estética anterior ("infantil, muchos colores").
-El sistema actual es **minimal empresa-céntrico**:
+Pedido de Brandon (22/10/2026): Gestión se ve igual que el **Sistema de Gestión Comercial**
+(crm.tecnophos.com.ar, repo `comercial-tecnophos`, sistema visual "Aire" en su `src/index.css` y
+`docs/DISENO.md`). Una sola línea de diseño para los dos: si algo cambia allá, se cambia acá.
 
+- **Tokens** (`src/app/globals.css`): los mismos valores del CRM con los nombres de shadcn.
+  `background` #f5f4fa (lavanda), `card` blanco, `foreground` #17161f (tinta), `texto-2` #55526a,
+  `muted-foreground` #6a677c (texto-3, AA), `muted` #f3f2f8 (suave), `accent` #eeeefd /
+  `accent-foreground` #4338ca, `border` #eceaf3, `border-strong`/`input` #d9d6e6, `divisor`, `hover`,
+  `primary` #4f46e5 + `primary-hover`. Estados en tres piezas: `success|warning|danger` (cifras,
+  puntos, barras), `-subtle` (fondo pastel) y `-text` (texto de la pastilla, AA sobre su fondo).
+  `zona` = lavanda del saludo del CRM para el bloque destacado (reemplazó al hero negro).
+  Sombras `shadow-tarjeta` y `shadow-flotante`. `rounded-2xl` vale **20px** (radio "tarjeta" del CRM).
+- **Recetas** (copiarlas tal cual, son las del CRM):
+  - Tarjeta: `rounded-2xl border border-border bg-card shadow-tarjeta`.
+  - Título de página: `<h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">`.
+    Título de tarjeta: `text-base font-semibold tracking-tight`.
+  - Botón principal: `rounded-[10px] bg-primary font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.97]`
+    (alto 40px). Secundario: `rounded-[10px] border border-border-strong bg-card text-foreground hover:bg-muted`.
+    Mejor todavía: `<Button>` de `components/ui/button.tsx`, que ya trae las variantes del CRM.
+  - Campo: `min-h-10 rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/15`.
+  - Pestañas: `Segmented` / `SegmentedLocal` (riel `bg-muted` 12px, activa blanca 9px).
+  - Menú lateral: filas `h-10 rounded-[10px] px-3 text-sm font-medium`, activa `bg-accent text-accent-foreground`,
+    resto `text-texto-2 hover:bg-muted`; íconos `size-[18px]` con trazo 1.75.
 - **Sin textos de relleno** (regla de Brandon, 22/10/2026): nada de taglines, textos de ayuda bajo
-  los títulos ni etiquetas secundarias ("(opcional)", "(si no…)"). Si una pantalla los necesita
-  para entenderse, se arregla el layout (p. ej. el campo Nombre del alta de usuarios aparece solo
-  cuando no se elige un empleado: `admin/usuarios/QuienEs.tsx`). Cada cambio tiene que mejorar a la
-  vez la experiencia de quien usa, de quien programa y de los agentes, sin romper nada.
-- **UN solo acento**: índigo (`--primary`). **PROHIBIDO** reintroducir colores por
-  empresa (se eliminaron todos los mapas `EMPRESA_*`).
-- **El color solo comunica estado**: tokens `--success` (teal) / `--warning`
-  (naranja) / `--danger` (rojo) + variantes `-subtle`. Nada más lleva color.
-- Tema **claro por defecto** (toggle oscuro disponible) · radius 12px · cards
-  `rounded-2xl` · tipografía: h1 `text-2xl font-semibold tracking-tight`.
+  los títulos ni etiquetas secundarias ("(opcional)", "(si no…)", "Estado general de…"). Si una
+  pantalla los necesita para entenderse, se arregla el layout (p. ej. el campo Nombre del alta de
+  usuarios aparece solo cuando no se elige un empleado: `admin/usuarios/QuienEs.tsx`). Cada cambio
+  tiene que mejorar a la vez la experiencia de quien usa, de quien programa y de los agentes, sin romper nada.
+- **UN solo acento**: índigo (`--primary`). **PROHIBIDO** reintroducir colores por empresa ni
+  colores de Tailwind sueltos (`red-500`, `emerald-400`…): todo sale de los tokens.
+- **El color solo comunica estado**, siempre con texto o ícono al lado.
+- Tema **claro por defecto**; el oscuro usa la misma familia lavanda/índigo en tonos de noche.
 - **Componentes obligatorios** (`src/components/ui/`):
   - `EstadoPill` / `EstadoBadgeSuave` — ÚNICO encoding de estado de vencimiento.
-  - `Monograma` — avatares de iniciales (nada de tiles de colores).
-  - `BarraVencimiento`, `Donut` (SVG puro), `Segmented` (tabs).
-- **AppShell** (`components/layout/AppShell.tsx`): sidebar única clara. Arriba, el
-  selector **"Viendo"** (persistido en `localStorage.empresa_activa`) con **Todas las
-  empresas** como primera opción (solo si el usuario ve más de una), cada empresa y ARCOR.
-  Debajo, las vistas de lo elegido, con ícono y agrupadas: sin título (Resumen, Empleados,
-  Vencimientos), **Documentación** (Habilitaciones = `?vista=documentacion`, Mensual =
-  `/documentos`), **Recursos** (Flota, Stock) y **Administración**. Con "Todas" solo aparecen
-  las que existen para el grupo (Resumen general = `/dashboard`, Empleados, Vencimientos,
-  Flota). Cambiar de empresa te deja en la MISMA pantalla (`destino()`), no en el Resumen.
-  El usuario es un solo botón que abre Inicio, tema y cerrar sesión. Sin rail de módulos
-  (decisión explícita de Brandon: no mezclar módulos). Se sacaron los "Sectores": eran
-  links que llevaban todos a la misma página.
-- Botones primarios: `bg-primary hover:bg-primary/90 text-primary-foreground`
-  (nunca `hover:brightness-*` ni `text-white` hardcodeado).
-- **Pendiente (F5)**: extender estos tokens a Comercial (EtapaBadge tiene 11 colores)
-  y Operaciones (`SectionHeader` con naranja hardcodeado). Si tocás esas pantallas,
-  acercalas al sistema.
+  - `Monograma` — avatares de iniciales (`redondo` para personas, como el CRM).
+  - `BarraVencimiento`, `Donut` (SVG puro), `Segmented` (tabs), `Button`, `Input`, `Card`, `Table`.
+- **AppShell** (`components/layout/AppShell.tsx`): el menú lateral del CRM (248px). Arriba la marca
+  (`public/logo-grupo.svg`, el mismo ícono del grupo que el CRM) + "Gestión"; el selector de
+  empresa (persistido en `localStorage.empresa_activa`) con **Todas las empresas** primero (solo si
+  el usuario ve más de una), cada empresa y ARCOR, con la cantidad de empleados a la derecha.
+  Debajo, las vistas de lo elegido: **Menú** (Resumen, Empleados, Vencimientos), **Documentación**
+  (Habilitaciones = `?vista=documentacion`, Mensual = `/documentos`, Armar carpeta), **Recursos**
+  (Flota, Palas, Stock) y **Administración**. Con "Todas" solo aparecen las que existen para el
+  grupo. Cambiar de empresa te deja en la MISMA pantalla (`destino()`). Abajo, la tarjeta de la
+  persona abre Inicio, tema y cerrar sesión. Sin rail de módulos (decisión de Brandon).
+- **Pendiente**: el módulo viejo `/comercial` (reemplazado por el CRM) sigue con su estética propia;
+  no vale la pena migrarlo.
 
 ---
 

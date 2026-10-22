@@ -10,7 +10,7 @@ export interface OpcionEmpleado {
   etiqueta: string
 }
 
-const campo = 'w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+const campo = 'min-h-10 w-full px-3 py-2 rounded-[10px] border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring'
 
 export function QuienEs({ empleados }: { empleados: OpcionEmpleado[] }) {
   const [empleadoId, setEmpleadoId] = useState('')

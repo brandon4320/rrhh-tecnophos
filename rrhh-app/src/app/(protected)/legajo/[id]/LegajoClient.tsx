@@ -58,7 +58,7 @@ const FORM_VACIO = {
 }
 
 const inputCls =
-  'w-full px-3.5 py-2.5 rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+  'min-h-10 w-full px-3 py-2 rounded-[10px] border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring'
 
 export default function LegajoClient({
   empleado,
@@ -392,7 +392,7 @@ export default function LegajoClient({
         <div className="flex items-center gap-4">
           <Monograma nombre={nombreCompleto} size="lg" variant="accent" />
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{nombreCompleto}</h1>
+            <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">{nombreCompleto}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-3">
               <span className="text-sm text-muted-foreground">{empleado.empresa?.nombre}</span>
               {empleadoData.sector && (
@@ -411,13 +411,13 @@ export default function LegajoClient({
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               onClick={() => setEditingEmpleado((prev) => !prev)}
-              className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="rounded-[10px] border border-border-strong bg-card px-4 py-2 text-sm font-medium text-foreground transition-[background-color,transform] hover:bg-muted active:scale-[0.97]"
             >
               Editar
             </button>
             <button
               onClick={abrirNuevo}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.97]"
             >
               <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -432,7 +432,7 @@ export default function LegajoClient({
         <form
           onSubmit={(e) => { e.preventDefault(); handleSaveEmpleado() }}
           onKeyDown={escCancela(() => setEditingEmpleado(false))}
-          className="bg-card rounded-xl border border-border p-6 mb-8"
+          className="bg-card rounded-2xl border border-border p-6 mb-8 shadow-tarjeta"
         >
           <h3 className="font-semibold text-foreground mb-5">Editar empleado</h3>
 
@@ -496,7 +496,7 @@ export default function LegajoClient({
             <button
               type="submit"
               disabled={savingEmpleado}
-              className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
+              className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-[10px] transition-[background-color,transform] active:scale-[0.97]"
             >
               {savingEmpleado ? 'Guardando...' : 'Guardar cambios'}
             </button>
@@ -526,7 +526,7 @@ export default function LegajoClient({
 
       <div className="space-y-3 mb-8">
         {certs.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground text-sm bg-card rounded-xl border border-border">
+          <div className="text-center py-12 text-muted-foreground text-sm bg-card rounded-2xl border border-border shadow-tarjeta">
             Sin certificados registrados. Agregá el primero.
           </div>
         )}
@@ -540,7 +540,7 @@ export default function LegajoClient({
               key={cert.id}
               id={`cert-${cert.id}`}
               className={clsx(
-                'scroll-mt-6 bg-card rounded-xl border overflow-hidden',
+                'scroll-mt-6 bg-card rounded-2xl border overflow-hidden shadow-tarjeta',
                 isOpen && certALaVista === cert.id ? 'border-primary/40' : 'border-border'
               )}
             >
@@ -783,7 +783,7 @@ export default function LegajoClient({
           id="cert-form"
           onSubmit={(e) => { e.preventDefault(); handleSave() }}
           onKeyDown={escCancela(resetForm)}
-          className="scroll-mt-6 bg-card rounded-xl border border-primary/30 p-6 shadow-sm"
+          className="scroll-mt-6 bg-card rounded-2xl border border-primary/30 p-6 shadow-tarjeta"
         >
           <h3 className="font-semibold text-foreground mb-5">
             {editingId ? 'Editar certificado' : 'Nuevo certificado'}
@@ -901,7 +901,7 @@ export default function LegajoClient({
             <button
               type="submit"
               disabled={saving || !form.tipo_id}
-              className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium px-5 py-2.5 rounded-lg transition-colors"
+              className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-[10px] transition-[background-color,transform] active:scale-[0.97]"
             >
               {saving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Agregar certificado'}
             </button>

@@ -34,7 +34,7 @@ export default function EppEntregado({ movimientos, empresaSlug }: { movimientos
         )}
       </div>
       {movimientos.length > 0 && (
-        <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
+        <ul className="divide-y divide-border rounded-2xl border border-border bg-card shadow-tarjeta">
           {movimientos.map((m) => (
             <li key={m.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
               <span className="w-24 shrink-0 text-xs tabular-nums text-muted-foreground">{fmtFechaCompletaAR(m.fecha)}</span>

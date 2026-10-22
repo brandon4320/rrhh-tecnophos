@@ -78,7 +78,7 @@ export default function EncargadosClient({ empresa, encargados: inicial, avisos,
   }
 
   return (
-    <section className="rounded-2xl border border-border bg-card">
+    <section className="rounded-2xl border border-border bg-card shadow-tarjeta">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
         <div>
           <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
@@ -129,10 +129,10 @@ export default function EncargadosClient({ empresa, encargados: inicial, avisos,
           {canEdit && (
             <form onSubmit={agregar} className="mt-3 flex flex-wrap gap-2">
               <input id="enc-nombre" value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                placeholder="Nombre" className="min-w-[140px] flex-1 rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                placeholder="Nombre" className="min-h-10 min-w-[140px] flex-1 rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring" />
               <input id="enc-telefono" value={form.telefono} onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
-                placeholder="Celular (291 412-3456)" inputMode="tel" className="min-w-[160px] flex-1 rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-              <button type="submit" disabled={saving} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+                placeholder="Celular (291 412-3456)" inputMode="tel" className="min-h-10 min-w-[160px] flex-1 rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring" />
+              <button type="submit" disabled={saving} className="inline-flex items-center gap-1.5 rounded-[10px] bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover disabled:opacity-50 active:scale-[0.97]">
                 <Plus className="size-4" /> Agregar
               </button>
             </form>

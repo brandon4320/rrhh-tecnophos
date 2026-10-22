@@ -11,7 +11,7 @@ export default function ProtectedNotFound() {
         <p className="mt-1 text-sm text-muted-foreground">
           Puede que se haya dado de baja, que el link sea viejo o que no tengas acceso a esa empresa.
         </p>
-        <Link href="/dashboard" className="mt-5 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
+        <Link href="/dashboard" className="mt-5 inline-flex rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.97]">
           Ir al resumen
         </Link>
       </div>

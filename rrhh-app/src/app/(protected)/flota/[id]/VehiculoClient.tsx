@@ -64,10 +64,10 @@ const GRAVEDAD: Record<string, { label: string; cls: string }> = {
   baja: { label: 'Leve', cls: 'bg-muted text-muted-foreground' },
 }
 
-const card = 'rounded-2xl border border-border bg-card'
-const input = 'w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring'
-const btnPrimario = 'inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50'
-const btnSecundario = 'inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50'
+const card = 'rounded-2xl border border-border bg-card shadow-tarjeta'
+const input = 'min-h-10 w-full rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring'
+const btnPrimario = 'inline-flex items-center justify-center gap-1.5 rounded-[10px] bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover disabled:opacity-50 active:scale-[0.97]'
+const btnSecundario = 'inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-border-strong bg-card px-3 py-2 text-sm font-medium text-foreground transition-[background-color,transform] hover:bg-muted disabled:opacity-50 active:scale-[0.97]'
 
 const pesos = (n: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 const num = (v: string) => (v.trim() === '' ? null : Number(v.replace(/\./g, '').replace(',', '.')))

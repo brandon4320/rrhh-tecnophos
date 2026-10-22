@@ -26,7 +26,7 @@ export default function ProtectedError({ error, reset }: { error: Error & { dige
         {error.digest && <p className="mt-1 text-xs text-danger/60">Código: {error.digest}</p>}
         <button
           onClick={() => { router.refresh(); reset() }}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          className="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.97]"
         >
           <RotateCcw className="size-4" strokeWidth={1.75} />
           Reintentar

@@ -68,7 +68,7 @@ export default async function ArcorActividadPage({
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Actividad</h1>
+          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Actividad</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {total} {total === 1 ? 'evento' : 'eventos'} · {movimientos} movimientos de contenedores
             {ocultos > 0 && (
@@ -98,7 +98,7 @@ export default async function ArcorActividadPage({
         </div>
       </div>
 
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
         {antes && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-4 text-sm text-muted-foreground">
             <span>Anteriores al {fmtFechaHoraAR(antes.ts)}</span>

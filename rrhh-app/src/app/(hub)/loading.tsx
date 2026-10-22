@@ -10,7 +10,7 @@ export default function Loading() {
         <Skeleton className="h-8 w-56" />
         <div className="grid gap-4 md:grid-cols-2">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="rounded-2xl border border-border bg-card p-5">
+            <div key={i} className="rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
               <Skeleton className="h-5 w-40" />
               <div className="mt-4 space-y-2">
                 <Skeleton className="h-10 w-full rounded-lg" />

@@ -38,7 +38,7 @@ export function BotonEntrar() {
     <button
       type="submit"
       disabled={pending}
-      className="mt-1 inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground transition-[background-color,transform] duration-150 hover:bg-primary/90 active:scale-[0.985] disabled:cursor-default disabled:opacity-80"
+      className="mt-1 inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-primary text-[15px] font-semibold text-primary-foreground transition-[background-color,transform] duration-150 hover:bg-primary-hover active:scale-[0.985] disabled:cursor-default disabled:opacity-80"
     >
       {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
       {pending ? 'Entrando…' : 'Entrar'}

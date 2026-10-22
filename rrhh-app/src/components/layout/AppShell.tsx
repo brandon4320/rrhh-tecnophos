@@ -97,10 +97,10 @@ const PORTAL_ARCOR: Portal = {
 const ROL_LABEL: Record<string, string> = { admin: 'Administrador', usuario: 'Usuario' }
 
 function LogoPortal({ portal, size }: { portal: Portal; size: 'sm' | 'md' }) {
-  const caja = size === 'md' ? 'size-9' : 'size-7'
+  const caja = size === 'md' ? 'size-8' : 'size-7'
   if (portal.tipo === 'todas') {
     return (
-      <span className={cn('inline-flex shrink-0 items-center justify-center rounded-lg border border-border bg-accent text-primary', caja)}>
+      <span className={cn('inline-flex shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground', caja)}>
         <Building2 className={size === 'md' ? 'size-[18px]' : 'size-4'} strokeWidth={1.75} />
       </span>
     )
@@ -115,10 +115,9 @@ function LogoPortal({ portal, size }: { portal: Portal; size: 'sm' | 'md' }) {
   )
 }
 
-function subtituloDe(p: Portal): string {
-  if (p.tipo === 'extra') return p.subtitulo
-  const empleados = `${p.total} ${p.total === 1 ? 'empleado' : 'empleados'}`
-  return p.tipo === 'todas' ? `${p.empresas} empresas · ${empleados}` : empleados
+/** Empleados del portal, para la cifra a la derecha de cada opción del selector (ARCOR no tiene). */
+function conteoDe(p: Portal): number | null {
+  return p.tipo === 'extra' ? null : p.total
 }
 
 type Item = { key: string; label: string; href: string; icon: LucideIcon; active: boolean; external?: boolean }
@@ -344,72 +343,70 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
 
   const oscuro = montado && resolvedTheme === 'dark'
 
-  // Activo: fondo acento + texto e ícono en el color primario. Hover: apenas un gris.
-  // Antes los dos eran un fondo casi igual y no se sabía en qué pantalla estabas.
+  // Mismo menú que el CRM (components/shell/Shell.tsx de comercial-tecnophos): filas de 40px,
+  // activo en lavanda con el texto del acento, el resto en texto-2 con un gris suave al pasar.
   const itemCls = (active: boolean) =>
     cn(
-      'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-      active
-        ? 'bg-accent font-medium text-primary'
-        : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground'
+      'flex h-10 items-center gap-2.5 rounded-[10px] px-3 text-sm font-medium transition-colors duration-150',
+      active ? 'bg-accent text-accent-foreground' : 'text-texto-2 hover:bg-muted hover:text-foreground'
     )
-  const iconCls = (active: boolean) =>
-    cn('size-4 shrink-0', active ? 'text-primary' : 'text-muted-foreground/80 group-hover:text-foreground')
-  const tituloCls = 'px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80'
-  const accionMenu = 'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted'
+  const iconCls = 'size-[18px] shrink-0'
+  const tituloCls = 'px-3 pb-1 text-xs font-medium text-muted-foreground'
+  const accionMenu = 'flex h-10 w-full items-center gap-2.5 rounded-[10px] px-3 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted'
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background print:block print:h-auto print:overflow-visible">
       {/* ── Sidebar única ── */}
-      <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-card print:hidden">
-        <div className="px-5 pb-1 pt-5">
-          <p className="text-base font-semibold tracking-tight">Gestión</p>
-          <p className="text-xs text-muted-foreground">Tecnophos · ADC · Serviwhite</p>
-        </div>
+      <aside className="flex w-[248px] shrink-0 flex-col border-r border-border bg-card px-3.5 py-5 print:hidden">
+        {/* Marca: el mismo ícono del grupo que el CRM, con el nombre del sistema. */}
+        <Link href="/" className="flex items-center gap-2.5 rounded-xl px-1.5 py-1" aria-label="Gestión — inicio">
+          {/* eslint-disable-next-line @next/next/no-img-element -- svg chico, sin optimizar */}
+          <img src="/logo-grupo.svg" alt="" width={30} height={30} className="shrink-0 select-none" draggable={false} />
+          <span className="text-[15px] font-semibold tracking-[-0.015em]">Gestión</span>
+        </Link>
 
         {/* Selector: todo lo de abajo es de lo elegido acá */}
         {activa && (
-          <div className="relative px-3 pt-4">
-            <p className={tituloCls}>Viendo</p>
+          <div className="relative mt-4">
             <button
               type="button"
               onClick={() => setSelectorOpen((v) => !v)}
               aria-expanded={selectorOpen}
-              className="flex w-full items-center gap-3 rounded-xl border border-border bg-background px-3 py-2 text-left transition-colors hover:border-input"
+              aria-label={`Empresa: ${activa.nombre}. Cambiar`}
+              className="flex h-12 w-full cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-card px-2 text-left transition-colors hover:bg-muted"
             >
               <LogoPortal portal={activa} size="md" />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{activa.nombre}</span>
-                <span className="block truncate text-xs text-muted-foreground">{subtituloDe(activa)}</span>
-              </span>
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{activa.nombre}</span>
               <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
             </button>
 
             {selectorOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setSelectorOpen(false)} />
-                <div className="absolute left-3 right-3 z-50 mt-2 max-h-[70dvh] overflow-y-auto rounded-xl border border-border bg-popover shadow-lg">
+                <div className="absolute inset-x-0 z-50 mt-2 max-h-[70dvh] overflow-y-auto rounded-xl border border-border bg-popover p-1.5 shadow-flotante">
                   {portales.map((p, i) => {
                     // Separadores: después de "Todas" y antes de las entradas virtuales.
                     const anterior = portales[i - 1]
                     const separa = !!anterior && (anterior.tipo === 'todas' || (p.tipo === 'extra' && anterior.tipo !== 'extra'))
                     return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => cambiarPortal(p)}
-                        className={cn(
-                          'flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted',
-                          separa && 'border-t border-border'
-                        )}
-                      >
-                        <LogoPortal portal={p} size="sm" />
-                        <span className="min-w-0 flex-1">
-                          <span className={cn('block truncate text-sm', p.tipo === 'todas' && 'font-medium')}>{p.nombre}</span>
-                          <span className="block truncate text-[11px] text-muted-foreground">{subtituloDe(p)}</span>
-                        </span>
-                        {p.id === activa.id && <Check className="size-4 shrink-0 text-primary" strokeWidth={2} />}
-                      </button>
+                      <div key={p.id}>
+                        {separa && <div className="mx-2 my-1.5 h-px bg-border" />}
+                        <button
+                          type="button"
+                          onClick={() => cambiarPortal(p)}
+                          className="flex h-11 w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-2 text-left transition-colors hover:bg-muted"
+                        >
+                          <LogoPortal portal={p} size="sm" />
+                          <span className={cn('min-w-0 flex-1 truncate text-sm', p.id === activa.id && 'font-semibold')}>{p.nombre}</span>
+                          {p.id === activa.id ? (
+                            <Check className="size-4 shrink-0 text-primary" strokeWidth={2} />
+                          ) : (
+                            conteoDe(p) !== null && (
+                              <span className="shrink-0 text-xs tabular-nums text-muted-foreground" title="Empleados">{conteoDe(p)}</span>
+                            )
+                          )}
+                        </button>
+                      </div>
                     )
                   })}
                 </div>
@@ -418,39 +415,37 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           </div>
         )}
 
-        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+        <nav className="mt-5 flex flex-1 flex-col gap-4 overflow-y-auto" aria-label="Menú principal">
           {grupos.map((g, i) => (
-            <div key={g.titulo ?? `grupo-${i}`}>
-              {g.titulo && <p className={tituloCls}>{g.titulo}</p>}
-              <div className="space-y-0.5">
-                {g.items.map((it) =>
-                  it.external ? (
-                    <a key={it.key} href={it.href} target="_blank" rel="noopener noreferrer" className={itemCls(false)}>
-                      <it.icon className={iconCls(false)} strokeWidth={1.75} />
-                      <span className="flex-1">{it.label}</span>
-                      <ExternalLink className="size-3.5 shrink-0 text-muted-foreground/60" strokeWidth={1.75} />
-                    </a>
-                  ) : (
-                    <Link key={it.key} href={it.href} className={itemCls(it.active)} aria-current={it.active ? 'page' : undefined}>
-                      <it.icon className={iconCls(it.active)} strokeWidth={1.75} />
-                      {it.label}
-                    </Link>
-                  )
-                )}
-              </div>
+            <div key={g.titulo ?? `grupo-${i}`} className="flex flex-col gap-1">
+              <p className={tituloCls}>{g.titulo ?? 'Menú'}</p>
+              {g.items.map((it) =>
+                it.external ? (
+                  <a key={it.key} href={it.href} target="_blank" rel="noopener noreferrer" className={itemCls(false)}>
+                    <it.icon className={iconCls} strokeWidth={1.75} aria-hidden />
+                    <span className="flex-1">{it.label}</span>
+                    <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+                  </a>
+                ) : (
+                  <Link key={it.key} href={it.href} className={itemCls(it.active)} aria-current={it.active ? 'page' : undefined}>
+                    <it.icon className={iconCls} strokeWidth={1.75} aria-hidden />
+                    {it.label}
+                  </Link>
+                )
+              )}
             </div>
           ))}
         </nav>
 
         {/* Usuario: un solo botón que abre Inicio, tema y salir */}
-        <div className="relative border-t border-border p-3">
+        <div className="relative mt-3">
           {menuUsuario && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuUsuario(false)} />
-              <div className="absolute bottom-full left-3 right-3 z-50 mb-2 space-y-0.5 rounded-xl border border-border bg-popover p-1.5 shadow-lg">
+              <div className="absolute inset-x-0 bottom-full z-50 mb-2 space-y-0.5 rounded-xl border border-border bg-popover p-1.5 shadow-flotante">
                 <Link href="/" className={accionMenu}>
                   <Home className="size-4 text-muted-foreground" strokeWidth={1.75} />
-                  Inicio · todos los módulos
+                  Inicio
                 </Link>
                 <button type="button" onClick={() => setTheme(oscuro ? 'light' : 'dark')} className={accionMenu}>
                   {oscuro
@@ -470,12 +465,12 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
             type="button"
             onClick={() => setMenuUsuario((v) => !v)}
             aria-expanded={menuUsuario}
-            className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted"
+            className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-border p-2.5 text-left transition-colors hover:bg-muted"
           >
-            <Monograma nombre={sesion.nombre ?? sesion.email} size="sm" />
+            <Monograma nombre={sesion.nombre ?? sesion.email} size="sm" variant="accent" redondo />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{sesion.nombre ?? sesion.email}</span>
-              <span className="block truncate text-[11px] text-muted-foreground">{ROL_LABEL[sesion.rol] ?? sesion.rol}</span>
+              <span className="block truncate text-[13px] font-semibold">{sesion.nombre ?? sesion.email}</span>
+              <span className="block truncate text-xs text-muted-foreground">{ROL_LABEL[sesion.rol] ?? sesion.rol}</span>
             </span>
             <Ellipsis className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
           </button>

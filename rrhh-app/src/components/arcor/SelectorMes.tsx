@@ -26,7 +26,7 @@ export function SelectorMes({
         if (op) router.push(op.href)
       }}
       className={cn(
-        'rounded-xl border border-border bg-card px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring',
+        'min-h-10 rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring',
         className
       )}
     >

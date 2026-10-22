@@ -50,7 +50,7 @@ export function MatrizTalles({
 }) {
   const columnas = talles.length + 1
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+    <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border">
@@ -119,7 +119,7 @@ export function MatrizTalles({
  */
 export function TablaItems({ items, ultimoPorItem, ...d }: Datos & { items: StockItem[]; ultimoPorItem: Map<string, StockMovimiento> }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+    <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
       <table className="w-full min-w-[640px] table-fixed text-sm">
         <thead>
           <tr className="border-b border-border">

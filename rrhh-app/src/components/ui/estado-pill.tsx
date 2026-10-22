@@ -33,6 +33,14 @@ export function EstadoPill({
   )
 }
 
+/** Texto de la pastilla: el tono oscuro de cada estado, como las Pastilla del CRM (AA sobre su fondo). */
+const TEXTO_PASTILLA: Record<EstadoVencimiento, string> = {
+  vencido: 'text-danger-text',
+  proximo: 'text-warning-text',
+  vigente: 'text-success-text',
+  sin_fecha: 'text-texto-2',
+}
+
 /** Variante contenida (fondo sutil) para cuando el pill necesita destacarse: hero, KPIs. */
 export function EstadoBadgeSuave({
   estado,
@@ -53,9 +61,9 @@ export function EstadoBadgeSuave({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
+        'inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium',
         bg[estado],
-        s.text,
+        TEXTO_PASTILLA[estado],
         className
       )}
     >

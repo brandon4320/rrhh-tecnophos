@@ -770,7 +770,7 @@ export default function FormularioQR({ token, vehiculo, ultimo, estado, document
         </section>
         <BarraInferior>
           <button type="button" disabled={!novOk || enviando} onClick={enviarNovedad}
-            className="h-12 flex-1 rounded-xl bg-primary text-base font-semibold text-primary-foreground disabled:opacity-40">
+            className="h-12 flex-1 rounded-[10px] bg-primary text-base font-semibold text-primary-foreground disabled:opacity-40 active:scale-[0.97]">
             {enviando ? 'Enviando…' : 'Enviar novedad'}
           </button>
         </BarraInferior>
@@ -845,7 +845,7 @@ export default function FormularioQR({ token, vehiculo, ultimo, estado, document
                 const respondidos = s.items.filter((i) => b.respuestas[i.id]).length
                 const completa = respondidos === s.items.length
                 return (
-                  <div key={s.id} className="overflow-hidden rounded-xl border border-border bg-card">
+                  <div key={s.id} className="overflow-hidden rounded-2xl border border-border bg-card shadow-tarjeta">
                     <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/50 px-4 py-3">
                       <div>
                         <p className="font-semibold">{s.titulo}</p>
@@ -988,12 +988,12 @@ export default function FormularioQR({ token, vehiculo, ultimo, estado, document
           </button>
           {paso < PASOS.length - 1 ? (
             <button type="button" disabled={!pasoValido} onClick={() => irAPaso(paso + 1)}
-              className="h-12 flex-1 rounded-xl bg-primary text-base font-semibold text-primary-foreground disabled:opacity-40">
+              className="h-12 flex-1 rounded-[10px] bg-primary text-base font-semibold text-primary-foreground disabled:opacity-40 active:scale-[0.97]">
               Siguiente
             </button>
           ) : (
             <button type="button" disabled={!pasoValido || enviando} onClick={enviarChecklist}
-              className="h-12 flex-1 rounded-xl bg-primary text-base font-semibold text-primary-foreground disabled:opacity-40">
+              className="h-12 flex-1 rounded-[10px] bg-primary text-base font-semibold text-primary-foreground disabled:opacity-40 active:scale-[0.97]">
               {enviando ? 'Enviando…' : 'Enviar checklist'}
             </button>
           )}
@@ -1057,7 +1057,7 @@ export default function FormularioQR({ token, vehiculo, ultimo, estado, document
 
         <div className="space-y-3 pt-2">
           <button type="button" onClick={empezarChecklist}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-semibold text-primary-foreground">
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-[10px] bg-primary text-base font-semibold text-primary-foreground active:scale-[0.97]">
             {empezado ? <RotateCcw className="size-5" strokeWidth={1.75} /> : <ClipboardCheck className="size-5" strokeWidth={1.75} />}
             {empezado ? 'Seguir el checklist empezado' : 'Hacer el checklist'}
           </button>

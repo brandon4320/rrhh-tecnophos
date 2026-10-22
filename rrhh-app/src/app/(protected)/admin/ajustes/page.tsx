@@ -37,9 +37,9 @@ export default function AjustesPage() {
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold text-foreground mb-6">Ajustes del sistema</h1>
+      <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em] mb-6">Ajustes del sistema</h1>
 
-      <div className="bg-card rounded-xl border border-border p-6">
+      <div className="bg-card rounded-2xl border border-border p-6 shadow-tarjeta">
         <h2 className="text-lg font-semibold text-foreground mb-4">Logo de la empresa</h2>
         <p className="text-sm text-muted-foreground mb-4">
           Subi una imagen PNG de hasta 200KB. Se muestra en el sidebar.
@@ -65,11 +65,11 @@ export default function AjustesPage() {
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-[10px] hover:bg-primary-hover disabled:opacity-50 active:scale-[0.97]"
             >
               {uploading ? 'Subiendo...' : 'Cambiar logo'}
             </button>
-            {msg && <p className="text-sm mt-2 text-emerald-400">{msg}</p>}
+            {msg && <p className="text-sm mt-2 text-success-text">{msg}</p>}
           </div>
         </div>
       </div>

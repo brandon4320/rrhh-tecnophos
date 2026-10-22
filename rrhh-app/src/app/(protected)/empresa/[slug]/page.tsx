@@ -115,7 +115,7 @@ export default async function EmpresaPage({
         <div className="mb-8 flex items-center gap-4">
           <Monograma nombre={empresa.nombre} size="lg" variant="accent" />
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Documentación</h1>
+            <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Documentación</h1>
             <p className="text-sm text-muted-foreground">
               {empresa.nombre} · habilitaciones, programas de seguridad, vehículos y activos
             </p>
@@ -383,12 +383,11 @@ export default async function EmpresaPage({
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       {/* ── Hero ── */}
-      <section className="rounded-2xl bg-surface-dark p-6 text-surface-dark-foreground sm:p-8">
+      <section className="rounded-2xl bg-zona p-6 text-zona-foreground sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">{empresa.nombre}</h1>
-            <p className="mt-1 text-sm text-white/50">Estado general de la empresa</p>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">{empresa.nombre}</h1>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
               {vencidos.length === 0 ? (
                 <EstadoBadgeSuave estado="vigente" label="Operación estable" />
               ) : (
@@ -398,7 +397,7 @@ export default async function EmpresaPage({
                 />
               )}
               {proximos.length > 0 && (
-                <span className="text-sm text-white/60">
+                <span className="text-sm text-texto-2">
                   {proximos.length} por vencer próximamente
                 </span>
               )}
@@ -406,24 +405,24 @@ export default async function EmpresaPage({
           </div>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
-            <div className="lg:border-l lg:border-white/10 lg:pl-8">
-              <p className="text-sm text-white/50">Próximo vencimiento</p>
+            <div className="lg:border-l lg:border-border-strong lg:pl-8">
+              <p className="text-sm text-muted-foreground">Próximo vencimiento</p>
               {proximoVenc ? (
                 <>
                   <p className="mt-1 text-2xl font-semibold tracking-tight">
                     {fmtFechaLarga(proximoVenc.fecha_vencimiento!)}
                   </p>
-                  <p className="mt-1 text-sm font-medium text-white/90">{proximoVenc.nombre}</p>
-                  <p className="text-xs text-white/50">{proximoVenc.detalle}</p>
+                  <p className="mt-1 text-sm font-medium">{proximoVenc.nombre}</p>
+                  <p className="text-xs text-muted-foreground">{proximoVenc.detalle}</p>
                 </>
               ) : (
-                <p className="mt-1 text-2xl font-semibold text-white/40">—</p>
+                <p className="mt-1 text-2xl font-semibold text-muted-foreground">—</p>
               )}
             </div>
             {canEdit && (
               <Link
                 href={`/empresa/${slug}?vista=documentacion`}
-                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                className="inline-flex shrink-0 items-center gap-2 rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.97]"
               >
                 <Plus className="size-4" strokeWidth={2.5} />
                 Nueva habilitación
@@ -435,7 +434,7 @@ export default async function EmpresaPage({
 
       {/* ── KPIs ── */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-primary">
               <Users className="size-4" strokeWidth={1.75} />
@@ -446,7 +445,7 @@ export default async function EmpresaPage({
           <p className="mt-0.5 text-xs text-muted-foreground">activos</p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-success-subtle text-success">
               <FileCheck2 className="size-4" strokeWidth={1.75} />
@@ -457,7 +456,7 @@ export default async function EmpresaPage({
           <p className="mt-0.5 text-xs text-success">{nuevosMes > 0 ? `+${nuevosMes} este mes` : 'sin cargas este mes'}</p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-warning-subtle text-warning">
               <Clock className="size-4" strokeWidth={1.75} />
@@ -486,7 +485,7 @@ export default async function EmpresaPage({
 
       {/* ── Atención requerida + columna derecha ── */}
       <section className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
           <h2 className="text-lg font-semibold tracking-tight">Atención requerida</h2>
           <p className="text-sm text-muted-foreground">Ordenado por urgencia</p>
 
@@ -502,7 +501,7 @@ export default async function EmpresaPage({
 
         <div className="space-y-6">
           {/* Cumplimiento */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
             <h2 className="text-lg font-semibold tracking-tight">Cumplimiento</h2>
             <p className="text-sm text-muted-foreground">Estado documental</p>
             <div className="mt-4 flex items-center gap-5">
@@ -521,7 +520,7 @@ export default async function EmpresaPage({
 
           {/* Equipos por área */}
           {sectores.length > 0 && (
-            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
               <h2 className="text-lg font-semibold tracking-tight">Equipos por área</h2>
               <p className="text-sm text-muted-foreground">Distribución actual</p>
               <div className="mt-4 space-y-2">

@@ -34,17 +34,17 @@ export function SegmentedLocal({
 
   return (
     <>
-      <div className={cn('inline-flex items-center gap-1 rounded-xl bg-muted p-1', className)}>
+      <div className={cn('inline-flex items-center gap-1 rounded-[12px] bg-muted p-1', className)}>
         {tabs.map((t) => (
           <button
             key={t.key}
             type="button"
             onClick={() => cambiar(t.key)}
             className={cn(
-              'rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors',
+              'inline-flex h-8 cursor-pointer items-center rounded-[9px] px-3.5 text-sm font-medium transition-colors',
               t.key === active
-                ? 'bg-card text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'bg-card text-foreground shadow-[0_1px_2px_rgba(23,22,31,0.08),0_1px_1px_rgba(23,22,31,0.04)]'
+                : 'text-texto-2 hover:text-foreground'
             )}
           >
             {t.label}

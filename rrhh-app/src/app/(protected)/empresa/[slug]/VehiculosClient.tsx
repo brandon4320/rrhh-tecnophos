@@ -57,7 +57,7 @@ const VEH_EMPTY = {
   descripcion: '',
 }
 
-const inputCls = 'w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-card'
+const inputCls = 'min-h-10 w-full px-3 py-2 rounded-[10px] border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 bg-card focus:border-ring'
 
 function escCancela(cancelar: () => void) {
   return (e: KeyboardEvent) => {
@@ -363,7 +363,7 @@ export default function VehiculosClient({
             <button
               type="submit"
               disabled={savingVeh}
-              className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+              className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-[10px] transition-[background-color,transform] active:scale-[0.97]"
             >
               {savingVeh ? 'Guardando...' : 'Agregar vehículo'}
             </button>
@@ -417,7 +417,7 @@ export default function VehiculosClient({
               key={veh.id}
               id={`veh-${veh.id}`}
               className={clsx(
-                'scroll-mt-6 bg-card rounded-xl border overflow-hidden',
+                'scroll-mt-6 bg-card rounded-2xl border overflow-hidden shadow-tarjeta',
                 abiertoInicial === veh.id ? 'border-primary/40' : 'border-border'
               )}
             >
@@ -503,7 +503,7 @@ export default function VehiculosClient({
                                   </button>
                                   <button
                                     onClick={() => handleDelete(veh.id, cert)}
-                                    className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                                    className="text-xs text-muted-foreground hover:text-danger transition-colors"
                                   >
                                     Eliminar
                                   </button>
@@ -519,7 +519,7 @@ export default function VehiculosClient({
                                   <span key={a.id} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
                                     <button type="button" onClick={() => abrirArchivo(a.path)} className="max-w-[160px] truncate text-left text-primary hover:underline">{a.nombre}</button>
                                     {canEdit && (
-                                      <button onClick={() => handleDeleteArchivo(veh.id, cert.id, a)} className="text-muted-foreground hover:text-red-500" aria-label="Eliminar archivo">×</button>
+                                      <button onClick={() => handleDeleteArchivo(veh.id, cert.id, a)} className="text-muted-foreground hover:text-danger" aria-label="Eliminar archivo">×</button>
                                     )}
                                   </span>
                                 ))}
@@ -641,7 +641,7 @@ export default function VehiculosClient({
           <button
             type="submit"
             disabled={saving || !form.tipo_id}
-            className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg"
+            className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-[10px] active:scale-[0.97]"
           >
             {saving ? 'Guardando...' : textoBoton}
           </button>

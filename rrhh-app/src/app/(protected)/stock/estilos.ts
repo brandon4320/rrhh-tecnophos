@@ -3,12 +3,12 @@ import clsx from 'clsx'
 import type { EstadoVencimiento } from '@/types'
 
 export const inputCls =
-  'w-full px-3.5 py-2.5 rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+  'min-h-10 w-full px-3 py-2 rounded-[10px] border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring'
 export const labelCls = 'mb-1 block text-xs font-medium text-foreground'
 export const btnPrimary =
-  'inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50'
+  'inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover disabled:opacity-50 active:scale-[0.97]'
 export const btnOutline =
-  'inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50'
+  'inline-flex items-center gap-2 rounded-[10px] border border-border-strong bg-card px-4 py-2 text-sm font-medium text-foreground transition-[background-color,transform] hover:bg-muted disabled:opacity-50 active:scale-[0.97]'
 export const btnMini = 'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors'
 export const btnFila =
   'inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground'

@@ -4,105 +4,129 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================
-   Sistema de diseño — "Gestión" minimal empresa-céntrico.
-   Un solo acento (índigo) + semánticos (success/warning/danger)
-   como ÚNICOS colores de estado. Claro por defecto, toggle dark.
-   Cards redondeadas (radius 12px), rail oscuro + panel claro.
+   Sistema de diseño — UNA sola línea con el Sistema de Gestión Comercial
+   (crm.tecnophos.com.ar, repo comercial-tecnophos, src/index.css "Aire").
+   Mismos valores con los nombres de shadcn: fondo lavanda casi blanco,
+   tarjetas blancas de 20px con borde finísimo y sombra suave, tinta
+   #17161f, un solo acento índigo y estados en pares fondo/texto.
+   Si cambia un color en el CRM, se cambia acá también (AGENTS.md §7).
    ============================================================ */
 :root {
-  --radius: 0.75rem;             /* 12px: cards rounded-2xl, controles lg */
+  --radius: 0.75rem;             /* 12px: radio "interno" del CRM (controles, filas) */
 
-  --background: #f6f7f9;
-  --foreground: #0f172a;         /* slate-900 */
+  --background: #f5f4fa;         /* CRM fondo */
+  --foreground: #17161f;         /* CRM tinta */
 
-  --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card: #ffffff;               /* CRM superficie */
+  --card-foreground: #17161f;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --popover-foreground: #17161f;
 
-  --primary: #4f46e5;            /* índigo-600: único acento */
+  --primary: #4f46e5;            /* CRM acento */
+  --primary-hover: #4338ca;      /* CRM acento-hover */
   --primary-foreground: #ffffff;
 
-  --secondary: #f1f5f9;          /* slate-100 */
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;   /* slate-500 */
-  --accent: #eef2ff;             /* indigo-50: tint del acento */
-  --accent-foreground: #4f46e5;
+  --secondary: #f3f2f8;          /* CRM suave */
+  --secondary-foreground: #17161f;
+  --muted: #f3f2f8;              /* CRM suave */
+  --muted-foreground: #6a677c;   /* CRM texto-3 (AA sobre blanco y suave) */
+  --texto-2: #55526a;            /* CRM texto-2: texto secundario más fuerte */
+  --accent: #eeeefd;             /* CRM acento-suave */
+  --accent-foreground: #4338ca;  /* CRM acento-texto */
 
-  --destructive: #dc2626;
+  --destructive: #c2412b;
   --destructive-foreground: #ffffff;
 
-  /* Semánticos de estado (única fuente para vencido/próximo/ok) */
-  --success: #0d9488;            /* teal-600 */
-  --success-subtle: #ccfbf1;     /* teal-100 */
-  --warning: #ea580c;            /* orange-600 */
-  --warning-subtle: #ffedd5;     /* orange-100 */
-  --danger: #dc2626;             /* red-600 */
-  --danger-subtle: #fee2e2;      /* red-100 */
+  /* Estados: el color fuerte (cifras, puntos, barras) y su fondo pastel (pastillas), como el CRM. */
+  --success: #1f8a5b;
+  --success-subtle: #e4f5ec;     /* CRM verde-fondo */
+  --success-text: #1c6e48;       /* CRM verde-texto */
+  --warning: #d0650c;
+  --warning-subtle: #fff1e0;     /* CRM naranja-fondo */
+  --warning-text: #8a4a00;       /* CRM naranja-texto */
+  --danger: #c2412b;
+  --danger-subtle: #fdecea;      /* CRM rojo-fondo */
+  --danger-text: #a8321f;        /* CRM rojo-texto */
 
-  --border: #e2e8f0;             /* slate-200 */
-  --input: #e2e8f0;
+  --border: #eceaf3;             /* CRM borde */
+  --border-strong: #d9d6e6;      /* CRM borde-fuerte: campos y botones secundarios */
+  --divisor: #f1f0f5;            /* CRM divisor: línea entre filas */
+  --hover: #fafafd;              /* CRM hover de filas */
+  --input: #d9d6e6;
   --ring: #4f46e5;
 
-  /* Rail oscuro (columna de íconos) + panel claro */
-  --sidebar: #0b1220;
-  --sidebar-foreground: #94a3b8;
-  --sidebar-border: rgba(148, 163, 184, 0.14);
-  --sidebar-accent: rgba(255, 255, 255, 0.06);
-  --sidebar-primary: #6366f1;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #55526a;
+  --sidebar-border: #eceaf3;
+  --sidebar-accent: #f3f2f8;
+  --sidebar-primary: #4f46e5;
 
-  /* Superficie oscura para hero cards (mismo navy del rail) */
-  --surface-dark: #0b1220;
-  --surface-dark-foreground: #f8fafc;
+  /* Zona destacada (hero): lavanda del acento, como el saludo del CRM. */
+  --zona: #f1f0fd;
+  --zona-foreground: #17161f;
+
+  --sombra-tarjeta: 0 1px 2px rgba(23, 22, 31, 0.04), 0 12px 32px -16px rgba(23, 22, 31, 0.1);
+  --sombra-flotante: 0 4px 12px rgba(23, 22, 31, 0.06), 0 24px 48px -12px rgba(23, 22, 31, 0.18);
 
   --input-background: #ffffff;
   color-scheme: light;
 }
 
+/* Oscuro: la misma familia lavanda/índigo en tonos de noche (el CRM no tiene modo oscuro). */
 .dark {
-  --background: #06111f;         /* navy casi negro */
-  --foreground: #f8fafc;
+  --background: #0f0e17;
+  --foreground: #f4f3fa;
 
-  --card: #0b1628;
-  --card-foreground: #f8fafc;
-  --popover: #0b1628;
-  --popover-foreground: #f8fafc;
+  --card: #17161f;
+  --card-foreground: #f4f3fa;
+  --popover: #1c1b26;
+  --popover-foreground: #f4f3fa;
 
-  --primary: #6366f1;            /* índigo-500 */
+  --primary: #6d66f0;
+  --primary-hover: #7f79f3;
   --primary-foreground: #ffffff;
 
-  --secondary: #101e33;
-  --secondary-foreground: #f8fafc;
-  --muted: #101e33;
-  --muted-foreground: #94a3b8;
-  --accent: rgba(99, 102, 241, 0.14);
-  --accent-foreground: #a5b4fc;
+  --secondary: #22212d;
+  --secondary-foreground: #f4f3fa;
+  --muted: #22212d;
+  --muted-foreground: #a19eb3;
+  --texto-2: #c4c1d4;
+  --accent: rgba(109, 102, 240, 0.16);
+  --accent-foreground: #b9b5fb;
 
-  --destructive: #ef4444;
+  --destructive: #f07a66;
   --destructive-foreground: #ffffff;
 
-  --success: #2dd4bf;            /* teal-400 */
-  --success-subtle: rgba(45, 212, 191, 0.14);
-  --warning: #fb923c;            /* orange-400 */
-  --warning-subtle: rgba(251, 146, 60, 0.14);
-  --danger: #f87171;             /* red-400 */
-  --danger-subtle: rgba(248, 113, 113, 0.14);
+  --success: #4cc78f;
+  --success-subtle: rgba(76, 199, 143, 0.14);
+  --success-text: #7fdcb0;
+  --warning: #f29a4a;
+  --warning-subtle: rgba(242, 154, 74, 0.14);
+  --warning-text: #f7bb83;
+  --danger: #f07a66;
+  --danger-subtle: rgba(240, 122, 102, 0.14);
+  --danger-text: #f6a395;
 
-  --border: rgba(148, 163, 184, 0.16);
-  --input: rgba(148, 163, 184, 0.16);
-  --ring: #6366f1;
+  --border: rgba(196, 193, 212, 0.12);
+  --border-strong: rgba(196, 193, 212, 0.22);
+  --divisor: rgba(196, 193, 212, 0.08);
+  --hover: rgba(255, 255, 255, 0.03);
+  --input: rgba(196, 193, 212, 0.22);
+  --ring: #6d66f0;
 
-  --sidebar: #050b16;
-  --sidebar-foreground: #94a3b8;
-  --sidebar-border: rgba(148, 163, 184, 0.12);
-  --sidebar-accent: rgba(255, 255, 255, 0.06);
-  --sidebar-primary: #6366f1;
+  --sidebar: #17161f;
+  --sidebar-foreground: #c4c1d4;
+  --sidebar-border: rgba(196, 193, 212, 0.12);
+  --sidebar-accent: #22212d;
+  --sidebar-primary: #6d66f0;
 
-  --surface-dark: #0b1628;
-  --surface-dark-foreground: #f8fafc;
+  --zona: #1e1c33;
+  --zona-foreground: #f4f3fa;
 
-  --input-background: #0b1628;
+  --sombra-tarjeta: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sombra-flotante: 0 4px 12px rgba(0, 0, 0, 0.35), 0 24px 48px -12px rgba(0, 0, 0, 0.5);
+
+  --input-background: #17161f;
   color-scheme: dark;
 }
 
@@ -115,15 +139,20 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-texto-2: var(--texto-2);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-divisor: var(--divisor);
+  --color-hover: var(--hover);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-sidebar: var(--sidebar);
@@ -134,18 +163,28 @@
 
   --color-success: var(--success);
   --color-success-subtle: var(--success-subtle);
+  --color-success-text: var(--success-text);
   --color-warning: var(--warning);
   --color-warning-subtle: var(--warning-subtle);
+  --color-warning-text: var(--warning-text);
   --color-danger: var(--danger);
   --color-danger-subtle: var(--danger-subtle);
+  --color-danger-text: var(--danger-text);
 
-  --color-surface-dark: var(--surface-dark);
-  --color-surface-dark-foreground: var(--surface-dark-foreground);
+  --color-zona: var(--zona);
+  --color-zona-foreground: var(--zona-foreground);
+
+  --shadow-tarjeta: var(--sombra-tarjeta);
+  --shadow-flotante: var(--sombra-flotante);
 
   --radius-sm: calc(var(--radius) - 6px);   /* 6px  */
   --radius-md: calc(var(--radius) - 4px);   /* 8px  */
   --radius-lg: calc(var(--radius) - 2px);   /* 10px */
   --radius-xl: var(--radius);               /* 12px */
+  --radius-2xl: 20px;                       /* tarjetas: radio "tarjeta" del CRM */
+  --radius-tarjeta: 20px;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -159,7 +198,11 @@
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    text-rendering: optimizeLegibility;
   }
+  /* Solo el estilo de corte: `text-wrap` entero le ganaba a `truncate` (mismo arreglo que el CRM). */
+  h1, h2, h3 { text-wrap-style: balance; }
+  p { text-wrap-style: pretty; }
 }
 
 /* Scrollbars sobrios */
@@ -167,6 +210,14 @@
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--muted-foreground) 35%, transparent) transparent;
 }
+/* Foco visible del color del acento, siguiendo el radio de cada elemento (como el CRM). */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.outline-none:focus-visible,
+.focus\:outline-none:focus-visible,
+.focus-visible\:outline-none:focus-visible { outline: none; }
 ::selection {
   background: color-mix(in srgb, var(--primary) 28%, transparent);
 }

@@ -38,7 +38,7 @@ export function AccionesArcor({ revisar = 0, className }: { revisar?: number; cl
         href={ENLACES_ARCOR.cargar}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+        className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.97]"
       >
         <Upload className="size-4" strokeWidth={2} />
         Carga manual

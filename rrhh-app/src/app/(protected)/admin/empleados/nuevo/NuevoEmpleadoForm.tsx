@@ -6,7 +6,7 @@ import { crearEmpleado } from './actions'
 import { estadoInicial } from './estado'
 
 const inputCls =
-  'w-full px-3.5 py-2.5 rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+  'min-h-10 w-full px-3 py-2 rounded-[10px] border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring'
 
 interface Props {
   empresas: { id: string; nombre: string; slug: string }[]
@@ -20,7 +20,7 @@ export default function NuevoEmpleadoForm({ empresas, empresaInicial, sectores, 
   const v = estado.valores
 
   return (
-    <div className="bg-card rounded-xl border border-border p-6">
+    <div className="bg-card rounded-2xl border border-border p-6 shadow-tarjeta">
       {estado.error && (
         <div role="alert" className="mb-5 rounded-xl border border-danger/30 bg-danger-subtle px-4 py-3 text-sm text-danger">
           <p>{estado.error}</p>
@@ -125,7 +125,7 @@ export default function NuevoEmpleadoForm({ empresas, empresaInicial, sectores, 
           <button
             type="submit"
             disabled={enviando}
-            className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+            className="bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground text-sm font-semibold px-4 py-2.5 rounded-[10px] transition-[background-color,transform] active:scale-[0.97]"
           >
             {enviando ? 'Guardando...' : 'Guardar y cargar certificados'}
           </button>

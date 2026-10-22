@@ -343,7 +343,7 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
       {/* ── Header ── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Stock</h1>
+          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Stock</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {activos.length} {activos.length === 1 ? 'ítem' : 'ítems'} · {empresa.nombre}
           </p>
@@ -368,7 +368,7 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
       </div>
 
       {/* ── KPIs ── */}
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
         <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:divide-x sm:divide-border">
           <div className="sm:pr-6">
             <p className="text-3xl font-semibold tabular-nums">{activos.length}</p>
@@ -449,7 +449,7 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
         <>
           {/* ── Hay que comprar: lo accionable, antes del inventario ── */}
           {vista === 'todo' && !busqueda && porComprar.length > 0 && (
-            <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold tracking-tight">Hay que comprar</h2>

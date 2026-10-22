@@ -49,7 +49,7 @@ const FORM_EMPTY: FormState = {
 }
 
 const inputCls =
-  'w-full px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-card'
+  'min-h-10 w-full px-3 py-2 rounded-[10px] border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 bg-card focus:border-ring'
 
 interface Props {
   certs: CertEmpresa[]
@@ -337,7 +337,7 @@ export default function EmpresaCertsClient({
             <button
               type="submit"
               disabled={savingNew}
-              className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+              className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-[10px] transition-[background-color,transform] active:scale-[0.97]"
             >
               {savingNew ? 'Guardando...' : `Agregar ${etiqueta}`}
             </button>
@@ -364,7 +364,7 @@ export default function EmpresaCertsClient({
       )}
 
       {certs.length > 0 && (
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-tarjeta">
           <div className="divide-y divide-border">
             {certs.map((cert) => {
               const estado = getEstadoVencimiento(cert.fecha_vencimiento, cert.alerta_dias ?? undefined)
@@ -401,7 +401,7 @@ export default function EmpresaCertsClient({
                           </button>
                           <button
                             onClick={() => handleDelete(cert)}
-                            className="text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                            className="text-xs text-muted-foreground hover:text-danger transition-colors"
                           >
                             Eliminar
                           </button>
@@ -446,7 +446,7 @@ export default function EmpresaCertsClient({
                         <button
                           type="submit"
                           disabled={saving}
-                          className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+                          className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-[10px] transition-[background-color,transform] active:scale-[0.97]"
                         >
                           {saving ? 'Guardando...' : 'Guardar cambios'}
                         </button>
@@ -479,7 +479,7 @@ export default function EmpresaCertsClient({
                           {canEdit && (
                             <button
                               onClick={() => handleDeleteArchivo(cert.id, a)}
-                              className="text-muted-foreground hover:text-red-500"
+                              className="text-muted-foreground hover:text-danger"
                               aria-label="Eliminar archivo"
                             >
                               ×

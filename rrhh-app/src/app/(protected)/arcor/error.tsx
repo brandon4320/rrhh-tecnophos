@@ -10,7 +10,7 @@ import { CircleAlert, RotateCcw } from 'lucide-react'
 export default function ArcorError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Tecnophos - ARCOR</h1>
+      <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Tecnophos - ARCOR</h1>
       <div className="mt-6 rounded-2xl border border-danger/30 bg-danger-subtle p-5 text-sm text-danger">
         <p className="inline-flex items-center gap-2 font-medium">
           <CircleAlert className="size-4" strokeWidth={2} />
@@ -21,7 +21,7 @@ export default function ArcorError({ error, reset }: { error: Error & { digest?:
         </p>
         <button
           onClick={reset}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          className="mt-4 inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.97]"
         >
           <RotateCcw className="size-4" strokeWidth={2} />
           Reintentar

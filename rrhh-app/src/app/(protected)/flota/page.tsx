@@ -51,7 +51,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
   } catch (e) {
     return (
       <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Flota</h1>
+        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Flota</h1>
         <div className="mt-6 rounded-2xl border border-danger/30 bg-danger-subtle px-5 py-4 text-sm text-danger">
           No se pudo cargar la flota. Detalle técnico: {e instanceof Error ? e.message : String(e)}
         </div>
@@ -66,12 +66,12 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
 
   const cuenta = (s: Semaforo) => filas.filter((f) => f.r.semaforo === s).length
   const sinDatos = filas.filter(({ v }) => !v.marca || !v.modelo || !v.anio).length
-  const boton = 'inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground'
+  const boton = 'inline-flex items-center gap-2 rounded-[10px] border border-border-strong bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-[background-color,transform] hover:bg-muted active:scale-[0.97]'
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Flota</h1>
+          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Flota</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {filas.length} {filas.length === 1 ? 'vehículo' : 'vehículos'} · {todas ? 'todas las empresas' : empresaSel.nombre}
           </p>
@@ -99,7 +99,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
         </p>
       )}
 
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
         <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:divide-x sm:divide-border">
           <div className="sm:pr-6">
             <p className="text-3xl font-semibold tabular-nums">{filas.length}</p>
@@ -132,7 +132,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
           <table className="w-full min-w-[1040px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">

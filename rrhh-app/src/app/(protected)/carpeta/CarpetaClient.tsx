@@ -257,7 +257,7 @@ export default function CarpetaClient({
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 pb-32 sm:p-6 sm:pb-32 lg:p-8 lg:pb-32">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Armar carpeta para planta</h1>
+        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Armar carpeta para planta</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           {empresa.nombre} · Elegí personas, vehículos y documentos, y bajá todo en un ZIP con los nombres ordenados para mandar a la planta.
         </p>
@@ -281,7 +281,7 @@ export default function CarpetaClient({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar persona o sector…"
-            className="w-full rounded-xl border border-input bg-card py-2.5 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="min-h-10 w-full rounded-[10px] border border-input bg-card py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
           />
         </div>
         {sectores.length > 1 && (
@@ -346,12 +346,12 @@ export default function CarpetaClient({
               value={periodo}
               onChange={(e) => setPeriodo(e.target.value)}
               aria-label="Mes"
-              className="rounded-lg border border-input bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="min-h-10 rounded-[10px] border border-input bg-card px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
             >
               {meses.map((m) => <option key={m.periodo} value={m.periodo}>{labelPeriodo(m.periodo)}</option>)}
             </select>
           </div>
-          <div className="divide-y divide-border rounded-2xl border border-border bg-card">
+          <div className="divide-y divide-border rounded-2xl border border-border bg-card shadow-tarjeta">
             {carpetasMes.map(([carpeta, docs]) => {
               const claves = docs.map((d) => kM(d.id))
               const marca = marcaDe(claves, sel)
@@ -411,13 +411,13 @@ export default function CarpetaClient({
             onChange={(e) => setNombreZip(e.target.value)}
             aria-label="Nombre de la carpeta"
             placeholder="Nombre de la carpeta"
-            className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring sm:w-72"
+            className="min-h-10 w-full rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 sm:w-72 focus:border-ring"
           />
           <button
             type="button"
             onClick={descargar}
             disabled={resumen.archivos === 0 || !!progreso}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover disabled:opacity-50 active:scale-[0.97]"
           >
             <Download className="size-4" strokeWidth={1.75} />
             {progreso ? `Bajando ${progreso.hechos} de ${progreso.total}…` : 'Descargar ZIP'}
@@ -443,7 +443,7 @@ function ListaDuenos({
 }) {
   if (duenos.length === 0) return <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">{vacio}</p>
   return (
-    <div className="divide-y divide-border rounded-2xl border border-border bg-card">
+    <div className="divide-y divide-border rounded-2xl border border-border bg-card shadow-tarjeta">
       {duenos.map((d) => {
         const todas = todasLasClaves(d.certificados)
         const marca = marcaDe(todas, sel)

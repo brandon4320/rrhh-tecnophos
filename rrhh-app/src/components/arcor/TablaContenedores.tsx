@@ -22,7 +22,7 @@ export function TablaContenedores({ items, hoy }: { items: ContenedorRow[]; hoy:
     )
   }
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+    <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
       <Table>
         <TableHeader>
           <TableRow>

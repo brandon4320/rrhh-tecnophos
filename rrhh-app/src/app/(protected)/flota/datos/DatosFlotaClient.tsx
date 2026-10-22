@@ -15,7 +15,7 @@ interface Vehiculo {
 type Fila = { marca: string; modelo: string; anio: string; tipo: TipoVehiculo }
 
 const MARCAS = ['Toyota', 'Ford', 'Volkswagen', 'Chevrolet', 'Fiat', 'Renault', 'Peugeot', 'Citroën', 'Nissan', 'Mercedes-Benz', 'Iveco', 'RAM']
-const input = 'w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60'
+const input = 'min-h-10 w-full rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 disabled:opacity-60 focus:border-ring'
 
 /** Lo cargado en la descripción ("CITROEN - JUMPER") sirve de punto de partida si no hay marca ni modelo. */
 function inicial(v: Vehiculo): Fila {
@@ -74,14 +74,14 @@ export default function DatosFlotaClient({ vehiculos, volver, variasEmpresas }: 
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">Marca, modelo, año y tipo</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Completá lo que falte y guardá todo junto. El tipo define qué se revisa en el checklist (a un trailer no se le piden km ni motor).</p>
         </div>
-        <button type="submit" disabled={saving || cambiadas.length === 0} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50">
+        <button type="submit" disabled={saving || cambiadas.length === 0} className="rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover disabled:opacity-50 active:scale-[0.97]">
           {saving ? 'Guardando…' : cambiadas.length === 0 ? 'Sin cambios' : `Guardar ${cambiadas.length === 1 ? '1 cambio' : `${cambiadas.length} cambios`}`}
         </button>
       </div>
 
       <datalist id="marcas">{MARCAS.map((m) => <option key={m} value={m} />)}</datalist>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-border text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">

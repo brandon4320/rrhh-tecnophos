@@ -141,7 +141,7 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Vencimientos</h1>
+        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Vencimientos</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           {visibles.length} {visibles.length === 1 ? 'registro' : 'registros'}
           {vista === 'pendientes' && ' · vencidos y por vencer dentro de su ventana de alerta'}
@@ -178,7 +178,7 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
             onKeyDown={(e) => { if (e.key === 'Escape' && busqueda) { e.preventDefault(); cambiarBusqueda('') } }}
             placeholder="Buscar nombre, patente o tipo…"
             aria-label="Buscar vencimientos"
-            className="w-full rounded-xl border border-border bg-card py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="min-h-10 w-full rounded-[10px] border border-input bg-card py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
           />
         </div>
 
@@ -186,7 +186,7 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
           value={empresa ?? ''}
           onChange={(e) => router.push(url({ empresa: e.target.value || undefined }))}
           aria-label="Empresa"
-          className="rounded-xl border border-border bg-card px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="min-h-10 rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
         >
           <option value="">Todas las empresas</option>
           {empresas.map((e) => (
@@ -200,7 +200,7 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
           value={tipo ?? ''}
           onChange={(e) => router.push(url({ tipo: e.target.value || undefined }))}
           aria-label="Tipo de certificado"
-          className="max-w-[240px] rounded-xl border border-border bg-card px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="min-h-10 max-w-[240px] rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
         >
           <option value="">Todos los certificados</option>
           {tipos.map((t) => (
@@ -228,7 +228,7 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
         )}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-tarjeta">
         {visibles.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
             {busqueda.trim()

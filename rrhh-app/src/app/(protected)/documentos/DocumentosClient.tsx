@@ -43,10 +43,10 @@ const OTRA = '__otra__'
 const SUBIDAS_EN_PARALELO = 3
 
 const inputCls =
-  'w-full px-3.5 py-2.5 rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring'
+  'min-h-10 w-full px-3 py-2 rounded-[10px] border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring'
 const labelCls = 'mb-1 block text-xs font-medium text-foreground'
 const btnPrimary =
-  'inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50'
+  'inline-flex items-center gap-2 rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover disabled:opacity-50 active:scale-[0.97]'
 const btnMini = 'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50'
 
 /**
@@ -265,7 +265,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
       {/* ── Header ── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Documentación mensual</h1>
+          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Documentación mensual</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {empresa.nombre}
             {transcurridos.length > 0 && ` · ${completos} de ${transcurridos.length} ${transcurridos.length === 1 ? 'mes completo' : 'meses completos'}`}
@@ -518,7 +518,7 @@ function CarpetaCard({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       className={clsx(
-        'flex flex-col rounded-2xl border bg-card transition-colors',
+        'flex flex-col rounded-2xl border bg-card transition-colors shadow-tarjeta',
         dragOver === nodo.ruta ? 'border-primary bg-primary/5' : 'border-border',
         className
       )}
