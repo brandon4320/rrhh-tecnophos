@@ -1,7 +1,8 @@
 'use client'
 
 // Portada del login (como la del Sistema de Gestión Comercial): fotos reales de Tecnophos, ADC y
-// Serviwhite que se turnan con un acercamiento lento, "Gestión" bien grande y los tres logos. Sin
+// Serviwhite que se turnan con un acercamiento lento, "Sistema de Gestión de Recursos" bien grande (mismo
+// formato que el login del CRM: "Sistema de" chico y el nombre grande) y los tres logos. Sin
 // frase ni etiquetas de más (regla de Brandon: si una pantalla las necesita, se arregla el layout).
 // Tocar un logo muestra su foto. Solo transform y opacity; con "reducir movimiento", quieta.
 import { useEffect, useState } from 'react'
@@ -111,13 +112,16 @@ export function PortadaLogin() {
       className="relative hidden min-h-[620px] overflow-hidden rounded-[28px] bg-[#0b0b14] lg:block"
       onMouseEnter={() => setPausado(true)}
       onMouseLeave={() => setPausado(false)}
-      aria-label="Gestión · Tecnophos, ADC y Serviwhite"
+      aria-label="Sistema de Gestión de Recursos · Tecnophos, ADC y Serviwhite"
     >
       <style>{ANIMACIONES}</style>
       <Fotos actual={actual} tamanos="(min-width: 1024px) 56vw, 100vw" />
       <Velos />
       <div className="relative flex h-full flex-col justify-end p-10 text-white xl:p-14">
-        <h1 className="text-[clamp(64px,7vw,120px)] leading-[0.9] font-semibold tracking-[-0.045em]">Gestión</h1>
+        <h1 className="font-semibold tracking-[-0.04em] text-balance">
+          <span className="block text-[clamp(22px,2vw,30px)] leading-tight font-medium tracking-[-0.01em] text-white/75">Sistema de</span>
+          <span className="mt-1 block text-[clamp(60px,6.4vw,112px)] leading-[0.9]">Gestión de Recursos</span>
+        </h1>
         <div className="mt-12 xl:mt-14">
           <Logos actual={actual} setActual={setActual} />
         </div>
@@ -130,12 +134,15 @@ export function PortadaLogin() {
 export function BandaLogin() {
   const { actual } = useCarrusel()
   return (
-    <section className="relative h-[min(280px,32dvh)] min-h-[210px] overflow-hidden rounded-b-[28px] bg-[#0b0b14] lg:hidden" aria-label="Gestión · Tecnophos, ADC y Serviwhite">
+    <section className="relative h-[min(280px,32dvh)] min-h-[210px] overflow-hidden rounded-b-[28px] bg-[#0b0b14] lg:hidden" aria-label="Sistema de Gestión de Recursos · Tecnophos, ADC y Serviwhite">
       <style>{ANIMACIONES}</style>
       <Fotos actual={actual} tamanos="100vw" />
       <Velos />
       <div className="relative flex h-full flex-col justify-end p-5 text-white">
-        <p className="text-[44px] leading-[0.95] font-semibold tracking-[-0.04em]">Gestión</p>
+        <p className="font-semibold tracking-[-0.04em]">
+          <span className="block text-[17px] font-medium tracking-[-0.01em] text-white/75">Sistema de</span>
+          <span className="block text-[40px] leading-[0.95]">Gestión de Recursos</span>
+        </p>
         <div className="mt-4">
           <Logos actual={actual} chico />
         </div>

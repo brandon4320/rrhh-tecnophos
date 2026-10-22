@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Gestión · Tecnophos / ADC',
-  description: 'Sistema de gestión modular (RRHH, Operaciones)',
+  title: 'Gestión de Recursos',
+  description: 'Personal, vencimientos, flota y stock de Tecnophos, ADC y Serviwhite',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

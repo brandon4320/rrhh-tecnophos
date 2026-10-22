@@ -359,10 +359,10 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
       {/* ── Sidebar única ── */}
       <aside className="flex w-[248px] shrink-0 flex-col border-r border-border bg-card px-3.5 py-5 print:hidden">
         {/* Marca: el mismo ícono del grupo que el CRM, con el nombre del sistema. */}
-        <Link href="/" className="flex items-center gap-2.5 rounded-xl px-1.5 py-1" aria-label="Gestión — inicio">
+        <Link href="/" className="flex items-center gap-2.5 rounded-xl px-1.5 py-1" aria-label="Gestión de Recursos — inicio">
           {/* eslint-disable-next-line @next/next/no-img-element -- svg chico, sin optimizar */}
           <img src="/logo-grupo.svg" alt="" width={30} height={30} className="shrink-0 select-none" draggable={false} />
-          <span className="text-[15px] font-semibold tracking-[-0.015em]">Gestión</span>
+          <span className="text-[15px] font-semibold tracking-[-0.015em]">Gestión de Recursos</span>
         </Link>
 
         {/* Selector: todo lo de abajo es de lo elegido acá */}

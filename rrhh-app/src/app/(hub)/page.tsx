@@ -87,7 +87,7 @@ export default async function HubPage() {
           <div className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element -- svg chico, sin optimizar */}
             <img src="/logo-grupo.svg" alt="" width={30} height={30} className="shrink-0 select-none" draggable={false} />
-            <span className="text-[15px] font-semibold tracking-[-0.015em]">Gestión</span>
+            <span className="text-[15px] font-semibold tracking-[-0.015em]">Gestión de Recursos</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="mr-2 hidden text-sm text-texto-2 sm:inline">{nombre}</span>

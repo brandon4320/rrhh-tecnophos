@@ -365,6 +365,9 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
 
 ## 7. Sistema de diseño — UNA sola línea con el CRM (22/10/2026)
 
+**Nombre del sistema: "Gestión de Recursos"** (Brandon, 22/10/2026), par de "Gestión Comercial" (el CRM).
+Así aparece en el menú, el inicio, el login ("Sistema de" chico + el nombre grande, como el CRM) y la pestaña.
+
 Pedido de Brandon (22/10/2026): Gestión se ve igual que el **Sistema de Gestión Comercial**
 (crm.tecnophos.com.ar, repo `comercial-tecnophos`, sistema visual "Aire" en su `src/index.css` y
 `docs/DISENO.md`). Una sola línea de diseño para los dos: si algo cambia allá, se cambia acá.
