@@ -405,13 +405,18 @@ Pedido de Brandon (22/10/2026): Gestión se ve igual que el **Sistema de Gestió
   - `Monograma` — avatares de iniciales (`redondo` para personas, como el CRM).
   - `BarraVencimiento`, `Donut` (SVG puro), `Segmented` (tabs), `Button`, `Input`, `Card`, `Table`.
 - **AppShell** (`components/layout/AppShell.tsx`): el menú lateral del CRM (248px). Arriba la marca
-  (`public/logo-grupo.svg`, el mismo ícono del grupo que el CRM) + "Gestión"; el selector de
-  empresa (persistido en `localStorage.empresa_activa`) con **Todas las empresas** primero (solo si
-  el usuario ve más de una), cada empresa y ARCOR, con la cantidad de empleados a la derecha.
+  (`public/logo-grupo.svg`, el mismo ícono del grupo que el CRM) + "Gestión de Recursos"; el
+  **selector de empresas del CRM**: íconos encimados en el botón y casillas en el menú para mirar
+  una o varias (la última no se saca), con ARCOR aparte debajo de una raya. Lo tildado vive en la
+  URL: `?empresa=a,b` (helpers en `src/lib/empresas-vistas.ts`); sin el parámetro son todas; lo
+  último se recuerda en `localStorage.empresa_activa` para las pantallas que no dicen empresa.
+  Una sola tildada = el menú de esa empresa; varias = el menú general filtrado (Resumen general,
+  Empleados, Vencimientos y Flota filtran por la lista; dentro de esas pantallas ya no hay un
+  select de empresa: manda el menú).
   Debajo, las vistas de lo elegido: **Menú** (Resumen, Empleados, Vencimientos), **Documentación**
   (Habilitaciones = `?vista=documentacion`, Mensual = `/documentos`, Armar carpeta), **Recursos**
-  (Flota, Palas, Stock) y **Administración**. Con "Todas" solo aparecen las que existen para el
-  grupo. Cambiar de empresa te deja en la MISMA pantalla (`destino()`). Abajo, la tarjeta de la
+  (Flota, Palas, Stock) y **Administración**. Con varias tildadas solo aparecen las que existen
+  para el grupo. Cambiar de empresa te deja en la MISMA pantalla (`destino()`). Abajo, la tarjeta de la
   persona abre Inicio, tema y cerrar sesión. Sin rail de módulos (decisión de Brandon).
 - **Pendiente**: el módulo viejo `/comercial` (reemplazado por el CRM) sigue con su estética propia;
   no vale la pena migrarlo.
