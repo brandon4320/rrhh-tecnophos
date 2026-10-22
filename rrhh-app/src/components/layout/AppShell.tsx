@@ -367,7 +367,7 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
 
         {/* Selector: todo lo de abajo es de lo elegido acá */}
         {activa && (
-          <div className="relative mt-4">
+          <div className="relative mt-3">
             <button
               type="button"
               onClick={() => setSelectorOpen((v) => !v)}
@@ -415,9 +415,9 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           </div>
         )}
 
-        <nav className="mt-5 flex flex-1 flex-col gap-4 overflow-y-auto" aria-label="Menú principal">
+        <nav className="mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto" aria-label="Menú principal">
           {grupos.map((g, i) => (
-            <div key={g.titulo ?? `grupo-${i}`} className="flex flex-col gap-1">
+            <div key={g.titulo ?? `grupo-${i}`} className="flex flex-col gap-0.5">
               <p className={tituloCls}>{g.titulo ?? 'Menú'}</p>
               {g.items.map((it) =>
                 it.external ? (

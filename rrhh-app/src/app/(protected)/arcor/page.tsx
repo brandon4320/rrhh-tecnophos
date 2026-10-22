@@ -15,7 +15,7 @@ import {
   type ColaAbierta,
 } from '@/modules/arcor/reglas'
 import type { EstadoClaude, EstadoHeartbeat, EstadoPublicaciones, EstadoWhatsapp } from '@/modules/arcor/tipos'
-import { diaClaveAR, fmtFechaAR, fmtFechaHoraAR, fmtFechaLargaAR, tiempoRelativo } from '@/lib/fechas-ar'
+import { diaClaveAR, fmtFechaAR, fmtFechaHoraAR, tiempoRelativo } from '@/lib/fechas-ar'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,9 +72,6 @@ export default async function ArcorResumenPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Tecnophos - ARCOR</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Certificados de fumigación de contenedores · <span className="capitalize">{fmtFechaLargaAR(ahora.toISOString())}</span>
-          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <AutoRefresh generado={ahora.toISOString()} />
@@ -88,7 +85,6 @@ export default async function ArcorResumenPage() {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">Estado del sistema</h2>
-            <p className="text-sm text-muted-foreground">Lo que reporta el servidor de ARCOR (WhatsApp, lector, publicaciones)</p>
           </div>
           <Link href="/arcor/alertas" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
             Ver alertas <ArrowRight className="size-3.5" strokeWidth={1.75} />
@@ -236,7 +232,6 @@ export default async function ArcorResumenPage() {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">Actividad reciente</h2>
-            <p className="text-sm text-muted-foreground">Últimos movimientos registrados por el sistema</p>
           </div>
           <Link href="/arcor/actividad" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
             Ver toda la actividad <ArrowRight className="size-3.5" strokeWidth={1.75} />

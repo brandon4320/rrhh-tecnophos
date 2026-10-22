@@ -187,7 +187,6 @@ export default async function DashboardPage({
       <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
           <h2 className="text-lg font-semibold tracking-tight">Estado general</h2>
-          <p className="text-sm text-muted-foreground">Lectura rápida de todas las empresas</p>
 
           <div className="mt-5 grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:divide-x sm:divide-border">
             <div className="sm:pr-6">
@@ -282,7 +281,6 @@ export default async function DashboardPage({
       <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
           <h2 className="text-lg font-semibold tracking-tight">Vencimientos prioritarios</h2>
-          <p className="text-sm text-muted-foreground">Ordenados por urgencia</p>
 
           <SegmentedLocal
             className="mt-4"
@@ -299,7 +297,6 @@ export default async function DashboardPage({
           {/* Empresas */}
           <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
             <h2 className="text-lg font-semibold tracking-tight">Empresas</h2>
-            <p className="text-sm text-muted-foreground">Comparación de estado</p>
 
             <div className="mt-4">
               <div className="grid grid-cols-[1fr_44px_44px] gap-2 border-b border-border pb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -340,7 +337,6 @@ export default async function DashboardPage({
           {/* Distribución documental */}
           <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
             <h2 className="text-lg font-semibold tracking-tight">Distribución documental</h2>
-            <p className="text-sm text-muted-foreground">Estado de los certificados</p>
 
             <div className="mt-4 space-y-4">
               {[

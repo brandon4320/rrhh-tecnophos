@@ -49,7 +49,7 @@ export default async function QRFlotaPage({ searchParams }: { searchParams: Prom
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">QR para las camionetas</h1>
           <p className="text-sm text-muted-foreground">
-            {etiquetas.length} {etiquetas.length === 1 ? 'etiqueta' : 'etiquetas'} · {emp.nombre}. Pegalas en la cara interna de la tapa de la guantera.
+            {etiquetas.length} {etiquetas.length === 1 ? 'etiqueta' : 'etiquetas'} · {emp.nombre}
           </p>
         </div>
         <BotonImprimir />

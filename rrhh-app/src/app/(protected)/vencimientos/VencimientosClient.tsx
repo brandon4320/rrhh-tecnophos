@@ -144,7 +144,6 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
         <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Vencimientos</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           {visibles.length} {visibles.length === 1 ? 'registro' : 'registros'}
-          {vista === 'pendientes' && ' · vencidos y por vencer dentro de su ventana de alerta'}
         </p>
       </div>
 

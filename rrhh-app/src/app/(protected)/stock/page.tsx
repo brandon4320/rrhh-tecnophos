@@ -32,7 +32,6 @@ export default async function StockPage({
     return (
       <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
         <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Stock</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Elegí la empresa cuyo inventario querés ver.</p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {lista.map((e) => (
             <Link

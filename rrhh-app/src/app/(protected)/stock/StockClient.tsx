@@ -453,7 +453,6 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold tracking-tight">Hay que comprar</h2>
-                  <p className="text-sm text-muted-foreground">Ordenado por urgencia</p>
                 </div>
                 {porComprar.length > 6 && (
                   <button onClick={() => setVista('reponer')} className="text-xs font-medium text-primary hover:underline">

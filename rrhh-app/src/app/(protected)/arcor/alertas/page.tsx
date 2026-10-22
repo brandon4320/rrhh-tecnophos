@@ -37,9 +37,6 @@ export default async function ArcorAlertasPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Alertas</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            WhatsApp, crédito del lector, fallos de workflows, publicaciones y silencio del sistema
-          </p>
         </div>
         <AutoRefresh generado={ahora.toISOString()} />
       </div>

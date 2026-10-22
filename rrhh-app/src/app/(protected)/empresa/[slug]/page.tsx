@@ -116,9 +116,6 @@ export default async function EmpresaPage({
           <Monograma nombre={empresa.nombre} size="lg" variant="accent" />
           <div>
             <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Documentación</h1>
-            <p className="text-sm text-muted-foreground">
-              {empresa.nombre} · habilitaciones, programas de seguridad, vehículos y activos
-            </p>
           </div>
         </div>
 
@@ -487,7 +484,6 @@ export default async function EmpresaPage({
       <section className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
           <h2 className="text-lg font-semibold tracking-tight">Atención requerida</h2>
-          <p className="text-sm text-muted-foreground">Ordenado por urgencia</p>
 
           <SegmentedLocal
             className="mt-4"
@@ -503,7 +499,6 @@ export default async function EmpresaPage({
           {/* Cumplimiento */}
           <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
             <h2 className="text-lg font-semibold tracking-tight">Cumplimiento</h2>
-            <p className="text-sm text-muted-foreground">Estado documental</p>
             <div className="mt-4 flex items-center gap-5">
               <Donut pct={pctCumplimiento} />
               <div className="space-y-2">
@@ -522,7 +517,6 @@ export default async function EmpresaPage({
           {sectores.length > 0 && (
             <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
               <h2 className="text-lg font-semibold tracking-tight">Equipos por área</h2>
-              <p className="text-sm text-muted-foreground">Distribución actual</p>
               <div className="mt-4 space-y-2">
                 {sectores.map((s) => (
                   <div key={s.nombre} className="flex items-center gap-3 rounded-xl bg-muted/60 px-4 py-3">

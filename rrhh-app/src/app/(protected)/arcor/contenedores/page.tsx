@@ -91,7 +91,6 @@ export default async function ArcorContenedoresPage({
             {total} {alcance}
             {lugar && ` · ${tituloLugar(lugar)}`}
             {items.length < total && ` · mostrando los primeros ${items.length}`}
-            {esCola && items.length > 1 && ' · del más viejo al más nuevo'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">

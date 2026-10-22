@@ -37,9 +37,6 @@ export default async function NuevoEmpleadoPage({
     <div className="p-8 max-w-3xl mx-auto">
       <div className="mb-8">
         <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Nuevo empleado</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Cargá los datos básicos. Después vas directo a su legajo para agregar los certificados.
-        </p>
       </div>
 
       <NuevoEmpleadoForm

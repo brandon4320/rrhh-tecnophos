@@ -513,7 +513,6 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
           <section className={card}>
             <div className="border-b border-border px-5 py-4">
               <h2 className="text-lg font-semibold tracking-tight">Mantenimiento</h2>
-              <p className="text-sm text-muted-foreground">Se proyecta con los km de los checklists</p>
             </div>
             <ul className="divide-y divide-border">
               {resumen.mantenimientos.map((m) => {

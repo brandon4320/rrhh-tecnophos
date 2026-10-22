@@ -258,9 +258,6 @@ export default function CarpetaClient({
     <div className="mx-auto max-w-5xl space-y-6 p-4 pb-32 sm:p-6 sm:pb-32 lg:p-8 lg:pb-32">
       <div>
         <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Armar carpeta para planta</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {empresa.nombre} · Elegí personas, vehículos y documentos, y bajá todo en un ZIP con los nombres ordenados para mandar a la planta.
-        </p>
       </div>
 
       {/* ── Personas ── */}

@@ -64,8 +64,7 @@ export default async function PalasPage({ searchParams }: { searchParams: Promis
         <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Palas cargadoras</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           {empresaSel.nombre} · {palas?.length ?? 0}{' '}
-          {(palas?.length ?? 0) === 1 ? 'unidad cargada' : 'unidades cargadas'}. Cada una con sus datos y su
-          documentación; lo que vence aparece solo en Vencimientos.
+          {(palas?.length ?? 0) === 1 ? 'unidad' : 'unidades'}
         </p>
       </div>
 

@@ -72,7 +72,6 @@ export default function DatosFlotaClient({ vehiculos, volver, variasEmpresas }: 
             <ArrowLeft className="size-4" /> Volver a Flota
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">Marca, modelo, año y tipo</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Completá lo que falte y guardá todo junto. El tipo define qué se revisa en el checklist (a un trailer no se le piden km ni motor).</p>
         </div>
         <button type="submit" disabled={saving || cambiadas.length === 0} className="rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover disabled:opacity-50 active:scale-[0.97]">
           {saving ? 'Guardando…' : cambiadas.length === 0 ? 'Sin cambios' : `Guardar ${cambiadas.length === 1 ? '1 cambio' : `${cambiadas.length} cambios`}`}
