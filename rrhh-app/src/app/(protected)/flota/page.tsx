@@ -133,13 +133,12 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
-          <table className="w-full min-w-[1040px] text-sm">
+          {/* Entra en el ancho de la pantalla: patente, marca, modelo y año van en una sola celda, y toda
+              la fila abre la ficha (antes había que deslizar hasta la flecha del final). */}
+          <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                <th className="px-5 py-3">Patente</th>
-                <th className="px-3 py-3">Marca</th>
-                <th className="px-3 py-3">Modelo</th>
-                <th className="px-3 py-3 text-right">Año</th>
+              <tr className="border-b border-border text-left text-[11px] font-medium whitespace-nowrap uppercase tracking-wider text-muted-foreground">
+                <th className="px-5 py-3">Vehículo</th>
                 {todas && <th className="px-3 py-3">Empresa</th>}
                 <th className="px-3 py-3">Estado</th>
                 <th className="px-3 py-3">Checklist</th>
@@ -149,21 +148,24 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                 <th className="px-3 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-divisor">
               {filas.map(({ v, r, empresa: emp }) => {
                 const service = r.mantenimientos.find((m) => m.tipo === 'service') ?? r.mantenimientos[0]
                 return (
-                  <tr key={v.id} className="transition-colors hover:bg-muted/40">
-                    <td className="whitespace-nowrap px-5 py-3">
-                      <Link href={`/flota/${v.id}`} className="font-mono font-semibold tracking-wide hover:text-primary">{v.patente}</Link>
+                  <tr key={v.id} className="relative cursor-pointer transition-colors hover:bg-hover">
+                    <td className="px-5 py-3">
+                      {/* El enlace se estira a toda la fila (after:inset-0); los otros enlaces de la fila van encima con z-10. */}
+                      <Link href={`/flota/${v.id}`} className="font-mono font-semibold tracking-wide whitespace-nowrap after:absolute after:inset-0 after:content-['']">
+                        {v.patente}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        {[v.marca, v.modelo ?? v.descripcion, v.anio].filter(Boolean).join(' ') || '—'}
+                      </p>
                     </td>
-                    <td className="px-3 py-3">{v.marca ?? <span className="text-muted-foreground">—</span>}</td>
-                    <td className="px-3 py-3">{v.modelo ?? <span className="text-muted-foreground">{v.descripcion ?? '—'}</span>}</td>
-                    <td className="px-3 py-3 text-right tabular-nums">{v.anio ?? <span className="text-muted-foreground">—</span>}</td>
                     {todas && (
                       <td className="px-3 py-3">
                         {emp ? (
-                          <Link href={`/flota?empresa=${emp.slug}`} className="text-muted-foreground hover:text-foreground">{emp.nombre}</Link>
+                          <Link href={`/flota?empresa=${emp.slug}`} className="relative z-10 text-texto-2 hover:text-foreground">{emp.nombre}</Link>
                         ) : '—'}
                       </td>
                     )}
@@ -178,7 +180,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                         <span className="text-xs text-muted-foreground">Desactivado</span>
                       )}
                     </td>
-                    <td className="px-3 py-3 text-right tabular-nums">
+                    <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
                       {v.km_actual != null ? <span className="font-medium">{v.km_actual.toLocaleString('es-AR')}</span> : <span className="text-muted-foreground">—</span>}
                       {r.kmDia != null && <p className="text-xs text-muted-foreground">{Math.round(r.kmDia)} km/día</p>}
                     </td>
@@ -191,7 +193,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                         </p>
                       ) : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="max-w-[200px] px-3 py-3">
+                    <td className="max-w-[220px] px-3 py-3">
                       {r.motivos.length === 0 ? (
                         <span className="text-xs text-muted-foreground">Nada pendiente</span>
                       ) : (
@@ -202,14 +204,12 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-right">
                       {emp && (
-                        <Link href={`/flota/qr?empresa=${emp.slug}&vehiculo=${v.id}&imprimir=1`} prefetch={false} title={`Imprimir el QR de ${v.patente}`} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
+                        <Link href={`/flota/qr?empresa=${emp.slug}&vehiculo=${v.id}&imprimir=1`} prefetch={false} title={`Imprimir el QR de ${v.patente}`} className="relative z-10 inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
                           <Printer className="size-3.5" strokeWidth={1.75} />
                           QR
                         </Link>
                       )}
-                      <Link href={`/flota/${v.id}`} aria-label={`Ver ${v.patente}`} className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
-                        <ChevronRight className="size-4" />
-                      </Link>
+                      <ChevronRight className="ml-1 inline size-4 text-muted-foreground" aria-hidden />
                     </td>
                   </tr>
                 )

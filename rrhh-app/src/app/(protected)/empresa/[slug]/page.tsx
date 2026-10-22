@@ -22,6 +22,16 @@ interface CertFecha {
   created_at?: string | null
 }
 
+// Logo completo de cada empresa para el encabezado del Resumen (las sedes de Tecnophos comparten
+// marca y se distinguen por el nombre de la sede al lado). Sin logo, queda el nombre como título.
+const LOGO_HERO: Record<string, { src: string; alto: string }> = {
+  adc: { src: '/logo-adc.png', alto: 'h-16' },
+  serviwhite: { src: '/logo-serviwhite.png', alto: 'h-8' },
+}
+function logoHero(slug: string) {
+  return slug.startsWith('tecnophos') ? { src: '/logo-tecnophos.svg', alto: 'h-12' } : LOGO_HERO[slug] ?? null
+}
+
 function peorEstado(certs: CertFecha[]): EstadoVencimiento {
   const estados = certs.map((c) => getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias))
   if (estados.includes('vencido')) return 'vencido'
@@ -377,14 +387,30 @@ export default async function EmpresaPage({
     </div>
   )
 
+  const logo = logoHero(slug)
+  const sede = slug.startsWith('tecnophos') ? empresa.nombre.replace(/^Tecnophos\s+/i, '') : null
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
       {/* ── Hero ── */}
       <section className="rounded-2xl bg-zona p-6 text-zona-foreground sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">{empresa.nombre}</h1>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
+            {logo ? (
+              <div className="flex items-center gap-4">
+                <h1 className="sr-only">{empresa.nombre}</h1>
+                {/* eslint-disable-next-line @next/next/no-img-element -- logo chico, sin optimizar */}
+                <img src={logo.src} alt="" className={`${logo.alto} w-auto max-w-[260px] object-contain`} />
+                {sede && (
+                  <span className="border-l border-border-strong pl-4 text-xl font-semibold tracking-[-0.015em] text-texto-2" aria-hidden>
+                    {sede}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">{empresa.nombre}</h1>
+            )}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               {vencidos.length === 0 ? (
                 <EstadoBadgeSuave estado="vigente" label="Operación estable" />
               ) : (
@@ -439,7 +465,6 @@ export default async function EmpresaPage({
             <span className="text-sm text-muted-foreground">Empleados</span>
           </div>
           <p className="mt-3 text-3xl font-semibold tabular-nums">{empleados?.length ?? 0}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">activos</p>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
@@ -461,11 +486,10 @@ export default async function EmpresaPage({
             <span className="text-sm text-muted-foreground">Por vencer</span>
           </div>
           <p className="mt-3 text-3xl font-semibold tabular-nums">{proximos.length}</p>
-          <p className="mt-0.5 text-xs text-warning">dentro de su ventana de alerta</p>
         </div>
 
         <div
-          className={`rounded-2xl border bg-card p-5 ${vencidos.length > 0 ? 'border-danger/30' : 'border-border'}`}
+          className={`rounded-2xl border bg-card p-5 shadow-tarjeta ${vencidos.length > 0 ? 'border-danger/30' : 'border-border'}`}
         >
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-danger-subtle text-danger">
@@ -474,9 +498,6 @@ export default async function EmpresaPage({
             <span className="text-sm text-muted-foreground">Vencidos</span>
           </div>
           <p className="mt-3 text-3xl font-semibold tabular-nums">{vencidos.length}</p>
-          <p className={`mt-0.5 text-xs ${vencidos.length > 0 ? 'text-danger' : 'text-muted-foreground'}`}>
-            {vencidos.length > 0 ? 'atención inmediata' : 'todo en orden'}
-          </p>
         </div>
       </section>
 

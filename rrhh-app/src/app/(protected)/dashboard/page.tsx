@@ -201,7 +201,6 @@ export default async function DashboardPage({
                   {vencidos.length}
                 </p>
                 <p className="mt-0.5 text-sm text-muted-foreground">Vencidos</p>
-                <p className="text-xs text-muted-foreground">requieren acción</p>
               </Link>
             </div>
             <div className="sm:px-6">
@@ -210,14 +209,12 @@ export default async function DashboardPage({
                   {proximos.length}
                 </p>
                 <p className="mt-0.5 text-sm text-muted-foreground">Por vencer</p>
-                <p className="text-xs text-muted-foreground">en su ventana de alerta</p>
               </Link>
             </div>
             <div className="sm:pl-6">
               <Link href="/vencimientos?estado=vigente" className={kpiLink}>
                 <p className="text-3xl font-semibold tabular-nums text-success">{alDia}</p>
                 <p className="mt-0.5 text-sm text-muted-foreground">Al día</p>
-                <p className="text-xs text-muted-foreground">documentación vigente</p>
               </Link>
             </div>
           </div>
@@ -261,7 +258,7 @@ export default async function DashboardPage({
                 <p className="text-2xl font-semibold tracking-tight">Sin certificados vencidos</p>
                 <p className="mt-1 text-sm text-texto-2">
                   {proximos.length > 0
-                    ? `${proximos.length} por vencer dentro de su ventana de alerta.`
+                    ? `${proximos.length} por vencer.`
                     : 'Toda la documentación está vigente.'}
                 </p>
               </div>

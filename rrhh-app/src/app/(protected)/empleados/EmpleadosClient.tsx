@@ -206,7 +206,6 @@ export default function EmpleadosClient({ filas: filasServer, empresas, empresaS
             </button>
           ))}
         </div>
-        <span className="hidden text-xs text-muted-foreground lg:inline">↑ ↓ para moverte · Enter para abrir</span>
       </div>
 
       {/* Lista */}
