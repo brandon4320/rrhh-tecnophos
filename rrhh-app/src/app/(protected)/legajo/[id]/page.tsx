@@ -44,9 +44,11 @@ export default async function LegajoPage({
       .eq('empleado_id', id)
       .order('periodo', { ascending: false }),
     // EPP y ropa entregados desde Stock (migración 24: stock_movimientos.empleado_id).
+    // Con el nombre de la FK: hay dos hacia stock_items (item_id sola y item_id+empresa_id) y sin
+    // decir cuál PostgREST corta con error (la sección quedaba vacía sin avisar).
     supabase
       .from('stock_movimientos')
-      .select('id, fecha, tipo, cantidad, item:stock_items(nombre, unidad)')
+      .select('id, fecha, tipo, cantidad, item:stock_items!stock_movimientos_item_id_fkey(nombre, unidad)')
       .eq('empleado_id', id)
       .in('tipo', ['consumo', 'devolucion'])
       .order('fecha', { ascending: false })

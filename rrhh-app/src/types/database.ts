@@ -64,6 +64,39 @@ export type Database = {
         }
         Relationships: []
       }
+      claves_ia: {
+        Row: {
+          created_at: string
+          hash: string
+          id: string
+          nombre: string
+          prefijo: string
+          revocada_at: string | null
+          ultimo_uso_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hash: string
+          id?: string
+          nombre: string
+          prefijo: string
+          revocada_at?: string | null
+          ultimo_uso_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hash?: string
+          id?: string
+          nombre?: string
+          prefijo?: string
+          revocada_at?: string | null
+          ultimo_uso_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       archivos: {
         Row: {
           certificado_id: string | null

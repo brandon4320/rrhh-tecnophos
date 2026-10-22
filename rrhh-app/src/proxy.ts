@@ -19,7 +19,8 @@ import { SUPABASE_JWKS } from '@/lib/supabase/jwks'
 // /api/cron/*: los llama Vercel; cada ruta valida CRON_SECRET.
 // /api/externo/*: otros sistemas propios (el Comercial en Cloudflare); cada ruta
 // valida su token (ver modules/integracion-comercial/servidor.ts).
-const PUBLIC_PATHS = ['/login', '/control-plagas.html', '/api/arcor/ingest', '/v', '/api/v', '/api/cron', '/api/externo']
+// /api/mcp: lo usa una IA con su clave de IA (no con la sesión), ver src/app/api/mcp/route.ts.
+const PUBLIC_PATHS = ['/login', '/control-plagas.html', '/api/arcor/ingest', '/v', '/api/v', '/api/cron', '/api/externo', '/api/mcp']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })

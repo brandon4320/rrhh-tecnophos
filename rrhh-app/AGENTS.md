@@ -251,6 +251,14 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   carpeta con archivos se vea SIEMPRE: sacar una del subconjunto nunca esconde lo ya cargado. Son documentos de la EMPRESA: lo de cada persona sigue en `recibos_sueldo`
   (la carpeta "Recibos de sueldos" muestra cuántos empleados activos ya tienen el suyo y cuenta como
   completa si están todos). UI en `documentos/DocumentosClient.tsx`, API `/api/documentos`.
+- **MCP para conectar una IA** (migración 29, 22/10/2026): `POST /api/mcp` (en `PUBLIC_PATHS` de
+  `src/proxy.ts`), clave `Authorization: Bearer ges_…` que cada persona crea en el menú de usuario →
+  **Conectar una IA** (`/cuenta/ia`; tabla `claves_ia`, solo el SHA-256, RLS: cada uno las suyas).
+  **Solo lectura.** Consulta con el cliente de servicio, así que CADA herramienta filtra a mano por las
+  empresas que esa persona ve (igual que la RLS: rol admin/usuario, `empresa_acceso`). Nunca recibos.
+  Herramientas en `src/lib/mcp/gestion.ts` (empresas, resumen, vencimientos, buscar_empleados, legajo,
+  flota, stock, habilitaciones_empresa); núcleo `src/lib/mcp/servidor.ts` = mismo archivo que el CRM
+  (`worker/mcp/servidor.ts`), copialo si lo cambiás. Cómo conectar Grok: `docs/MCP.md` del CRM.
 - **Historial de cambios** (migración 28, 22/10/2026): tabla `auditoria` escrita por el trigger
   `trg_auditoria` → `app_auditar()` (SECURITY DEFINER) en las tablas de Gestión de Recursos (empleados,
   certificados, archivos, vehículos y flota, equipos, stock, documentación mensual, recibos, perfiles,

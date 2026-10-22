@@ -11,6 +11,7 @@ import { paramEmpresas, slugsDe } from '@/lib/empresas-vistas'
 import {
   Activity,
   Bell,
+  Bot,
   CalendarClock,
   Check,
   ChevronsUpDown,
@@ -454,6 +455,10 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
                 <Link href="/" className={accionMenu}>
                   <Home className="size-4 text-muted-foreground" strokeWidth={1.75} />
                   Inicio
+                </Link>
+                <Link href="/cuenta/ia" className={accionMenu}>
+                  <Bot className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                  Conectar una IA
                 </Link>
                 <button type="button" onClick={() => setTheme(oscuro ? 'light' : 'dark')} className={accionMenu}>
                   {oscuro
