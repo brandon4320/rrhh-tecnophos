@@ -6,6 +6,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ChevronRight, FileX, Search } from 'lucide-react'
 import { Monograma } from '@/components/ui/monograma'
 import { EstadoPill } from '@/components/ui/estado-pill'
+import { EncabezadoOrdenable } from '@/components/ui/encabezado-ordenable'
+import { RANGO_ESTADO, alternarOrden, comparar, escribirOrden, leerOrden, type Orden } from '@/lib/orden'
 import { coincide } from '@/lib/texto'
 import { cn } from '@/lib/utils'
 import type { EstadoVencimiento } from '@/types'
@@ -43,6 +45,19 @@ const PESTANIAS: { vista: VistaVencimientos; label: string }[] = [
   { vista: 'todos', label: 'Todos' },
 ]
 
+const CAMPOS = ['titular', 'empresa', 'certificado', 'vencimiento', 'estado'] as const
+type Campo = (typeof CAMPOS)[number]
+// Por defecto, lo que vence antes arriba (como llega del server).
+const ORDEN_INICIAL: Orden<Campo> = { campo: 'vencimiento', dir: 'asc' }
+
+function valorDe(f: FilaVencimiento, campo: Campo): string | number | null {
+  if (campo === 'titular') return f.titular
+  if (campo === 'empresa') return f.empresaNombre
+  if (campo === 'certificado') return f.tipoNombre
+  if (campo === 'vencimiento') return f.fecha
+  return RANGO_ESTADO[f.estado]
+}
+
 function entra(f: FilaVencimiento, vista: VistaVencimientos): boolean {
   if (vista === 'todos') return true
   if (vista === 'pendientes') return f.estado === 'vencido' || f.estado === 'proximo'
@@ -77,12 +92,31 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
     return (deUrl === 'vigente' || deUrl === 'todos') && !incluyeVigentes ? vistaInicial : deUrl
   })
   const [busqueda, setBusqueda] = useState(() => searchParams.get('q') ?? '')
+  const [orden, setOrden] = useState(() => leerOrden(searchParams.get('orden'), CAMPOS, ORDEN_INICIAL))
 
   const buscadas = useMemo(
     () => filas.filter((f) => coincide(busqueda, f.titular, f.tipoNombre, f.empresaNombre)),
     [filas, busqueda]
   )
-  const visibles = useMemo(() => buscadas.filter((f) => entra(f, vista)), [buscadas, vista])
+  const visibles = useMemo(
+    () =>
+      buscadas
+        .filter((f) => entra(f, vista))
+        // Empate: por fecha, así el orden no salta entre iguales.
+        .sort((a, b) => comparar(valorDe(a, orden.campo), valorDe(b, orden.campo), orden.dir) || comparar(a.fecha, b.fecha)),
+    [buscadas, vista, orden]
+  )
+
+  function alternar(campo: Campo) {
+    const nuevo = alternarOrden(orden, campo)
+    setOrden(nuevo)
+    try {
+      const u = new URL(window.location.href)
+      if (nuevo.campo === ORDEN_INICIAL.campo && nuevo.dir === ORDEN_INICIAL.dir) u.searchParams.delete('orden')
+      else u.searchParams.set('orden', escribirOrden(nuevo))
+      window.history.replaceState(null, '', u)
+    } catch { /* la URL es cosmética */ }
+  }
   const cuenta = useMemo(() => {
     const c = { vencido: 0, proximo: 0, vigente: 0 }
     for (const f of buscadas) if (f.estado in c) c[f.estado as keyof typeof c]++
@@ -106,6 +140,7 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
     if (tip) p.set('tipo', tip)
     if (est !== 'pendientes') p.set('estado', est)
     if (busqueda.trim()) p.set('q', busqueda)
+    if (orden.campo !== ORDEN_INICIAL.campo || orden.dir !== ORDEN_INICIAL.dir) p.set('orden', escribirOrden(orden))
     const qs = p.toString()
     return `${pathname}${qs ? `?${qs}` : ''}`
   }
@@ -149,7 +184,7 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex flex-wrap items-center gap-1 rounded-xl bg-muted p-1">
+        <div className="inline-flex flex-wrap items-center gap-1 rounded-[12px] bg-muted p-1">
           {PESTANIAS.map((t) => {
             const n = cantidad(t.vista)
             return (
@@ -158,8 +193,8 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
                 type="button"
                 onClick={() => elegirVista(t.vista)}
                 className={cn(
-                  'rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors',
-                  vista === t.vista ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  'inline-flex h-8 cursor-pointer items-center rounded-[9px] px-3.5 text-sm font-medium transition-colors',
+                  vista === t.vista ? 'bg-card text-foreground shadow-[0_1px_2px_rgba(23,22,31,0.08),0_1px_1px_rgba(23,22,31,0.04)]' : 'text-texto-2 hover:text-foreground'
                 )}
               >
                 {t.label}
@@ -227,11 +262,11 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Titular</th>
-                <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">Empresa</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Certificado</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Vencimiento</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Estado</th>
+                <EncabezadoOrdenable campo="titular" etiqueta="Titular" orden={orden} onAlternar={alternar} className="px-5" />
+                <EncabezadoOrdenable campo="empresa" etiqueta="Empresa" orden={orden} onAlternar={alternar} className="hidden px-4 sm:table-cell" />
+                <EncabezadoOrdenable campo="certificado" etiqueta="Certificado" orden={orden} onAlternar={alternar} className="px-4" />
+                <EncabezadoOrdenable campo="vencimiento" etiqueta="Vencimiento" orden={orden} onAlternar={alternar} className="px-4" />
+                <EncabezadoOrdenable campo="estado" etiqueta="Estado" orden={orden} onAlternar={alternar} className="px-4" />
                 <th className="px-4 py-3" />
               </tr>
             </thead>

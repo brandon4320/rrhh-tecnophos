@@ -7,11 +7,13 @@ import { toast } from 'sonner'
 import { ChevronRight, Plus, Search } from 'lucide-react'
 import { Monograma } from '@/components/ui/monograma'
 import { EstadoPill } from '@/components/ui/estado-pill'
+import { EncabezadoOrdenable } from '@/components/ui/encabezado-ordenable'
+import { RANGO_ESTADO, alternarOrden, comparar, escribirOrden, leerOrden, type Orden } from '@/lib/orden'
 import { createClient } from '@/lib/supabase/client'
 import { coincide } from '@/lib/texto'
 import { mensajeError } from '@/lib/errores'
 import { cn } from '@/lib/utils'
-import type { EstadoVencimiento } from '@/types'
+import { ESTADO_LABELS, type EstadoVencimiento } from '@/types'
 
 export interface FilaEmpleado {
   id: string
@@ -31,6 +33,19 @@ interface Props {
   /** "ADC S.R.L., Serviwhite" o "todas las empresas": lo tildado en el selector del menú. */
   alcance: string
   puedeEditar: boolean
+}
+
+const CAMPOS = ['nombre', 'empresa', 'sector', 'certificados', 'estado'] as const
+type Campo = (typeof CAMPOS)[number]
+const ORDEN_INICIAL: Orden<Campo> = { campo: 'nombre', dir: 'asc' }
+const ESTADOS: EstadoVencimiento[] = ['vencido', 'proximo', 'vigente', 'sin_fecha']
+
+function valorDe(f: FilaEmpleado, campo: Campo): string | number | null {
+  if (campo === 'nombre') return f.nombreCompleto
+  if (campo === 'empresa') return f.empresaNombre
+  if (campo === 'sector') return f.sector?.trim() || null
+  if (campo === 'certificados') return f.certificados
+  return RANGO_ESTADO[f.estado]
 }
 
 /** Reemplaza un parámetro de la URL sin navegar (la búsqueda sobrevive al volver atrás). */
@@ -56,19 +71,60 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
   // La búsqueda se lee de la URL al montar: al volver de un legajo sigue escrita.
   const [busqueda, setBusqueda] = useState(() => searchParams.get('q') ?? '')
   const [verBajas, setVerBajas] = useState(() => searchParams.get('baja') === '1')
+  // Orden y filtros también de la URL (al volver de un legajo quedan como estaban).
+  const [orden, setOrden] = useState(() => leerOrden(searchParams.get('orden'), CAMPOS, ORDEN_INICIAL))
+  const [sector, setSector] = useState(() => searchParams.get('sector') ?? '')
+  const [estado, setEstado] = useState(() => (ESTADOS as string[]).includes(searchParams.get('estado') ?? '') ? (searchParams.get('estado') as EstadoVencimiento) : '')
   const [seleccion, setSeleccion] = useState(0)
   const [reactivando, setReactivando] = useState<string | null>(null)
 
   const activos = useMemo(() => filas.filter((f) => f.activo).length, [filas])
   const bajas = filas.length - activos
 
+  // Sectores de lo que se está mirando (activos o bajas), sin repetir mayúsculas/minúsculas.
+  const sectores = useMemo(() => {
+    const vistos = new Map<string, string>()
+    for (const f of filas) {
+      const s = f.sector?.trim()
+      if (f.activo !== verBajas && s && !vistos.has(s.toLocaleLowerCase('es'))) vistos.set(s.toLocaleLowerCase('es'), s)
+    }
+    return [...vistos.values()].sort((a, b) => comparar(a, b))
+  }, [filas, verBajas])
+
   const visibles = useMemo(
     () =>
-      filas.filter(
-        (f) => f.activo !== verBajas && coincide(busqueda, f.nombre, f.apellido, f.sector, f.empresaNombre)
-      ),
-    [filas, verBajas, busqueda]
+      filas
+        .filter(
+          (f) =>
+            f.activo !== verBajas &&
+            (!sector || f.sector?.trim().toLocaleLowerCase('es') === sector.toLocaleLowerCase('es')) &&
+            (!estado || f.estado === estado) &&
+            coincide(busqueda, f.nombre, f.apellido, f.sector, f.empresaNombre)
+        )
+        // Empate: por nombre, así el orden no salta entre iguales.
+        .sort((a, b) => comparar(valorDe(a, orden.campo), valorDe(b, orden.campo), orden.dir) || comparar(a.nombreCompleto, b.nombreCompleto)),
+    [filas, verBajas, busqueda, sector, estado, orden]
   )
+
+  function alternar(campo: Campo) {
+    // Los números (certificados) arrancan de mayor a menor; el resto, de la A a la Z / lo más urgente primero.
+    const nuevo = alternarOrden(orden, campo, campo === 'certificados' ? 'desc' : 'asc')
+    setOrden(nuevo)
+    setSeleccion(0)
+    reemplazarParam('orden', nuevo.campo === ORDEN_INICIAL.campo && nuevo.dir === ORDEN_INICIAL.dir ? null : escribirOrden(nuevo))
+  }
+
+  function cambiarSector(v: string) {
+    setSector(v)
+    setSeleccion(0)
+    reemplazarParam('sector', v || null)
+  }
+
+  function cambiarEstado(v: EstadoVencimiento | '') {
+    setEstado(v)
+    setSeleccion(0)
+    reemplazarParam('estado', v || null)
+  }
   const sel = Math.min(seleccion, visibles.length - 1)
 
   function cambiarBusqueda(v: string) {
@@ -163,7 +219,7 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
             className="min-h-10 w-full rounded-[10px] border border-input bg-card py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring"
           />
         </div>
-        <div className="inline-flex items-center gap-1 rounded-xl bg-muted p-1">
+        <div className="inline-flex items-center gap-1 rounded-[12px] bg-muted p-1">
           {[
             { bajasSi: false, label: `Activos · ${activos}` },
             { bajasSi: true, label: `Dados de baja · ${bajas}` },
@@ -173,14 +229,42 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
               type="button"
               onClick={() => cambiarVista(t.bajasSi)}
               className={cn(
-                'rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors',
-                verBajas === t.bajasSi ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                'inline-flex h-8 cursor-pointer items-center rounded-[9px] px-3.5 text-sm font-medium transition-colors',
+                verBajas === t.bajasSi ? 'bg-card text-foreground shadow-[0_1px_2px_rgba(23,22,31,0.08),0_1px_1px_rgba(23,22,31,0.04)]' : 'text-texto-2 hover:text-foreground'
               )}
             >
               {t.label}
             </button>
           ))}
         </div>
+        {sectores.length > 1 && (
+          <select
+            value={sector}
+            onChange={(e) => cambiarSector(e.target.value)}
+            aria-label="Sector"
+            className="min-h-10 max-w-[220px] rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/15"
+          >
+            <option value="">Todos los sectores</option>
+            {sectores.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        )}
+        <select
+          value={estado}
+          onChange={(e) => cambiarEstado(e.target.value as EstadoVencimiento | '')}
+          aria-label="Estado"
+          className="min-h-10 rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/15"
+        >
+          <option value="">Todos los estados</option>
+          {ESTADOS.map((e) => (
+            <option key={e} value={e}>
+              {e === 'vigente' ? 'OK' : e === 'sin_fecha' ? 'Sin datos' : ESTADO_LABELS[e]}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Lista */}
@@ -188,11 +272,11 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
-              <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Nombre</th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Empresa</th>
-              <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">Sector</th>
-              <th className="hidden px-4 py-3 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground sm:table-cell">Certificados</th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Estado</th>
+              <EncabezadoOrdenable campo="nombre" etiqueta="Nombre" orden={orden} onAlternar={alternar} className="px-5" />
+              <EncabezadoOrdenable campo="empresa" etiqueta="Empresa" orden={orden} onAlternar={alternar} className="px-4" />
+              <EncabezadoOrdenable campo="sector" etiqueta="Sector" orden={orden} onAlternar={alternar} className="hidden px-4 sm:table-cell" />
+              <EncabezadoOrdenable campo="certificados" etiqueta="Certificados" orden={orden} onAlternar={alternar} alinear="centro" className="hidden px-4 sm:table-cell" />
+              <EncabezadoOrdenable campo="estado" etiqueta="Estado" orden={orden} onAlternar={alternar} className="px-4" />
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -245,7 +329,9 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
 
         {visibles.length === 0 && (
           <div className="py-12 text-center text-sm text-muted-foreground">
-            {busqueda.trim()
+            {sector || estado
+              ? 'No hay empleados con esos filtros.'
+              : busqueda.trim()
               ? `No hay empleados ${verBajas ? 'dados de baja ' : ''}que coincidan con “${busqueda.trim()}”.`
               : verBajas
                 ? 'No hay empleados dados de baja.'
