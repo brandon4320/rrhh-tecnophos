@@ -1,7 +1,8 @@
 'use client'
 
 // Portada del login (como la del Sistema de Gestión Comercial): fotos reales de Tecnophos, ADC y
-// Serviwhite que se turnan con un acercamiento lento, "Gestión" bien grande y los tres logos.
+// Serviwhite que se turnan con un acercamiento lento, "Gestión" bien grande y los tres logos. Sin
+// frase ni etiquetas de más (regla de Brandon: si una pantalla las necesita, se arregla el layout).
 // Tocar un logo muestra su foto. Solo transform y opacity; con "reducir movimiento", quieta.
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -116,11 +117,7 @@ export function PortadaLogin() {
       <Fotos actual={actual} tamanos="(min-width: 1024px) 56vw, 100vw" />
       <Velos />
       <div className="relative flex h-full flex-col justify-end p-10 text-white xl:p-14">
-        <h1 className="text-balance">
-          <span className="block text-[clamp(20px,1.8vw,28px)] leading-tight font-medium tracking-[-0.01em] text-white/75">Sistema de</span>
-          <span className="mt-1 block text-[clamp(64px,7vw,120px)] leading-[0.9] font-semibold tracking-[-0.045em]">Gestión</span>
-        </h1>
-        <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/70">Personal, documentación, vencimientos, flota y stock de las tres empresas, en un solo lugar.</p>
+        <h1 className="text-[clamp(64px,7vw,120px)] leading-[0.9] font-semibold tracking-[-0.045em]">Gestión</h1>
         <div className="mt-12 xl:mt-14">
           <Logos actual={actual} setActual={setActual} />
         </div>
@@ -138,7 +135,6 @@ export function BandaLogin() {
       <Fotos actual={actual} tamanos="100vw" />
       <Velos />
       <div className="relative flex h-full flex-col justify-end p-5 text-white">
-        <p className="text-[13px] font-medium text-white/75">Sistema de</p>
         <p className="text-[44px] leading-[0.95] font-semibold tracking-[-0.04em]">Gestión</p>
         <div className="mt-4">
           <Logos actual={actual} chico />

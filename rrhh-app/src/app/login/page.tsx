@@ -81,7 +81,6 @@ export default async function LoginPage({
       <div className="flex min-h-[calc(100dvh-min(280px,32dvh))] flex-col px-5 lg:min-h-0 lg:px-10">
         <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-start pt-8 pb-10 lg:justify-center lg:py-10">
           <h2 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Entrar</h2>
-          <p className="mt-1.5 text-[15px] text-muted-foreground">Con tu usuario (nombre.apellido) o tu correo.</p>
 
           <form action={loginAction} className="mt-7 grid gap-4">
             {next && <input type="hidden" name="next" value={next} />}
@@ -115,7 +114,6 @@ export default async function LoginPage({
             <BotonEntrar />
           </form>
         </div>
-        <p className="pb-8 text-center text-xs text-muted-foreground">¿Problemas para entrar? Pedile ayuda a Brandon.</p>
       </div>
     </div>
   )

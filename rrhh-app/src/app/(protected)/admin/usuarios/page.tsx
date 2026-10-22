@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { QuienEs } from './QuienEs'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { internalEmailToUsername, normalizeUsername, usernameToInternalEmail } from '@/lib/auth-helpers'
@@ -273,7 +274,7 @@ export default async function AdminUsuariosPage({
 
   const errorMessage =
     params.error === 'missing_fields'
-      ? 'Completá el username, la contraseña y elegí un empleado o escribí el nombre.'
+      ? 'Faltan datos: nombre (o empleado), username y contraseña.'
       : params.error === 'missing_service_role'
         ? 'Falta configurar SUPABASE_SERVICE_ROLE_KEY en el entorno del proyecto.'
         : params.error === 'employee_not_found'
@@ -300,10 +301,7 @@ export default async function AdminUsuariosPage({
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Administrar usuarios</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Creá y gestioná accesos para empleados desde la app. Este módulo solo es visible para administradores.
-        </p>
+        <h1 className="text-2xl font-semibold text-foreground">Usuarios</h1>
       </div>
 
       <div className="bg-card rounded-xl border border-border p-6">
@@ -327,38 +325,22 @@ export default async function AdminUsuariosPage({
 
         <form action={crearUsuario} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Empleado <span className="font-normal text-muted-foreground">(opcional)</span>
-              </label>
-              <select name="empleado_id" defaultValue="" className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="">No es un empleado (escribí el nombre abajo)</option>
-                {(empleados ?? []).map((empleado: any) => {
-                  const nombreCompleto = [empleado.nombre, empleado.apellido].filter(Boolean).join(' ')
-                  return (
-                    <option key={empleado.id} value={empleado.id}>
-                      {nombreCompleto} · {empleado.empresa?.nombre ?? 'Sin empresa'}
-                    </option>
-                  )
-                })}
-              </select>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Nombre y apellido <span className="font-normal text-muted-foreground">(si no elegiste un empleado)</span>
-              </label>
-              <input type="text" name="nombre" autoComplete="off" className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Marcelo Pérez" />
-            </div>
+            <QuienEs
+              empleados={(empleados ?? []).map((e) => {
+                // El join puede venir como objeto o como lista según cómo lo tipe Supabase.
+                const empresa = Array.isArray(e.empresa) ? e.empresa[0] : e.empresa
+                return { id: e.id, etiqueta: `${[e.nombre, e.apellido].filter(Boolean).join(' ')} · ${empresa?.nombre ?? 'Sin empresa'}` }
+              })}
+            />
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Username</label>
-              <input type="text" name="username" required className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="aylen.tecnophos" />
+              <input type="text" name="username" required className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="nombre.apellido" />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Contraseña inicial</label>
-              <input type="text" name="password" required minLength={6} className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Mínimo 6 caracteres" />
+              <label className="block text-sm font-medium text-foreground mb-1.5">Contraseña</label>
+              <input type="text" name="password" required minLength={6} className="w-full px-3.5 py-2.5 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
 
             <div>
@@ -369,9 +351,6 @@ export default async function AdminUsuariosPage({
               </select>
             </div>
 
-            <div className="rounded-lg border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
-              Todos los usuarios creados desde este módulo tienen acceso a todas las empresas.
-            </div>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">
@@ -410,7 +389,7 @@ export default async function AdminUsuariosPage({
                     <input type="hidden" name="user_id" value={managedUser.id} />
                     <div>
                       <label className="block text-xs font-medium text-muted-foreground mb-1">Nueva contraseña</label>
-                      <input type="text" name="new_password" minLength={6} required className="px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Mínimo 6 caracteres" />
+                      <input type="text" name="new_password" minLength={6} required className="px-3 py-2 rounded-lg border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
                     </div>
                     <button type="submit" className="px-3 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent">
                       Actualizar contraseña

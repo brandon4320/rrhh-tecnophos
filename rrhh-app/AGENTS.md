@@ -368,6 +368,11 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
 Brandon rechazó explícitamente la estética anterior ("infantil, muchos colores").
 El sistema actual es **minimal empresa-céntrico**:
 
+- **Sin textos de relleno** (regla de Brandon, 22/10/2026): nada de taglines, textos de ayuda bajo
+  los títulos ni etiquetas secundarias ("(opcional)", "(si no…)"). Si una pantalla los necesita
+  para entenderse, se arregla el layout (p. ej. el campo Nombre del alta de usuarios aparece solo
+  cuando no se elige un empleado: `admin/usuarios/QuienEs.tsx`). Cada cambio tiene que mejorar a la
+  vez la experiencia de quien usa, de quien programa y de los agentes, sin romper nada.
 - **UN solo acento**: índigo (`--primary`). **PROHIBIDO** reintroducir colores por
   empresa (se eliminaron todos los mapas `EMPRESA_*`).
 - **El color solo comunica estado**: tokens `--success` (teal) / `--warning`
