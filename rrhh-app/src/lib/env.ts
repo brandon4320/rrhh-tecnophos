@@ -20,10 +20,9 @@ export const env = {
 export const serverEnv = {
   supabaseServiceRoleKey: () =>
     required('SUPABASE_SERVICE_ROLE_KEY', process.env.SUPABASE_SERVICE_ROLE_KEY),
-  r2: () => ({
-    accountId: required('CLOUDFLARE_ACCOUNT_ID', process.env.CLOUDFLARE_ACCOUNT_ID),
-    accessKeyId: required('R2_ACCESS_KEY_ID', process.env.R2_ACCESS_KEY_ID),
-    secretAccessKey: required('R2_SECRET_ACCESS_KEY', process.env.R2_SECRET_ACCESS_KEY),
-    bucket: process.env.R2_BUCKET_NAME ?? 'brandon4320',
-  }),
+  // R2 no va acá: el account id y el bucket se resuelven en `lib/r2/client.ts`,
+  // que valida la forma del account id. Tener dos fuentes para lo mismo fue parte
+  // del problema del 23/10/2026 (ver el comentario de ese archivo), así que esto
+  // queda con un solo dueño. No importar el cliente de R2 desde acá: `env` lo usa
+  // el proxy, que corre en el edge.
 }
