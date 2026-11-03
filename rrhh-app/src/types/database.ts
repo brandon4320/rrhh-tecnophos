@@ -307,6 +307,8 @@ export type Database = {
           activo: boolean | null
           apellido: string | null
           created_at: string | null
+          cuil: string | null
+          email: string | null
           empresa_id: string | null
           id: string
           nombre: string
@@ -317,6 +319,8 @@ export type Database = {
           activo?: boolean | null
           apellido?: string | null
           created_at?: string | null
+          cuil?: string | null
+          email?: string | null
           empresa_id?: string | null
           id?: string
           nombre: string
@@ -327,6 +331,8 @@ export type Database = {
           activo?: boolean | null
           apellido?: string | null
           created_at?: string | null
+          cuil?: string | null
+          email?: string | null
           empresa_id?: string | null
           id?: string
           nombre?: string
