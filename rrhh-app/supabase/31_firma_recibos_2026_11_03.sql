@@ -188,6 +188,35 @@ create policy recibo_cargas_lectura on public.recibo_cargas for select
   using ((select app_es_rrhh()) and (select app_ve_recibos()));
 
 -- ------------------------------------------------------------
+-- 6b. Permisos de base (sin esto, las policies de arriba no sirven)
+-- ------------------------------------------------------------
+-- La RLS decide QUÉ FILAS ve alguien, pero antes tiene que tener permiso sobre
+-- la tabla. Estas cuatro nacieron sin permiso para nadie —igual que
+-- `integraciones`, que es solo service role a propósito—, así que sin esto
+-- Brandon y Mariano recibirían "permission denied" y las policies de lectura
+-- serían letra muerta. Se detectó probando con la clave anónima: devolvía 42501
+-- (sin permiso) en vez de 0 filas, que es lo que devuelven las tablas que sí
+-- tienen permiso y dejan que mande la RLS.
+--
+-- Solo SELECT: toda la escritura sigue siendo del server con service role.
+grant select on public.firmas_empleado to authenticated;
+grant select on public.recibo_tokens   to authenticated;
+grant select on public.recibo_mails    to authenticated;
+grant select on public.recibo_cargas   to authenticated;
+
+-- anon no toca nada de esto ni aunque cambien los permisos por defecto.
+revoke all on public.firmas_empleado from anon;
+revoke all on public.recibo_tokens   from anon;
+revoke all on public.recibo_mails    from anon;
+revoke all on public.recibo_cargas   from anon;
+
+-- Y authenticated no escribe: para eso están las rutas del server.
+revoke insert, update, delete, truncate on public.firmas_empleado from authenticated;
+revoke insert, update, delete, truncate on public.recibo_tokens   from authenticated;
+revoke insert, update, delete, truncate on public.recibo_mails    from authenticated;
+revoke insert, update, delete, truncate on public.recibo_cargas   from authenticated;
+
+-- ------------------------------------------------------------
 -- 7. Auditoría
 -- ------------------------------------------------------------
 -- `recibos_sueldo` ya está auditada (migración 28) y sus columnas nuevas entran
@@ -232,3 +261,12 @@ select column_name, data_type, column_default
 select indexname from pg_indexes
  where tablename in ('recibo_mails', 'recibos_sueldo', 'recibo_tokens')
  order by indexname;
+
+-- d) Los permisos de base: `authenticated` tiene que poder SELECT (y nada más),
+--    y anon nada. Sin esto las policies de lectura no se llegan a evaluar.
+select table_name, grantee, string_agg(privilege_type, ', ' order by privilege_type) as permisos
+  from information_schema.role_table_grants
+ where table_name in ('firmas_empleado', 'recibo_tokens', 'recibo_mails', 'recibo_cargas')
+   and grantee in ('anon', 'authenticated')
+ group by table_name, grantee
+ order by table_name, grantee;
