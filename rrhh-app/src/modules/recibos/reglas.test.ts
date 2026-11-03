@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   BLOQUEO_MINUTOS, DIAS_VIGENCIA, INTENTOS_MAX, MENSAJE_BLOQUEADO, MENSAJE_CUIL_INCORRECTO,
-  coincideUltimos4, enVentanaDeEnvio, estadoToken, evaluarIntento, rotuloPeriodo, rotuloTipo,
-  soloDigitos, vencimientoDesde,
+  coincideUltimos4, enVentanaDeEnvio, estadoToken, evaluarIntento, nombreDePila, rotuloPeriodo,
+  rotuloTipo, soloDigitos, vencimientoDesde,
 } from './reglas'
 
 const AHORA = new Date('2026-11-03T15:00:00-03:00')
@@ -132,5 +132,19 @@ describe('rótulos', () => {
     // de por medio, el recibo de octubre diría "Septiembre" (AGENTS.md §9).
     expect(rotuloPeriodo('2026-10-01')).toBe('Octubre 2026')
     expect(rotuloPeriodo('2026-01-01')).toBe('Enero 2026')
+  })
+})
+
+describe('nombreDePila', () => {
+  it('toma solo el primer nombre y lo deja legible', () => {
+    // En Gestion se guardan en mayusculas; "Hola LUCIANA MARILIN" grita.
+    expect(nombreDePila('LUCIANA MARILIN')).toBe('Luciana')
+    expect(nombreDePila('eric sebastian')).toBe('Eric')
+    expect(nombreDePila('Juan')).toBe('Juan')
+  })
+  it('aguanta vacio y espacios de mas', () => {
+    expect(nombreDePila('   ')).toBe('')
+    expect(nombreDePila(null)).toBe('')
+    expect(nombreDePila('  MARIA  JOSE ')).toBe('Maria')
   })
 })

@@ -140,3 +140,15 @@ export function rotuloPeriodo(periodo: string): string {
   const m = d.toLocaleDateString('es-AR', { month: 'long', timeZone: 'America/Argentina/Buenos_Aires' })
   return `${m.charAt(0).toUpperCase()}${m.slice(1)} ${d.getFullYear()}`
 }
+
+/**
+ * El primer nombre, con mayuscula solo al principio: "LUCIANA MARILIN" -> "Luciana".
+ *
+ * En Gestion los nombres se guardan en MAYUSCULAS porque asi los lleva la
+ * oficina, pero esta pantalla la ve el empleado y "Hola LUCIANA MARILIN" grita.
+ */
+export function nombreDePila(nombre: string | null | undefined): string {
+  const primero = (nombre ?? '').trim().split(/\s+/)[0] ?? ''
+  if (!primero) return ''
+  return primero.charAt(0).toUpperCase() + primero.slice(1).toLowerCase()
+}
