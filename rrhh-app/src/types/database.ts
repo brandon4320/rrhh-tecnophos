@@ -1032,15 +1032,202 @@ export type Database = {
           },
         ]
       }
+      firmas_empleado: {
+        Row: {
+          actualizada_at: string
+          alto: number | null
+          ancho: number | null
+          created_at: string
+          empleado_id: string
+          id: string
+          path: string
+        }
+        Insert: {
+          actualizada_at?: string
+          alto?: number | null
+          ancho?: number | null
+          created_at?: string
+          empleado_id: string
+          id?: string
+          path: string
+        }
+        Update: {
+          actualizada_at?: string
+          alto?: number | null
+          ancho?: number | null
+          created_at?: string
+          empleado_id?: string
+          id?: string
+          path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "firmas_empleado_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: true
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recibo_tokens: {
+        Row: {
+          bloqueado_hasta: string | null
+          created_at: string
+          empleado_id: string
+          id: string
+          intentos: number
+          revocado: boolean
+          token_hash: string
+          ultimo_uso_at: string | null
+          vence_at: string
+        }
+        Insert: {
+          bloqueado_hasta?: string | null
+          created_at?: string
+          empleado_id: string
+          id?: string
+          intentos?: number
+          revocado?: boolean
+          token_hash: string
+          ultimo_uso_at?: string | null
+          vence_at: string
+        }
+        Update: {
+          bloqueado_hasta?: string | null
+          created_at?: string
+          empleado_id?: string
+          id?: string
+          intentos?: number
+          revocado?: boolean
+          token_hash?: string
+          ultimo_uso_at?: string | null
+          vence_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recibo_tokens_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recibo_mails: {
+        Row: {
+          asunto: string | null
+          created_at: string
+          destinatario: string
+          dia: string
+          empleado_id: string
+          error: string | null
+          estado: string
+          id: string
+          recibos: Json
+          tipo: string
+          token_id: string | null
+        }
+        Insert: {
+          asunto?: string | null
+          created_at?: string
+          destinatario: string
+          dia?: string
+          empleado_id: string
+          error?: string | null
+          estado?: string
+          id?: string
+          recibos?: Json
+          tipo: string
+          token_id?: string | null
+        }
+        Update: {
+          asunto?: string | null
+          created_at?: string
+          destinatario?: string
+          dia?: string
+          empleado_id?: string
+          error?: string | null
+          estado?: string
+          id?: string
+          recibos?: Json
+          tipo?: string
+          token_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recibo_mails_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recibo_cargas: {
+        Row: {
+          base: string | null
+          carpeta: string | null
+          created_at: string
+          detalle: Json
+          errores: number
+          esperados: number | null
+          fin_at: string | null
+          id: string
+          inicio_at: string
+          origen: string
+          pdf_encontrados: number
+          recibos_nuevos: number
+          ya_estaban: number
+        }
+        Insert: {
+          base?: string | null
+          carpeta?: string | null
+          created_at?: string
+          detalle?: Json
+          errores?: number
+          esperados?: number | null
+          fin_at?: string | null
+          id?: string
+          inicio_at?: string
+          origen?: string
+          pdf_encontrados?: number
+          recibos_nuevos?: number
+          ya_estaban?: number
+        }
+        Update: {
+          base?: string | null
+          carpeta?: string | null
+          created_at?: string
+          detalle?: Json
+          errores?: number
+          esperados?: number | null
+          fin_at?: string | null
+          id?: string
+          inicio_at?: string
+          origen?: string
+          pdf_encontrados?: number
+          recibos_nuevos?: number
+          ya_estaban?: number
+        }
+        Relationships: []
+      }
       recibos_sueldo: {
         Row: {
           created_at: string
           empleado_id: string
+          estado: string
+          firma_agente: string | null
+          firma_ip: string | null
+          firmado_at: string | null
+          firmado_path: string | null
           id: string
           mime_type: string | null
           nombre_archivo: string
           notas: string | null
           origen: string
+          origen_archivo: string | null
+          origen_hash: string | null
           path: string
           periodo: string
           size_bytes: number | null
@@ -1050,11 +1237,18 @@ export type Database = {
         Insert: {
           created_at?: string
           empleado_id: string
+          estado?: string
+          firma_agente?: string | null
+          firma_ip?: string | null
+          firmado_at?: string | null
+          firmado_path?: string | null
           id?: string
           mime_type?: string | null
           nombre_archivo: string
           notas?: string | null
           origen?: string
+          origen_archivo?: string | null
+          origen_hash?: string | null
           path: string
           periodo: string
           size_bytes?: number | null
@@ -1064,11 +1258,18 @@ export type Database = {
         Update: {
           created_at?: string
           empleado_id?: string
+          estado?: string
+          firma_agente?: string | null
+          firma_ip?: string | null
+          firmado_at?: string | null
+          firmado_path?: string | null
           id?: string
           mime_type?: string | null
           nombre_archivo?: string
           notas?: string | null
           origen?: string
+          origen_archivo?: string | null
+          origen_hash?: string | null
           path?: string
           periodo?: string
           size_bytes?: number | null
