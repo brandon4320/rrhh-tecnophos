@@ -127,6 +127,18 @@ supabase/                           # schema.sql + migraciones numeradas (ver §
 - **`src/lib/auth/roles.ts`**: roles y grupos (`RRHH_ROLES`, `LEGAJO_ESCRITURA`,
   `COMERCIAL_GESTION`, etc.).
 
+> ⚠ **No verifiques permisos con una consulta al catálogo.** Tanto
+> `information_schema.role_table_grants` como `has_table_privilege` dicen que `anon` puede
+> leer, insertar, actualizar y borrar CUALQUIER tabla — y es cierto a nivel GRANT: Supabase
+> le da permisos de tabla a `anon` en todo lo que se crea en `public`, `recibos_sueldo`
+> incluida. **Eso no es un agujero: la frontera es la RLS, no los GRANT.** Revocarlos a mano
+> no sirve (se vuelven a aplicar) y además confunde al que mire después. La única
+> verificación que vale es **pegarle a la API con la clave anónima** y leer el mensaje:
+> `new row violates row-level security policy` = la RLS hizo su trabajo;
+> `permission denied for function …` = lo frenó el permiso de un helper (como
+> `app_ve_recibos`, que la migración 23 le revoca a anon). Esto costó una falsa alarma el
+> 03/11/2026.
+
 **La seguridad REAL es la RLS de Postgres**, no los guards de UI. Helpers SQL
 `app_rol()`, `app_es_rrhh()` (= admin|usuario), `app_ve_empresa(id)`,
 `app_empresa_acceso()` (`perfiles.empresa_acceso`: `null` = ve todas las empresas;

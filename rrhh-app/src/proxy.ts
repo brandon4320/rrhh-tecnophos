@@ -20,7 +20,9 @@ import { SUPABASE_JWKS } from '@/lib/supabase/jwks'
 // /api/externo/*: otros sistemas propios (el Comercial en Cloudflare); cada ruta
 // valida su token (ver modules/integracion-comercial/servidor.ts).
 // /api/mcp: lo usa una IA con su clave de IA (no con la sesión), ver src/app/api/mcp/route.ts.
-const PUBLIC_PATHS = ['/login', '/control-plagas.html', '/api/arcor/ingest', '/v', '/api/v', '/api/cron', '/api/externo', '/api/mcp']
+// /firma y /api/firma: el link que recibe cada empleado por mail para ver y
+// firmar sus recibos; la autorizacion es el token, no una sesion.
+const PUBLIC_PATHS = ['/login', '/control-plagas.html', '/api/arcor/ingest', '/v', '/api/v', '/api/cron', '/api/externo', '/api/mcp', '/firma', '/api/firma']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })

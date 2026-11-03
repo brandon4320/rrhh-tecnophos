@@ -1218,7 +1218,12 @@ export type Database = {
           empleado_id: string
           estado: string
           firma_agente: string | null
+          firma_alto: number | null
+          firma_ancho: number | null
           firma_ip: string | null
+          firma_pagina: number | null
+          firma_x: number | null
+          firma_y: number | null
           firmado_at: string | null
           firmado_path: string | null
           id: string
@@ -1239,7 +1244,12 @@ export type Database = {
           empleado_id: string
           estado?: string
           firma_agente?: string | null
+          firma_alto?: number | null
+          firma_ancho?: number | null
           firma_ip?: string | null
+          firma_pagina?: number | null
+          firma_x?: number | null
+          firma_y?: number | null
           firmado_at?: string | null
           firmado_path?: string | null
           id?: string
@@ -1260,7 +1270,12 @@ export type Database = {
           empleado_id?: string
           estado?: string
           firma_agente?: string | null
+          firma_alto?: number | null
+          firma_ancho?: number | null
           firma_ip?: string | null
+          firma_pagina?: number | null
+          firma_x?: number | null
+          firma_y?: number | null
           firmado_at?: string | null
           firmado_path?: string | null
           id?: string
