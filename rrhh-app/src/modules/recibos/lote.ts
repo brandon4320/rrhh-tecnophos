@@ -126,20 +126,26 @@ export function resolverDestino(pdf: PdfLeido, padron: readonly EmpleadoPadron[]
   if (candidatos.length > 1) return { ok: false, motivo: 'ambiguo' }
 
   const empleado = candidatos[0]
+  const cuilEmpleado = soloDigitos(empleado.cuil)
+
+  // ★ Esto va ANTES de comparar los CUIL. Si no, a una persona sin CUIL
+  // cargado el PDF le daría "el CUIL no coincide" —comparar contra vacío
+  // siempre da distinto— y ese motivo frena el lote ENTERO por una alarma de
+  // carpetas mezcladas que no existe. Que falte un dato en Gestión es un
+  // problema de ese archivo, no del lote.
+  if (cuilEmpleado.length !== 11) return { ok: false, motivo: 'empleado_sin_cuil', empleado }
 
   // El CUIL es la verificación fuerte: no se repite y no depende de cómo esté
   // escrito el nombre.
   const cuilPdf = soloDigitos(pdf.cuil)
-  if (cuilPdf.length === 11 && cuilPdf !== soloDigitos(empleado.cuil)) {
+  if (cuilPdf.length === 11 && cuilPdf !== cuilEmpleado) {
     return { ok: false, motivo: 'cuil_no_coincide', empleado }
   }
   if (pdf.nombre && !mismaPersona(pdf.nombre, nombreCompleto(empleado))) {
     return { ok: false, motivo: 'nombre_no_coincide', empleado }
   }
 
-  // Sin CUIL no puede confirmar su identidad en la pantalla; sin mail no hay
-  // a dónde mandarle el link.
-  if (soloDigitos(empleado.cuil).length !== 11) return { ok: false, motivo: 'empleado_sin_cuil', empleado }
+  // Sin mail no hay a dónde mandarle el link.
   if (!empleado.email) return { ok: false, motivo: 'empleado_sin_mail', empleado }
 
   return { ok: true, empleado }

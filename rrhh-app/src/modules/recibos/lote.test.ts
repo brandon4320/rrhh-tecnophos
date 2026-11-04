@@ -93,6 +93,14 @@ describe('resolverDestino', () => {
     expect(resolverDestino(pdf(), [emp({ id: 'a', cuil: null })])).toMatchObject({ motivo: 'empleado_sin_cuil' })
   })
 
+  it('★ sin CUIL en Gestión el motivo es "falta el dato", NO "el CUIL no coincide"', () => {
+    // Comparar un CUIL leído contra uno vacío siempre da distinto, y
+    // "cuil_no_coincide" frena el lote entero. Que a alguien le falte el CUIL
+    // cargado no puede dejar a las otras 92 personas sin su recibo.
+    const r = resolverDestino(pdf({ cuil: '20111111117' }), [emp({ id: 'a', cuil: null })])
+    expect(r).toMatchObject({ motivo: 'empleado_sin_cuil' })
+  })
+
   it('sin mail no hay a dónde mandarlo', () => {
     expect(resolverDestino(pdf(), [emp({ id: 'a', email: null })])).toMatchObject({ motivo: 'empleado_sin_mail' })
   })
@@ -172,6 +180,14 @@ describe('revisarLote', () => {
     expect(r.puedeEnviar).toBe(true)
     expect(r.asignados).toHaveLength(1)
     expect(r.problemas[0]).toMatchObject({ motivo: 'nombre_no_coincide' })
+  })
+
+  it('★ una persona sin CUIL cargado no frena el lote', () => {
+    const conHueco = [...padron, emp({ id: 'd', legajo: 4, cuil: null })]
+    const r = revisarLote([pdf({ legajo: 1 }), pdf({ legajo: 4, cuil: '20111111117' })], conHueco)
+    expect(r.puedeEnviar).toBe(true)
+    expect(r.asignados).toHaveLength(1)
+    expect(r.problemas[0]).toMatchObject({ motivo: 'empleado_sin_cuil' })
   })
 
   it('un lote vacío no es un error, simplemente no hay nada que mandar', () => {
