@@ -140,8 +140,17 @@ export interface Hoja {
   cuil?: string | null
   nombre?: string | null
   concepto?: string | null
-  /** Huella del texto de la hoja, para reconocer copias idénticas. */
+  /**
+   * Huella del TEXTO de la hoja, para reconocer que dos copias dicen lo mismo.
+   *
+   * ★ No es el sha del archivo. Exportar dos veces el mismo recibo da archivos
+   * con bytes distintos —la fecha de creación va adentro del PDF— pero con el
+   * texto idéntico. Comparar bytes haría ver como contradictorias a dos copias
+   * del mismo papel, y eso corta el lote entero.
+   */
   huella?: string | null
+  /** sha256 del ARCHIVO. Identifica al PDF cargado, para no cargarlo dos veces. */
+  sha256?: string | null
 }
 
 /**

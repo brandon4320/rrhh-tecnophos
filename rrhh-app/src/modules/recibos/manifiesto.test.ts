@@ -96,6 +96,14 @@ describe('leerManifiesto', () => {
     expect(r.hojas[0]).toMatchObject({ base: '1', periodo: '2026-10-01', legajo: 83, recibo: '4821' })
   })
 
+  it('★ el archivo viene con su corrida adentro, no el nombre pelado', () => {
+    // En un mes hay varias corridas y el nombre del archivo individual se
+    // repite entre ellas: lleva el legajo y la fecha del período, que son los
+    // mismos. Con el nombre solo, dos archivos distintos se pisarían.
+    const r = leerManifiesto(valido())
+    expect(r.hojas[0].archivo).toBe('20261001/uno.pdf')
+  })
+
   it('★ un archivo con varias personas se RECHAZA, no se parte', () => {
     const m = valido({
       archivos: [archivo({ personas: [persona({ legajo: 83 }), persona({ legajo: 84 })] })],
@@ -140,10 +148,25 @@ describe('leerManifiesto', () => {
     }
   })
 
-  it('★ la huella de la hoja es la del ARCHIVO', () => {
-    // Con un PDF por liquidación, dos archivos iguales son el mismo recibo
-    // exportado dos veces: es el sha del archivo el que lo reconoce.
+  it('★ la huella es la del TEXTO y el sha es el del ARCHIVO', () => {
+    // Son dos cosas distintas a propósito: exportar dos veces el mismo recibo
+    // da archivos con bytes distintos (el PDF lleva su fecha de creación
+    // adentro) pero con el texto idéntico. Si se compararan los bytes, dos
+    // copias del mismo papel se verían como contradictorias y cortarían el
+    // lote entero.
     const r = leerManifiesto(valido())
-    expect(r.hojas[0].huella).toBe('a'.repeat(64))
+    expect(r.hojas[0].huella).toBe('h')
+    expect(r.hojas[0].sha256).toBe('a'.repeat(64))
+  })
+
+  it('dos exportaciones del mismo recibo NO se ven como contradictorias', () => {
+    const m = valido({
+      archivos: [
+        archivo({ archivo: 'individual.pdf', sha256: 'a'.repeat(64) }),
+        archivo({ archivo: 'reexportado.pdf', sha256: 'b'.repeat(64) }),
+      ],
+    })
+    const huellas = new Set(leerManifiesto(m).hojas.map((h) => h.huella))
+    expect(huellas.size).toBe(1)
   })
 })

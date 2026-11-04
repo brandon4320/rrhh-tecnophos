@@ -41,6 +41,27 @@ function enMilis(f: string | null | undefined): number | null {
 }
 
 /**
+ * Cuál de las huellas de archivo de esta liquidación es la que cuenta.
+ *
+ * ★ Una misma liquidación puede llegar en más de un archivo —el individual y
+ * el del lote, o una reexportación— y esos archivos tienen bytes distintos
+ * aunque digan exactamente lo mismo: el PDF lleva adentro su fecha de
+ * creación. Si se eligiera uno al azar, en la corrida siguiente podría tocar
+ * el otro y lo que ya está cargado parecería una corrección.
+ *
+ * Por eso: si alguna de las copias ya está cargada, vale ESA. Si no, la
+ * primera, que es estable porque el lector lista los archivos ordenados.
+ */
+export function hashQueCuenta(
+  hashes: readonly (string | null | undefined)[],
+  existentes: readonly ReciboExistente[]
+): string | null {
+  const limpias = hashes.map((h) => (h ?? '').trim()).filter(Boolean)
+  const yaCargada = limpias.find((h) => existentes.some((r) => r.origen_hash === h))
+  return yaCargada ?? limpias[0] ?? null
+}
+
+/**
  * Qué hacer con el documento que entra.
  *
  * El hash del archivo manda sobre todo lo demás: si ese PDF exacto ya está

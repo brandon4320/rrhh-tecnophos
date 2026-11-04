@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { tokenDeIntegracionValido } from '@/lib/integraciones'
-import { decidirCarga } from '@/modules/recibos/carga'
+import { decidirCarga, hashQueCuenta } from '@/modules/recibos/carga'
 import {
   agruparPorEmpleado, armarDocumentos, faltantes, revisarLote, tipoDeConcepto, TEXTO_PROBLEMA,
 } from '@/modules/recibos/lote'
@@ -85,14 +85,21 @@ export async function POST(req: Request) {
       .sort()
       .pop() ?? null
 
+    const previos = recibosPrevios.get(empleado.id) ?? []
+    // Si alguna de las copias ya está cargada, vale esa: dos exportaciones del
+    // mismo recibo tienen bytes distintos y elegir al azar haría ver como
+    // corrección algo que ya está.
+    const hash = hashQueCuenta(documento.hojas.map((h) => h.sha256), previos)
+
     const decision = decidirCarga(
-      { hash: documento.hojas[0]?.huella ?? null, reciboNumero: documento.recibo ?? null, origenAt },
-      recibosPrevios.get(empleado.id) ?? []
+      { hash, reciboNumero: documento.recibo ?? null, origenAt },
+      previos
     )
 
     return {
+      // Ruta relativa dentro de la carpeta de la empresa: el lector la abre
+      // tal cual. El nombre solo no alcanza, se repite entre corridas.
       archivo: documento.hojas[0]?.archivo ?? null,
-      corrida: manifiesto.mes,
       copias: documento.hojas.length,
       empleadoId: empleado.id,
       legajo: empleado.legajo,
@@ -100,7 +107,7 @@ export async function POST(req: Request) {
       periodo: documento.periodo,
       tipo: tipoDeConcepto(documento.concepto),
       concepto: documento.concepto ?? null,
-      hash: documento.hojas[0]?.huella ?? null,
+      hash,
       origenAt,
       ...decision,
     }
@@ -128,7 +135,7 @@ export async function POST(req: Request) {
       texto: TEXTO_ARCHIVO[r.motivo], legajo: null as number | null, personas: r.personas,
     })),
     ...revision.problemas.map((p) => ({
-      archivo: p.documento.hojas[0]?.archivo ?? null, corrida: manifiesto.mes, motivo: p.motivo,
+      archivo: p.documento.hojas[0]?.archivo ?? null, corrida: null as string | null, motivo: p.motivo,
       texto: TEXTO_PROBLEMA[p.motivo], legajo: p.documento.legajo, personas: undefined,
     })),
   ]

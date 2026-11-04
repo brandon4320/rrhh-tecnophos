@@ -199,7 +199,12 @@ export function leerManifiesto(m: Manifiesto): LecturaDelManifiesto {
 
     const p = a.personas[0]
     hojas.push({
-      archivo: a.archivo,
+      // ★ La ruta relativa, no el nombre pelado. En un mes puede haber varias
+      // corridas y el nombre del archivo individual se repite entre ellas
+      // (lleva el legajo y la fecha del período, que son los mismos). Con el
+      // nombre solo, dos archivos distintos se pisarían y el lector no sabría
+      // de qué carpeta sacar el PDF.
+      archivo: `${a.corrida}/${a.archivo}`,
       pagina: 1,
       base: m.base,
       periodo,
@@ -208,19 +213,23 @@ export function leerManifiesto(m: Manifiesto): LecturaDelManifiesto {
       cuil: p.cuil,
       nombre: p.nombre,
       concepto: p.concepto,
-      // La huella que desempata copias es la del ARCHIVO: con un PDF por
-      // liquidación, dos archivos iguales son el mismo recibo exportado dos
-      // veces.
-      huella: a.sha256,
+      // El texto, no los bytes: ver el comentario de Hoja.huella.
+      huella: p.huella,
+      sha256: a.sha256,
     })
   }
 
   return { hojas, rechazados }
 }
 
-/** La fecha del archivo de cada liquidación, para desempatar correcciones. */
+/**
+ * La fecha de cada archivo, para desempatar correcciones.
+ *
+ * La clave es la ruta relativa `corrida/archivo`, la misma que lleva la hoja:
+ * el nombre pelado se repite entre corridas del mismo mes.
+ */
 export function fechasPorArchivo(m: Manifiesto): Map<string, string | null> {
   const mapa = new Map<string, string | null>()
-  for (const a of m.archivos) mapa.set(a.archivo, a.origen_at ?? null)
+  for (const a of m.archivos) mapa.set(`${a.corrida}/${a.archivo}`, a.origen_at ?? null)
   return mapa
 }
