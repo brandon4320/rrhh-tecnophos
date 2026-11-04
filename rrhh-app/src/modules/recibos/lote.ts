@@ -6,17 +6,23 @@
 // forma de deshacerlo una vez que salió el mail.
 //
 // ────────────────────────────────────────────────────────────
-// ★ UN PDF NO ES UNA PERSONA.
+// ★ UN ARCHIVO = UNA LIQUIDACIÓN. Y SI NO LO ES, NO SE MANDA.
 //
-// Mirando lo que hay en el NAS (04/11/2026): la liquidación de octubre de ADC
-// son 44 personas en UN SOLO archivo de 44 hojas, y la de Tecnophos son 54
-// personas repartidas en 57 archivos, 108 hojas. El nombre del archivo empieza
-// con un legajo, pero ese es apenas el de la PRIMERA hoja: en octubre el nombre
-// no coincidía con el contenido en 45 de 45 casos en ADC.
+// Decisión de Agustín (04/11/2026): quien liquida va a exportar un PDF por
+// liquidación, así que este sistema NO parte archivos ni arma el recibo de
+// nadie recortando hojas de otro. Toma un documento, ve de quién es y le manda
+// el link a esa persona.
 //
-// Por eso la unidad es el DOCUMENTO —las hojas seguidas que comparten legajo y
-// número de recibo— y no el archivo. Mandar el archivo entero sería mandarle a
-// cada persona el sueldo de las otras 43.
+// Pero esa decisión vive FUERA de acá —es una configuración del sistema de
+// sueldos— y lo que había en el NAS ese mismo día era lo contrario: la
+// liquidación de octubre de ADC eran 44 personas en UN SOLO archivo de 44
+// hojas, y el legajo del nombre del archivo no coincidía con el contenido en
+// 45 de 45 casos.
+//
+// Así que la verificación se queda, no como partidor sino como ALARMA: un
+// archivo con más de una persona se rechaza y se avisa. El día que esa
+// configuración cambie o una corrida salga mal, el costo sería mandarle a cada
+// uno el sueldo de los demás, y eso no se deshace.
 // ────────────────────────────────────────────────────────────
 //
 // La identidad es el par (base de liquidación, legajo), NUNCA el legajo solo:
@@ -146,6 +152,10 @@ export interface Hoja {
  * una vez en su archivo individual y otra vez adentro de un archivo por lotes,
  * con el texto exactamente igual. No son original y duplicado: es el mismo
  * papel exportado dos veces. Por eso las copias se descartan y queda UNA.
+ *
+ * Con un PDF por liquidación esto queda casi siempre en una sola hoja, pero la
+ * deduplicación sigue haciendo falta: alcanza con que alguien vuelva a correr
+ * la exportación de un mes para que aparezcan de nuevo los mismos recibos.
  */
 export interface DocumentoLeido {
   /** Todas las copias encontradas de esta liquidación. */
