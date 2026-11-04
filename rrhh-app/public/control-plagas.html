@@ -2168,7 +2168,7 @@ const CLAVE_ENVIO = 'adc-sw-2026-k7m3';
 // Dirección /exec del servicio de Google. Con esto, un celular nuevo solo
 // necesita abrir el link: baja la configuración y ya puede mandar reportes.
 // (En Ajustes se puede poner otra dirección para pruebas.)
-const SERVICIO_URL = '';
+const SERVICIO_URL = 'https://script.google.com/macros/s/AKfycbyMT9qDgzjQeYp7yW4CW4WzcCuQyjBY8X0icVcWOwOGpcYPtEi7gqV_zpRuPapYVEby/exec';
 function servicioUrl() { return String((DB && DB.config && DB.config.gasUrl) || SERVICIO_URL || '').trim(); }
 
 function guardarConfigEnvio() {
