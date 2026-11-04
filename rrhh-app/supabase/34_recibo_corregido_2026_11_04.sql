@@ -32,11 +32,26 @@ begin;
 -- 1. El número de recibo impreso
 -- ------------------------------------------------------------
 alter table public.recibos_sueldo
-  add column if not exists recibo_numero text;
+  add column if not exists recibo_numero text,
+  add column if not exists origen_at     timestamptz;
 
 comment on column public.recibos_sueldo.recibo_numero is
   'Número de recibo que imprime la liquidación. Mismo número + distinto '
   'origen_hash = corrección de un recibo ya emitido, no una liquidación nueva.';
+
+-- ★ Cuál de las dos versiones es la buena.
+--
+-- Cuando se corrige una liquidación, en la carpeta quedan las DOS: el PDF
+-- original y el corregido. El proceso los lee a los dos en la misma corrida y
+-- sin una fecha no hay forma de saber cuál manda — decidiría el orden
+-- alfabético de los nombres de archivo, y la persona podría terminar firmando
+-- la versión vieja.
+--
+-- Es la fecha del ARCHIVO, no la de la carga: dos PDF leídos en la misma
+-- corrida tienen la misma hora de carga y eso no desempata nada.
+comment on column public.recibos_sueldo.origen_at is
+  'Fecha del archivo de origen. Entre dos recibos con el mismo número, vale el '
+  'de origen_at más nuevo.';
 
 -- Buscar "¿ya tengo este recibo de esta persona?" es lo que hace la carga por
 -- cada documento que entra. NO es único: una corrección convive con la fila

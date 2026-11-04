@@ -26,6 +26,36 @@ describe('decidirCarga', () => {
     expect(r).toEqual({ accion: 'correccion', anula: ['a'], habiaFirma: false })
   })
 
+  it('★★ el PDF VIEJO no puede pisar a la corrección por llegar después', () => {
+    // Cuando se corrige una liquidación, en la carpeta quedan las dos. El
+    // proceso lee las dos en la misma corrida: sin fecha ganaría la última en
+    // leerse y la persona podría terminar firmando la versión vieja.
+    const yaCargada = rec({ id: 'corregida', origen_hash: 'nuevo', origen_at: '2026-11-20T10:00:00Z' })
+    const llegaLaVieja = { hash: 'viejo', reciboNumero: '4821', origenAt: '2026-11-05T08:00:00Z' }
+    expect(decidirCarga(llegaLaVieja, [yaCargada])).toEqual({ accion: 'superada', porId: 'corregida' })
+  })
+
+  it('★★ y al revés, la corrección sí pisa a la vieja', () => {
+    const yaCargada = rec({ id: 'vieja', origen_hash: 'viejo', origen_at: '2026-11-05T08:00:00Z' })
+    const llegaLaNueva = { hash: 'nuevo', reciboNumero: '4821', origenAt: '2026-11-20T10:00:00Z' }
+    expect(decidirCarga(llegaLaNueva, [yaCargada]))
+      .toMatchObject({ accion: 'correccion', anula: ['vieja'] })
+  })
+
+  it('con la misma fecha exacta no se da por superada', () => {
+    // Empate: no hay con qué decidir, así que se trata como corrección y
+    // queda a la vista en el informe.
+    const yaCargada = rec({ id: 'a', origen_at: '2026-11-20T10:00:00Z' })
+    const entra = { hash: 'h2', reciboNumero: '4821', origenAt: '2026-11-20T10:00:00Z' }
+    expect(decidirCarga(entra, [yaCargada])).toMatchObject({ accion: 'correccion' })
+  })
+
+  it('una fecha ilegible no frena nada: se trata como corrección', () => {
+    const yaCargada = rec({ id: 'a', origen_at: 'cualquier cosa' })
+    const entra = { hash: 'h2', reciboNumero: '4821', origenAt: '2026-11-20T10:00:00Z' }
+    expect(decidirCarga(entra, [yaCargada])).toMatchObject({ accion: 'correccion' })
+  })
+
   it('★ si la vieja ya estaba firmada, queda avisado', () => {
     // El mail no puede decir "firmá esto": tiene que decir que lo que ya
     // firmó cambió.

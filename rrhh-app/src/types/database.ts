@@ -1238,6 +1238,7 @@ export type Database = {
           notas: string | null
           origen: string
           origen_archivo: string | null
+          origen_at: string | null
           origen_hash: string | null
           path: string
           periodo: string
@@ -1266,6 +1267,7 @@ export type Database = {
           notas?: string | null
           origen?: string
           origen_archivo?: string | null
+          origen_at?: string | null
           origen_hash?: string | null
           path: string
           periodo: string
@@ -1294,6 +1296,7 @@ export type Database = {
           notas?: string | null
           origen?: string
           origen_archivo?: string | null
+          origen_at?: string | null
           origen_hash?: string | null
           path?: string
           periodo?: string

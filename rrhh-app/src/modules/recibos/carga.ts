@@ -20,6 +20,8 @@ export interface ReciboExistente {
   origen_hash: string | null
   recibo_numero: string | null
   estado: string
+  /** Fecha del archivo del que salió. Es lo que desempata dos versiones. */
+  origen_at?: string | null
 }
 
 export type AccionCarga =
@@ -29,6 +31,14 @@ export type AccionCarga =
   | { accion: 'nueva' }
   /** Reemplaza a una ya emitida: se anulan las viejas y se pide firmar de nuevo. */
   | { accion: 'correccion'; anula: string[]; habiaFirma: boolean }
+  /** Es la versión VIEJA de algo que ya se corrigió: no se carga ni se avisa. */
+  | { accion: 'superada'; porId: string }
+
+function enMilis(f: string | null | undefined): number | null {
+  if (!f) return null
+  const t = new Date(f).getTime()
+  return Number.isFinite(t) ? t : null
+}
 
 /**
  * Qué hacer con el documento que entra.
@@ -38,7 +48,7 @@ export type AccionCarga =
  * que hace que volver a correr el proceso sea inofensivo.
  */
 export function decidirCarga(
-  entra: { hash: string | null; reciboNumero: string | null },
+  entra: { hash: string | null; reciboNumero: string | null; origenAt?: string | null },
   existentes: readonly ReciboExistente[]
 ): AccionCarga {
   const hash = (entra.hash ?? '').trim()
@@ -57,6 +67,21 @@ export function decidirCarga(
     (r) => (r.recibo_numero ?? '').trim() === numero && r.estado !== 'anulado'
   )
   if (!mismas.length) return { accion: 'nueva' }
+
+  // ★ Cuál de las dos versiones es la buena.
+  //
+  // Cuando se corrige una liquidación, en la carpeta quedan las DOS: el PDF
+  // original y el corregido. El proceso los lee a los dos en la misma corrida,
+  // así que sin fecha el que llega último gana — y el orden de los archivos
+  // decidiría si la persona firma la versión corregida o la vieja.
+  const entraEn = enMilis(entra.origenAt)
+  if (entraEn !== null) {
+    const masNueva = mismas.find((r) => {
+      const suya = enMilis(r.origen_at)
+      return suya !== null && suya > entraEn
+    })
+    if (masNueva) return { accion: 'superada', porId: masNueva.id }
+  }
 
   return {
     accion: 'correccion',
