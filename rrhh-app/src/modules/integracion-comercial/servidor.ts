@@ -5,8 +5,8 @@
 // component. El recorte de qué se muestra está en ./reglas.ts.
 // ============================================================
 import 'server-only'
-import { createHash, timingSafeEqual } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { tokenDeIntegracionValido } from '@/lib/integraciones'
 import { CARPETAS_MENSUALES, esCarpetaMensual, esDeEmpresa, marcaDe, slugsDe, ultimosPeriodos, type CarpetaMensual, type Marca } from './reglas'
 
 export type Admin = ReturnType<typeof createAdminClient>
@@ -16,15 +16,10 @@ export type Admin = ReturnType<typeof createAdminClient>
  * "token inválido": lanza, para responder 503 y no hacer rotar el token en vano.
  */
 export async function tokenValido(admin: Admin, req: Request): Promise<boolean> {
-  const auth = req.headers.get('authorization') ?? ''
-  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
-  if (token.length < 32) return false
-  const { data, error } = await admin.from('integraciones').select('token_hash').eq('clave', 'comercial').maybeSingle()
-  if (error) throw new Error(`integraciones: ${error.message}`)
-  if (!data?.token_hash) throw new Error('integraciones sin el hash de "comercial"')
-  const a = Buffer.from(createHash('sha256').update(token).digest('hex'), 'utf8')
-  const b = Buffer.from(data.token_hash, 'utf8')
-  return a.length === b.length && timingSafeEqual(a, b)
+  // La implementación vive en lib/integraciones.ts, compartida con el resto de
+  // las integraciones máquina a máquina: una sola copia del código que decide
+  // quién entra.
+  return tokenDeIntegracionValido(admin, req, 'comercial')
 }
 
 export interface ArchivoDoc { id: string; nombre: string; mime: string | null; tamano: number | null }

@@ -245,10 +245,15 @@ export const TEXTO_PROBLEMA: Record<MotivoProblema, string> = {
   empleado_sin_mail: 'La persona no tiene mail cargado.',
 }
 
-export interface Asignado { documento: DocumentoLeido; empleado: EmpleadoPadron }
+export interface Asignado {
+  documento: DocumentoLeido
+  empleado: EmpleadoPadron
+  /** El CUIL confirmó quién es, pero el nombre está escrito distinto. */
+  nombreDistinto?: boolean
+}
 export interface Problema { documento: DocumentoLeido; motivo: MotivoProblema; empleado?: EmpleadoPadron }
 export type Resolucion =
-  | { ok: true; empleado: EmpleadoPadron }
+  | { ok: true; empleado: EmpleadoPadron; nombreDistinto?: boolean }
   | { ok: false; motivo: MotivoProblema; empleado?: EmpleadoPadron }
 
 /** Palabras del nombre, comparables: sin acentos, sin signos, sin "de"/"la". */
@@ -321,17 +326,30 @@ export function resolverDestino(doc: DocumentoLeido, padron: readonly EmpleadoPa
   // El CUIL es la verificación fuerte: no se repite y no depende de cómo esté
   // escrito el nombre.
   const cuilLeido = soloDigitos(doc.cuil)
-  if (cuilLeido.length === 11 && cuilLeido !== cuilEmpleado) {
+  const cuilConfirma = cuilLeido.length === 11 && cuilLeido === cuilEmpleado
+  if (cuilLeido.length === 11 && !cuilConfirma) {
     return { ok: false, motivo: 'cuil_no_coincide', empleado }
   }
-  if (doc.nombre && !mismaPersona(doc.nombre, nombreCompleto(empleado))) {
+
+  // ★ El nombre es la verificación de RESPALDO, no una segunda barrera.
+  //
+  // Si el CUIL ya confirmó quién es, el nombre escrito distinto no prueba
+  // nada en contra: pasa todo el tiempo —apellido de casada, un segundo
+  // nombre que figura en un lado y no en el otro, una letra cambiada— y
+  // frenar por eso deja a una persona sin su recibo a cambio de nada. Se
+  // anota para que la oficina corrija el dato, y sigue.
+  //
+  // Esto apareció corriendo octubre de verdad: un recibo con el nombre
+  // escrito distinto y el CUIL correcto quedaba retenido sin motivo.
+  const nombreDistinto = !!doc.nombre && !mismaPersona(doc.nombre, nombreCompleto(empleado))
+  if (nombreDistinto && !cuilConfirma) {
     return { ok: false, motivo: 'nombre_no_coincide', empleado }
   }
 
   // Sin mail no hay a dónde mandarle el link.
   if (!empleado.email) return { ok: false, motivo: 'empleado_sin_mail', empleado }
 
-  return { ok: true, empleado }
+  return nombreDistinto ? { ok: true, empleado, nombreDistinto } : { ok: true, empleado }
 }
 
 /**
@@ -375,7 +393,7 @@ export function revisarLote(
 
   for (const documento of documentos) {
     const r = resolverDestino(documento, padron)
-    if (r.ok) asignados.push({ documento, empleado: r.empleado })
+    if (r.ok) asignados.push({ documento, empleado: r.empleado, nombreDistinto: r.nombreDistinto })
     else problemas.push({ documento, motivo: r.motivo, empleado: r.empleado })
   }
 
