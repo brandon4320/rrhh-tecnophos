@@ -260,6 +260,10 @@
   /* agregar estaciones al plano */
   .tab-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
   .tab-acciones .ghost { width: auto; flex: 1 1 260px; color: var(--ink); }
+  .tab-acciones .ghost[hidden] { display: none; }
+  .tab-mes { display: flex; gap: 8px; flex: 1 1 340px; }
+  .tab-mes select { width: auto; flex: none; }
+  .tab-fuente { font-size: 13.5px; color: var(--ink-3); margin: -4px 0 12px; }
   .ed-botones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
   @media (max-width: 640px) { .ed-botones { grid-template-columns: 1fr 1fr; } }
   .ed-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 14px; border-radius: 14px; border: 3px solid transparent; text-align: left; min-height: 74px; }
@@ -631,9 +635,11 @@
         <button class="chip sm" data-s="12" onclick="tableroSemanas(this)">12 semanas</button>
       </span><button class="chip sm" id="tabEjemplo" onclick="tableroEjemplo()">Datos de ejemplo</button></div>
     </div>
-    <div class="tab-acciones" id="tabAcciones" hidden>
-      <button class="ghost" onclick="abrirEditorPlano()">＋ Agregar estaciones al plano</button>
+    <div class="tab-acciones">
+      <span class="tab-mes"><select id="tabMes" aria-label="Mes del resumen"></select><button class="ghost" onclick="abrirResumenMensual()">Resumen mensual en PDF</button></span>
+      <button class="ghost" id="tabAcciones" onclick="abrirEditorPlano()" hidden>＋ Agregar estaciones al plano</button>
     </div>
+    <p class="tab-fuente" id="tabFuente"></p>
     <div class="demo-banner" id="tabDemoBanner" hidden><span>ⓘ</span><span>Estás viendo datos de ejemplo para la presentación. No son registros reales y no se guardan.</span></div>
     <div id="tabCuerpo"></div>
     <button class="backlink" onclick="go('scr-quien')">‹ Volver</button>
@@ -711,6 +717,16 @@
         <input type="text" id="nuevoProducto" placeholder="Nombre del producto" style="flex:2; min-width:200px">
         <input type="text" id="nuevoProductoU" placeholder="Unidad (g, u., ml)" style="flex:1; min-width:120px">
         <button class="mini-btn" style="flex:none" onclick="agregarProducto()">Agregar</button>
+      </div>
+    </div>
+
+    <div class="section-title"><h2>Datos centrales</h2></div>
+    <div class="card">
+      <p id="centralEstado" style="font-size:15px; font-weight:600; margin-bottom:8px"></p>
+      <p style="color:var(--ink-3); font-size:13.5px; margin-bottom:12px">Plantas, sectores, operarios, productos, estaciones del plano y números de WhatsApp se comparten entre todos los equipos: un celular nuevo solo necesita abrir el link. Las tareas de cada equipo se suben solas a la planilla "Control de plagas - datos" en Google Drive.</p>
+      <div class="stack">
+        <button class="ghost" onclick="sincronizarAhora()">Sincronizar ahora</button>
+        <button class="ghost" onclick="compartirConfig()">Compartir esta configuración con todos los equipos</button>
       </div>
     </div>
 
@@ -836,7 +852,7 @@
       style="margin-top:14px; font-size:24px; text-align:center; letter-spacing:8px">
     <p class="field-err" id="pinError" style="margin-top:8px">PIN incorrecto.</p>
     <div class="stack">
-      <button class="primary" onclick="confirmarPin()">Entrar</button>
+      <button class="primary" id="pinOk" onclick="confirmarPin()">Entrar</button>
       <button class="ghost" onclick="cerrarPin()">Cancelar</button>
     </div>
   </div>
@@ -939,7 +955,11 @@ function migrar(db) {
   if (db.config.waSupervisor === undefined) db.config.waSupervisor = '';
   if (!db.config.productos) db.config.productos = PRODUCTOS_INICIALES.map(p => Object.assign({}, p));
   if (!db.migraciones) db.migraciones = {};
-  if (!db.estExtra) db.estExtra = {};   // estaciones que agregó el supervisor, por plano
+  if (!db.estExtra) db.estExtra = {};
+  if (!db.sync) db.sync = {};
+  if (!db.sync.cfg) db.sync.cfg = {};      // por clave de config: { h: hash sincronizado, at: fecha en el servicio }
+  if (!db.sync.regs) db.sync.regs = {};    // por tarea: hash de lo último que se subió
+  if (!db.sync.equipo) db.sync.equipo = 'eq-' + Math.random().toString(36).slice(2, 8);   // estaciones que agregó el supervisor, por plano
   if (!db.plantas || !db.plantas.length) db.plantas = [{ id: 'p1', nombre: 'Frigorífico Cabildo', mail: '', empresa: 'ADC SRL' }];
   db.plantas.forEach(p => { if (p.mail === undefined) p.mail = ''; if (!p.empresa) p.empresa = 'ADC SRL'; });
   db.sectores.forEach(s => { if (!s.plantaId) s.plantaId = db.plantas[0].id; });
@@ -1016,9 +1036,14 @@ function cargar() {
     DB = migrar(DB);
   } catch (e) { DB = datosIniciales(); }
 }
-function persistir() {
+function guardarLocal() {
   try { localStorage.setItem(CLAVE, JSON.stringify(DB)); }
   catch (e) { toast('No se pudo guardar en el dispositivo. Exportá una copia de seguridad.'); }
+}
+// Guarda en la tablet y, si hay servicio, sube los cambios al rato.
+function persistir() {
+  guardarLocal();
+  programarSync();
 }
 
 /* ============ estado de sesión ============ */
@@ -1057,10 +1082,18 @@ function pedirPin(cb) {
   $('pinVeil').classList.add('on');
   setTimeout(() => $('pinInput').focus(), 120);
 }
-function confirmarPin() {
+async function confirmarPin() {
   const v = $('pinInput').value;
-  const ok = v === (DB.config.adminPin || '1234') || (pinModo === 'supervisor' && v === (DB.config.supPin || '1234'));
+  const btn = $('pinOk');
+  if (btn.disabled) return;
+  btn.disabled = true; btn.textContent = 'Verificando…';
+  let r;
+  try { r = await rolDePin(v); } finally { btn.disabled = false; btn.textContent = 'Entrar'; }
+  const ok = r.rol === 'admin' || (pinModo === 'supervisor' && r.rol === 'sup');
+  if (r.error) toast(r.error);
   if (ok) {
+    if (!rolSesion || r.rol === 'admin') { pinSesion = v; rolSesion = r.rol; }
+    if (rolSesion === 'admin' && central.estado === 'sin-config') subirConfig(true).then(renderEstadoCentral);
     if (pinModo === 'admin') adminOk = true;
     $('pinVeil').classList.remove('on');
     const cb = pinCb; pinCb = null;
@@ -1073,10 +1106,11 @@ function confirmarPin() {
 }
 function cerrarPin() { $('pinVeil').classList.remove('on'); pinCb = null; }
 function abrirAjustes() { pedirPin(() => { renderAjustes(); go('scr-ajustes'); }); }
-function cambiarPin() {
+async function cambiarPin() {
   const nuevo = prompt('Nuevo PIN de administrador (4 a 8 dígitos):');
   if (nuevo === null) return;
   if (!/^\d{4,8}$/.test(nuevo)) { toast('El PIN debe tener entre 4 y 8 dígitos'); return; }
+  if (!(await cambiarPinServicio('admin', nuevo))) return;
   DB.config.adminPin = nuevo;
   persistir();
   toast('PIN actualizado');
@@ -2131,6 +2165,11 @@ function compartirPalomas(p) { compartirTexto(textoPalomas(p)); }
 
 /* ============ envío automático por mail ============ */
 const CLAVE_ENVIO = 'adc-sw-2026-k7m3';
+// Dirección /exec del servicio de Google. Con esto, un celular nuevo solo
+// necesita abrir el link: baja la configuración y ya puede mandar reportes.
+// (En Ajustes se puede poner otra dirección para pruebas.)
+const SERVICIO_URL = '';
+function servicioUrl() { return String((DB && DB.config && DB.config.gasUrl) || SERVICIO_URL || '').trim(); }
 
 function guardarConfigEnvio() {
   DB.config.gasUrl = $('cfgGasUrl').value.trim();
@@ -2139,6 +2178,7 @@ function guardarConfigEnvio() {
   DB.config.waSupervisor = $('cfgWaSup').value.replace(/[^\d]/g, '');
   persistir();
   toast('Configuración de envío guardada');
+  bajarConfig().then(() => { renderEstadoCentral(); programarSync(); });
 }
 
 async function probarConexion() {
@@ -2164,9 +2204,9 @@ async function enviarReporte(tipo, obj, boton) {
   const planta = DB.plantas.find(p => p.id === obj.plantaId)
     || DB.plantas.find(p => obj.plantaNombre && p.nombre === obj.plantaNombre);
   const para = (planta && planta.mail) || DB.config.mailDestino;
-  if (!DB.config.gasUrl || !para) {
+  if (!servicioUrl() || !para) {
     confirmar('Falta configurar el envío',
-      !DB.config.gasUrl
+      !servicioUrl()
         ? 'Cargá la dirección del servicio de Google en Ajustes → Envío automático de reportes.'
         : `La planta ${obj.plantaNombre || ''} no tiene casilla de mail propia y tampoco hay casilla por defecto. Cargala en Ajustes.`,
       () => abrirAjustes(), 'Ir a Ajustes');
@@ -2177,7 +2217,7 @@ async function enviarReporte(tipo, obj, boton) {
   const payload = { clave: CLAVE_ENVIO, tipo, para, empresa: empresaDe(obj) };
   try {
     payload[tipo] = await objetoParaEnvio(obj);
-    const res = await fetch(DB.config.gasUrl, {
+    const res = await fetch(servicioUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
@@ -2580,6 +2620,7 @@ function renderAjustes() {
   $('cfgWa').value = DB.config.waNumero || '';
   $('cfgWaSup').value = DB.config.waSupervisor || '';
   renderProductos();
+  renderEstadoCentral();
 
   const totReg = DB.registros.length + DB.ordenes.length + DB.monitoreos.length + DB.palomas.length;
   $('pruebasResumenTxt').textContent = totReg
@@ -3413,7 +3454,7 @@ function infEstacionBadge(t, n, nombre) {
     <td style="padding-left:8px; font-size:12.5px; font-weight:700; color:${INF.ink}; white-space:nowrap">${esc(nombre)}</td></tr></table>`;
 }
 async function infFotoImg(id, anchoPdf, anchoPantalla, pdf) {
-  const src = await fotoLeer(id);
+  const src = String(id).indexOf('drive:') === 0 ? fotosMem.get(id) : await fotoLeer(id);
   if (!src) return '';
   if (!pdf) return `<img src="${src}" alt="Foto" style="width:${anchoPantalla}px; max-width:100%; height:auto; border-radius:8px; display:block">`;
   const a = await achicarFoto(src, anchoPdf);
@@ -3452,9 +3493,9 @@ function infObs(titulo, txt) {
   if (!txt) return '';
   return infSeccion(titulo) + `<div style="font-family:Arial, Helvetica, sans-serif; margin:0 20px; padding:12px 14px; background:${INF.soft}; border-radius:10px; font-size:13px; color:${INF.ink}; line-height:1.45">${esc(txt)}</div>`;
 }
-async function infGaleria(fotos, pdf) {
+async function infGaleria(fotos, pdf, titulo) {
   if (!fotos.length) return '';
-  let h = infSeccion('Fotos del recorrido', 'Cada foto quedó sellada con fecha, hora, estación y ubicación GPS.');
+  let h = infSeccion(titulo || 'Fotos del recorrido', 'Cada foto quedó sellada con fecha, hora, estación y ubicación GPS.');
   h += `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate; border-spacing:12px; font-family:Arial, Helvetica, sans-serif; padding:0 8px">`;
   for (let i = 0; i < fotos.length; i += 2) {
     h += '<tr>';
@@ -3678,11 +3719,13 @@ async function informeHTML(tipo, obj, modo) {
   if (tipo === 'monitoreo') h = await informeMonitoreo(obj, pdf);
   else if (tipo === 'palomas') h = await informePalomas(obj, pdf);
   else if (tipo === 'orden') h = await informeOrden(obj, pdf);
+  else if (tipo === 'mensual') h = await informeMensual(obj, pdf);
   else h = await informeRegistro(obj, pdf);
   h += `<div style="font-family:Arial, Helvetica, sans-serif; padding:22px 20px 20px; font-size:11px; color:${INF.ink3}">Generado por el sistema de control de plagas de ADC Fumigación el ${fFecha(hoyISO(), true)} h</div>`;
   return h;
 }
 function tituloInforme(tipo, obj) {
+  if (tipo === 'mensual') return 'Resumen de ' + nombreMes(obj.mes);
   if (tipo === 'monitoreo') return 'Monitoreo de trampas UV';
   if (tipo === 'palomas') return 'Jaulas para palomas';
   if (tipo === 'orden') return 'Servicio esporádico N° ' + obj.numero;
@@ -3692,7 +3735,7 @@ function tituloInforme(tipo, obj) {
 let informeActual = null;
 async function abrirInforme(tipo, obj, volver) {
   informeActual = { tipo, obj, volver: volver || 'scr-menu' };
-  $('infEyebrow').textContent = (obj.plantaNombre || '') + ' · ' + fFecha(obj.fecha, true);
+  $('infEyebrow').textContent = (obj.plantaNombre || '') + ' · ' + (tipo === 'mensual' ? 'Resumen mensual' : fFecha(obj.fecha, true));
   $('infTitle').textContent = 'Informe · ' + tituloInforme(tipo, obj);
   $('infBody').innerHTML = '<p class="lead">Armando el informe…</p>';
   const btn = $('infEnviar');
@@ -3713,6 +3756,8 @@ function volverDeInforme() {
   } else go(v);
 }
 function textoInforme(tipo, obj) {
+  if (tipo === 'mensual') return [`*Resumen mensual · ${nombreMes(obj.mes)}*`, obj.plantaNombre || '', '',
+    obj.informeUrl ? '📄 Resumen con gráficos, arreglos, fotos y plano: ' + obj.informeUrl : 'Resumen del mes de control de plagas.'].join('\n');
   const l = [`*Informe de tarea · ${tituloInforme(tipo, obj)}*`, `${obj.plantaNombre || ''}`, `${fFecha(obj.fecha, true)} · ${obj.operario || ''}`, ''];
   if (tipo === 'registro') {
     const filas = filasRegistro(obj);
@@ -3750,7 +3795,7 @@ async function enviarInforme(btn) {
   if (!informeActual) return;
   const { tipo, obj } = informeActual;
   if (obj.informeUrl) { abrirWhatsAppInforme(tipo, obj); return; }
-  if (!DB.config.gasUrl) {
+  if (!servicioUrl()) {
     confirmar('Falta configurar el envío', 'Para mandar el informe en PDF hace falta la dirección del servicio de Google (Ajustes → Envío automático). ¿Querés mandar solo el resumen por WhatsApp?', () => abrirWhatsAppInforme(tipo, obj), 'Mandar el resumen');
     return;
   }
@@ -3759,14 +3804,19 @@ async function enviarInforme(btn) {
   try {
     const titulo = `Informe ${tituloInforme(tipo, obj)} - ${obj.plantaNombre || ''} - ${fFecha(obj.fecha).replace(/\//g, '-')}`;
     const html = documentoInforme(await informeHTML(tipo, obj, 'pdf'), titulo);
-    const res = await fetch(DB.config.gasUrl, {
+    const cuerpoInforme = { clave: CLAVE_ENVIO, tipo: 'informe', nombre: titulo + '.pdf', html };
+    // La planilla oficial también para el supervisor, aunque el mail a la planta no haya salido.
+    if (['registro', 'orden', 'monitoreo'].includes(tipo) && !obj.pdfUrl && !faltanFirmas(obj))
+      cuerpoInforme.planilla = { tipo, obj: await objetoParaEnvio(obj) };
+    const res = await fetch(servicioUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ clave: CLAVE_ENVIO, tipo: 'informe', nombre: titulo + '.pdf', html }),
+      body: JSON.stringify(cuerpoInforme),
     });
     const j = await res.json();
     if (!j || !j.ok) throw new Error((j && j.error) || 'respuesta inválida');
     if (typeof j.pdfUrl === 'string' && j.pdfUrl.indexOf('https://drive.google.com/') === 0) obj.informeUrl = j.pdfUrl;
+    if (typeof j.planillaUrl === 'string' && j.planillaUrl.indexOf('https://drive.google.com/') === 0) obj.pdfUrl = j.planillaUrl;
     persistir();
     btn.disabled = false;
     btn.textContent = 'Abrir WhatsApp para enviarlo ›';
@@ -3777,6 +3827,492 @@ async function enviarInforme(btn) {
       confirmar('Falta actualizar el servicio de Google', 'El servicio todavía no tiene la versión que arma el informe en PDF (hay que implementarla como "Nueva versión"). ¿Mandar por ahora solo el resumen por WhatsApp?', () => abrirWhatsAppInforme(tipo, obj), 'Mandar el resumen');
     } else toast('No se pudo generar el informe. Revisá la conexión e intentá de nuevo.');
   }
+}
+
+/* ============ datos centrales (servicio de Google + planilla) ============ */
+// La configuración (plantas, sectores, operarios, productos, estaciones
+// agregadas y WhatsApp) y todas las tareas quedan en la planilla "Control de
+// plagas - datos" del servicio de Google. Cada celular baja la configuración
+// al abrir la app (alcanza con mandarle el link) y sube sus tareas solo.
+const CLAVES_CONFIG = ['operarios', 'plantas', 'sectores', 'productos', 'estExtra', 'envio'];
+let pinSesion = null, rolSesion = null;   // PIN validado en esta sesión (nunca se guarda)
+let central = { estado: 'sin-servicio', cuando: null, error: '', viejo: false };
+let syncTimer = null, sincronizando = false, syncOtraVez = false, ultimaBajada = 0;
+
+async function llamar(datos) {
+  const url = servicioUrl();
+  if (!url) throw new Error('sin servicio');
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ clave: CLAVE_ENVIO }, datos)),
+  });
+  return res.json();
+}
+function hashTxt(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36) + s.length.toString(36);
+}
+function valorConfig(k) {
+  if (k === 'envio') return { waSupervisor: DB.config.waSupervisor || '', waNumero: DB.config.waNumero || '', mailDestino: DB.config.mailDestino || '' };
+  if (k === 'productos') return DB.config.productos || [];
+  return DB[k] == null ? null : DB[k];
+}
+function ponerConfig(k, v) {
+  if (v == null) return;
+  if (k === 'envio') {
+    DB.config.waSupervisor = v.waSupervisor || '';
+    DB.config.waNumero = v.waNumero || '';
+    DB.config.mailDestino = v.mailDestino || '';
+  } else if (k === 'productos') DB.config.productos = v;
+  else DB[k] = v;
+}
+const hashConfig = k => hashTxt(JSON.stringify(valorConfig(k)));
+
+// Baja la configuración del servicio y la aplica (salvo lo que este equipo
+// cambió con PIN y todavía no subió).
+async function bajarConfig() {
+  if (!servicioUrl()) { central.estado = 'sin-servicio'; return false; }
+  ultimaBajada = Date.now();
+  let j;
+  try {
+    const url = servicioUrl();
+    const res = await fetch(url + (url.indexOf('?') === -1 ? '?' : '&') + 'accion=config&clave=' + encodeURIComponent(CLAVE_ENVIO));
+    j = await res.json();
+  } catch (e) { central.estado = 'error'; central.error = 'Sin conexión con el servicio'; return false; }
+  central.viejo = !!(j && j.ok && j.config === undefined);   // servicio sin la versión 2: no se intenta sincronizar
+  if (!j || !j.ok || !j.config) {
+    central.estado = 'error';
+    central.error = j && j.config === undefined && j.ok ? 'El servicio todavía no tiene la versión con datos centrales' : ((j && j.error) || 'Respuesta inválida');
+    return false;
+  }
+  const cfg = j.config;
+  if (!Object.keys(cfg.valores || {}).length) {
+    central.estado = 'sin-config';
+    if (rolSesion === 'admin') await subirConfig(true);
+    return true;
+  }
+  let cambio = false;
+  CLAVES_CONFIG.forEach(k => {
+    if (!(k in cfg.valores)) return;
+    const loc = DB.sync.cfg[k] || {};
+    const pendiente = loc.h && hashConfig(k) !== loc.h;
+    if (pendiente && pinSesion) return;                 // lo sube subirConfig
+    if (!pendiente && loc.at === cfg.actualizado[k]) return;
+    ponerConfig(k, cfg.valores[k]);
+    DB.sync.cfg[k] = { h: null, at: cfg.actualizado[k] };
+    cambio = true;
+  });
+  if (cambio) {
+    DB = migrar(DB);   // completa lo que agregue una versión nueva de la app
+    CLAVES_CONFIG.forEach(k => { if (DB.sync.cfg[k] && DB.sync.cfg[k].h === null) DB.sync.cfg[k].h = hashConfig(k); });
+    planoVer++;
+    guardarLocal();
+    refrescarListas();
+  }
+  central.estado = 'ok'; central.cuando = new Date(); central.error = '';
+  return true;
+}
+// Sube lo que se cambió con PIN en este equipo (o todo, la primera vez).
+async function subirConfig(todo) {
+  if (!servicioUrl() || !pinSesion) return;
+  const cambios = {};
+  CLAVES_CONFIG.forEach(k => {
+    const loc = DB.sync.cfg[k];
+    if (todo ? rolSesion === 'admin' || ['estExtra', 'sectores'].includes(k) : (loc && loc.h && hashConfig(k) !== loc.h)) cambios[k] = valorConfig(k);
+  });
+  if (!Object.keys(cambios).length) return;
+  try {
+    const j = await llamar({ accion: 'config-guardar', pin: pinSesion, cambios });
+    if (!j || !j.ok) throw new Error((j && j.error) || 'respuesta inválida');
+    (j.guardadas || []).forEach(k => { DB.sync.cfg[k] = { h: hashConfig(k), at: j.config.actualizado[k] }; });
+    central.estado = 'ok'; central.cuando = new Date();
+    guardarLocal();
+  } catch (e) { central.estado = 'error'; central.error = String(e.message || e); }
+}
+
+// ---------- tareas ----------
+const CLASES_SYNC = [['registros', 'registro'], ['ordenes', 'orden'], ['monitoreos', 'monitoreo'], ['palomas', 'palomas']];
+function copiaCentral(o) {
+  const c = Object.assign({}, o);
+  c.firmas = { op: !!firmaOpDe(o), sup: !!firmaSupDe(o) };
+  delete c.firmaOp; delete c.firmaSup; delete c.firma;
+  return c;
+}
+function resumenCorto(clase, o) {
+  try {
+    if (clase === 'registro') {
+      const filas = filasRegistro(o);
+      const nov = filas.filter(f => f.k !== 'B').length;
+      return `${filas.length}/${(o.cebosTotal || 0) + (o.uvTotal || 0)} estaciones · ${nov} con novedad`;
+    }
+    if (clase === 'monitoreo') return `${Object.keys(o.equipos || {}).length}/${(o.ubicaciones || []).length} equipos · ${Object.values(o.equipos || {}).reduce((a, d) => a + insectosDe(d), 0)} insectos`;
+    if (clase === 'palomas') return o.capturadas ? `${o.capturadas} palomas capturadas` : 'Sin capturas';
+    return `${o.tipo || ''} · ${(o.sectores || []).join(', ')}`;
+  } catch (e) { return ''; }
+}
+function pendientesDeSubir() {
+  const out = [];
+  const limite = Date.now() - 400 * 86400000;
+  CLASES_SYNC.forEach(([lista, clase]) => (DB[lista] || []).forEach(o => {
+    if (!o || !o.id || o.ejemplo || new Date(o.fecha) < limite) return;
+    if (DB.sync.regs[o.id] !== hashTxt(JSON.stringify(o))) out.push({ clase, o });
+  }));
+  return out;
+}
+async function subirFotos(o) {
+  for (const d of Object.values(o.det || {})) {
+    if (!d || !d.foto || d.fotoDrive) continue;
+    const src = await fotoLeer(d.foto);
+    if (!src) continue;
+    const a = await achicarFoto(src, 1280);
+    if (!a) continue;
+    const j = await llamar({ accion: 'foto', id: d.foto, dataUrl: a.src });
+    if (j && j.ok && j.fileId) d.fotoDrive = j.fileId;
+    else throw new Error((j && j.error) || 'no se pudo subir la foto');
+  }
+}
+async function subirRegistros() {
+  const pend = pendientesDeSubir();
+  for (let i = 0; i < pend.length; i += 8) {
+    const lote = pend.slice(i, i + 8);
+    for (const p of lote) await subirFotos(p.o);
+    const items = lote.map(p => ({ clase: p.clase, obj: copiaCentral(p.o), tarea: tituloInforme(p.clase, p.o), resumen: resumenCorto(p.clase, p.o), equipo: DB.sync.equipo }));
+    const j = await llamar({ accion: 'registros', items });
+    if (!j || !j.ok) throw new Error((j && j.error) || 'respuesta inválida');
+    const ok = new Set(j.ids || []);
+    lote.forEach(p => { if (ok.has(String(p.o.id))) DB.sync.regs[p.o.id] = hashTxt(JSON.stringify(p.o)); });
+    guardarLocal();
+  }
+  return pend.length;
+}
+async function sincronizar() {
+  if (!servicioUrl() || central.viejo) return;
+  if (sincronizando) { syncOtraVez = true; return; }
+  sincronizando = true;
+  try {
+    await subirConfig(false);
+    await subirRegistros();
+    if (central.estado !== 'error') { central.estado = central.estado === 'sin-config' ? 'sin-config' : 'ok'; central.cuando = new Date(); }
+  } catch (e) {
+    central.estado = 'error'; central.error = String(e.message || e);
+  } finally {
+    sincronizando = false;
+    if ($('scr-ajustes').classList.contains('on')) renderEstadoCentral();
+    if (syncOtraVez) { syncOtraVez = false; programarSync(); }
+  }
+}
+function programarSync() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(sincronizar, 1500);
+}
+
+// Después de bajar la configuración: refresca las listas sin cortar una tarea en curso.
+function refrescarListas() {
+  const actual = (document.querySelector('.screen.on') || {}).id;
+  try {
+    renderNombres();
+    if (['scr-planta', 'scr-quien'].includes(actual)) renderPlantas();
+    if (plantaActual) plantaActual = DB.plantas.find(p => p.id === plantaActual.id) || plantaActual;
+    if (['scr-sector', 'scr-menu', 'scr-quien', 'scr-planta'].includes(actual)) renderSectores();
+    if (actual === 'scr-menu') renderMenu();
+    if (actual === 'scr-ajustes') renderAjustes();
+  } catch (e) { /* pantalla sin datos todavía */ }
+}
+
+// ---------- PIN contra el servicio ----------
+// Si hay servicio, el PIN se valida allá (el de la tablet queda de respaldo
+// sin conexión). La primera vez que el servicio no tiene PIN, se carga el
+// que ya usaba esta tablet.
+async function rolDePin(v) {
+  const local = v === (DB.config.adminPin || '1234') ? 'admin' : (v === (DB.config.supPin || '1234') ? 'sup' : null);
+  if (!servicioUrl()) return { rol: local };
+  try {
+    const j = await llamar({ accion: 'pin', pin: v });
+    if (j && j.ok) return { rol: j.rol, servidor: true };
+    if (j && /desconocid/i.test(String(j.error))) return { rol: local };   // servicio sin la versión 2
+    if (j && (j.sinAdmin || j.sinSup)) {
+      const carga = local === 'admin' && j.sinAdmin ? { admin: v } : (local === 'sup' && j.sinSup ? { sup: v } : null);
+      if (carga) { llamar(Object.assign({ accion: 'pin-inicial' }, carga)).catch(() => {}); return { rol: local, servidor: true }; }
+    }
+    return { rol: null, error: j && j.error && /Demasiados/.test(j.error) ? j.error : null, servidor: true };
+  } catch (e) { return { rol: local }; }
+}
+async function cambiarPinServicio(rol, nuevo) {
+  if (!servicioUrl() || !pinSesion) return true;
+  try {
+    const j = await llamar({ accion: 'pin-cambiar', pin: pinSesion, rol, nuevo });
+    if (j && j.ok) { if (rolSesion === rol || (rol === 'admin')) { if (rolSesion === rol) pinSesion = nuevo; } return true; }
+    toast((j && j.error) || 'El servicio no aceptó el cambio de PIN');
+    return false;
+  } catch (e) { toast('Sin conexión: el PIN cambió solo en esta tablet'); return true; }
+}
+
+// ---------- estado en Ajustes ----------
+function renderEstadoCentral() {
+  const el = $('centralEstado');
+  if (!el) return;
+  const pend = pendientesDeSubir().length;
+  let txt;
+  if (!servicioUrl()) txt = 'Falta la dirección del servicio de Google (abajo, en "Envío automático").';
+  else if (central.estado === 'sin-config') txt = 'El servicio todavía no tiene la configuración. Tocá "Compartir esta configuración" para que la usen todos los equipos.';
+  else if (central.estado === 'error') txt = 'No se pudo sincronizar: ' + central.error + '.';
+  else if (central.estado === 'ok') txt = 'Conectado. Última sincronización: ' + (central.cuando ? fHora(central.cuando) : '—') + '.';
+  else txt = 'Conectando…';
+  if (servicioUrl() && !central.viejo)
+    txt += pend ? ` ${pend} ${pend === 1 ? 'tarea pendiente' : 'tareas pendientes'} de subir.` : ' Todas las tareas de esta tablet están subidas.';
+  el.textContent = txt;
+  el.style.color = central.estado === 'error' ? 'var(--bad)' : 'var(--ink-2)';
+}
+async function compartirConfig() {
+  if (!servicioUrl()) { toast('Primero cargá la dirección del servicio'); return; }
+  if (rolSesion !== 'admin') { toast('Hace falta el PIN de administrador'); return; }
+  toast('Compartiendo la configuración…');
+  await subirConfig(true);
+  renderEstadoCentral();
+  toast(central.estado === 'error' ? 'No se pudo: ' + central.error : 'Listo ✓ Los demás equipos la toman al abrir la app');
+}
+async function sincronizarAhora() {
+  toast('Sincronizando…');
+  await bajarConfig();
+  await sincronizar();
+  renderEstadoCentral();
+  if (central.estado !== 'error') toast('Sincronizado ✓');
+}
+
+// ---------- datos de todos los equipos para el tablero y el resumen ----------
+const centralCache = {};   // plantaId -> { items, cuando, desde }
+async function datosCentrales(planta, desde, hasta) {
+  if (!servicioUrl() || !pinSesion) return null;
+  try {
+    const j = await llamar({ accion: 'datos', pin: pinSesion, plantaId: planta.id, plantaNombre: planta.nombre, desde: desde.toISOString(), hasta: hasta ? hasta.toISOString() : null });
+    if (!j || !j.ok) return null;
+    return j.items || [];
+  } catch (e) { return null; }
+}
+// Une lo del servicio con lo de esta tablet (lo local manda: puede ser más nuevo).
+function unirDatos(planta, items, desde, hasta) {
+  const de = { registro: 'registros', orden: 'ordenes', monitoreo: 'monitoreos', palomas: 'palomas' };
+  const out = { registros: [], ordenes: [], monitoreos: [], palomas: [] };
+  const vistos = new Set();
+  const en = x => { const f = new Date(x.fecha); return f >= desde && (!hasta || f < hasta); };
+  const dePlanta = x => x.plantaId === planta.id || (!x.plantaId && x.plantaNombre === planta.nombre);
+  CLASES_SYNC.forEach(([lista]) => (DB[lista] || []).forEach(o => {
+    if (!o.ejemplo && dePlanta(o) && en(o)) { out[lista].push(o); vistos.add(String(o.id)); }
+  }));
+  (items || []).forEach(it => {
+    const lista = de[it.clase];
+    if (lista && it.obj && !vistos.has(String(it.obj.id)) && en(it.obj)) { out[lista].push(it.obj); vistos.add(String(it.obj.id)); }
+  });
+  Object.values(out).forEach(a => a.sort((x, y) => new Date(y.fecha) - new Date(x.fecha)));
+  return out;
+}
+async function refrescarTableroCentral() {
+  const planta = DB.plantas.find(p => p.id === tablero.plantaId);
+  if (!planta || !servicioUrl() || !pinSesion) return;
+  const desde = lunesDe(new Date()); desde.setDate(desde.getDate() - 7 * 12);
+  const items = await datosCentrales(planta, desde);
+  centralCache[planta.id] = items ? { items, cuando: new Date(), desde } : { items: null, error: true };
+  if ($('scr-tablero').classList.contains('on') && tablero.plantaId === planta.id) renderTablero(true);
+}
+function textoFuenteTablero(planta) {
+  const c = centralCache[planta.id];
+  if (tablero.ejemplo) return '';
+  if (!servicioUrl()) return 'Datos de esta tablet (falta configurar el servicio de Google).';
+  if (central.viejo || !pinSesion) return 'Datos de esta tablet.';
+  if (!c) return 'Buscando los datos de todos los equipos…';
+  if (c.error) return 'No se pudo traer los datos de los demás equipos: se muestran los de esta tablet.';
+  return 'Datos de todos los equipos · actualizado ' + fHora(c.cuando) + '.';
+}
+
+// ---------- fotos de otros equipos ----------
+async function fotosRemotas(ids) {
+  const faltan = ids.filter(id => !fotosMem.has('drive:' + id));
+  if (faltan.length && pinSesion) {
+    try {
+      const j = await llamar({ accion: 'fotos', pin: pinSesion, ids: faltan.slice(0, 16) });
+      if (j && j.ok) Object.keys(j.fotos || {}).forEach(id => fotosMem.set('drive:' + id, j.fotos[id]));
+    } catch (e) { /* sin conexión */ }
+  }
+}
+
+/* ============ resumen mensual ============ */
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+function nombreMes(mes) { const [a, m] = mes.split('-').map(Number); return MESES[m - 1] + ' ' + a; }
+function rangoMes(mes) { const [a, m] = mes.split('-').map(Number); return [new Date(a, m - 1, 1), new Date(a, m, 1)]; }
+function opcionesMes() {
+  const out = [], d = new Date();
+  for (let i = 0; i < 6; i++) {
+    const x = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    out.push(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`);
+  }
+  return out;
+}
+function abrirResumenMensual() {
+  const planta = DB.plantas.find(p => p.id === tablero.plantaId);
+  if (!planta) return;
+  const mes = $('tabMes').value || opcionesMes()[0];
+  const [desde] = rangoMes(mes);
+  const obj = { id: 'res-' + planta.id + '-' + mes, plantaId: planta.id, plantaNombre: planta.nombre, fecha: desde.toISOString(), mes, operario: '', ejemplo: tablero.ejemplo };
+  abrirInforme('mensual', obj, 'scr-tablero');
+}
+// SVG del tablero -> imagen para el informe (PNG en el PDF).
+async function infGrafico(svg, pdf) {
+  const vb = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svg);
+  const W = 640, H = vb ? Math.round(W * Number(vb[2]) / Number(vb[1])) : 220;
+  const limpio = svg.replace('<svg ', `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" `).replace('font-family="inherit"', 'font-family="Arial, Helvetica, sans-serif"');
+  if (!pdf) return `<div style="padding:0 20px 6px">${limpio}</div>`;
+  const png = await svgAPng(limpio, W * 2, H * 2);
+  return png ? `<div style="padding:0 20px 6px"><img src="${png}" alt="Gráfico" width="${W}" height="${H}" style="width:${W}px; height:${H}px"></div>` : '';
+}
+async function datosDelMes(planta, mes, ejemplo) {
+  const [desde, hasta] = rangoMes(mes);
+  if (ejemplo) {
+    const ej = generarEjemplo(planta);
+    // los datos de ejemplo son de las últimas semanas: se muestran como si fueran del mes
+    return { registros: ej.registros, ordenes: [], monitoreos: ej.monitoreos, palomas: ej.palomas, fuente: 'Datos de ejemplo' };
+  }
+  const items = await datosCentrales(planta, desde, hasta);
+  const d = unirDatos(planta, items, desde, hasta);
+  d.fuente = items ? 'Todos los equipos' : 'Solo esta tablet';
+  return d;
+}
+async function informeMensual(o, pdf) {
+  const planta = DB.plantas.find(p => p.id === o.plantaId) || { id: o.plantaId, nombre: o.plantaNombre };
+  const d = await datosDelMes(planta, o.mes, o.ejemplo);
+  const modelo = modeloPara(planta.nombre);
+  const plano = planoDePlanta(planta.nombre);
+  const [desde, hasta] = rangoMes(o.mes);
+  const desrat = d.registros.filter(r => r.tipoTarea !== 'jaulas');
+  const jaulas = d.registros.filter(r => r.tipoTarea === 'jaulas');
+  // semanas (lunes) que tocan el mes
+  const semanas = [];
+  for (let s = lunesDe(desde); s < hasta; s = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 7)) semanas.push(s);
+  const idxSem = f => semanas.findIndex((s, i) => f >= s && (i === semanas.length - 1 || f < semanas[i + 1]));
+  const etSem = s => s.toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' });
+  const consumo = {}, prods = {}, porSemana = semanas.map(() => 0), arreglos = [], fotos = [];
+  let eventosC = 0;
+  desrat.forEach(r => {
+    Object.keys(r.cebos || {}).forEach(n => {
+      if (r.cebos[n] !== 'C') return;
+      consumo[n] = (consumo[n] || 0) + 1; eventosC++;
+      const i = idxSem(new Date(r.fecha)); if (i >= 0) porSemana[i]++;
+    });
+  });
+  d.registros.forEach(r => filasRegistro(r).forEach(f => {
+    if (f.d.prod) {
+      const p = prods[f.d.prod] || (prods[f.d.prod] = { n: f.d.prod, u: f.d.unidad || unidadDe(f.d.prod), cant: 0, veces: 0 });
+      p.veces++; p.cant += f.d.cant || 0;
+    }
+    if (['N', 'D', 'O', 'X', 'T'].includes(f.k)) arreglos.push({ r, f });
+    if (f.k !== 'B' && (f.d.foto || f.d.fotoDrive) && fotos.length < 8) fotos.push({ r, f });
+  }));
+  let capturas = 0;
+  const capturasJ = {};
+  jaulas.forEach(r => filasRegistro(r).forEach(f => { if (f.k === 'K') { const c = f.d.capt || 1; capturas += c; capturasJ[f.nombre] = (capturasJ[f.nombre] || 0) + c; } }));
+  const insPorEquipo = {};
+  let insectos = 0;
+  d.monitoreos.forEach(m => (m.ubicaciones || []).forEach((ub, i) => {
+    const e = m.equipos[i + 1]; if (!e) return;
+    const k = `UV ${numPlanoUV(modelo, i)} · ${ub}`;
+    insPorEquipo[k] = (insPorEquipo[k] || 0) + insectosDe(e); insectos += insectosDe(e);
+  }));
+  const palomasTot = d.palomas.reduce((a, p) => a + (p.capturadas || 0), 0);
+  const empresa = modelo.empresa || planta.empresa || 'ADC SRL';
+  const fin = new Date(hasta - 86400000);
+
+  let h = infCabecera('RESUMEN MENSUAL', 'Resumen de ' + nombreMes(o.mes), planta.nombre,
+    [['Período', `${desde.getDate()} al ${fin.getDate()} de ${MESES[desde.getMonth()]}`], ['Tareas', String(d.registros.length + d.monitoreos.length + d.palomas.length + d.ordenes.length)], ['Datos', d.fuente]], empresa);
+  const kp = [
+    { v: String(desrat.length + jaulas.length), l: 'Recorridos', s: `${desrat.length} desratización · ${jaulas.length} jaulas` },
+    { v: String(eventosC), l: 'Cebos consumidos', s: `en ${Object.keys(consumo).length} estaciones`, color: eventosC ? HEX_ESTADO.C[0] : null },
+    { v: String(arreglos.length), l: 'Arreglos y cambios', s: 'faltantes, rotas, ocultas, pegamento y tubos', color: arreglos.length ? HEX_ESTADO.D[0] : null },
+  ];
+  if (jaulas.length) kp.push({ v: String(capturas), l: 'Roedores capturados', s: 'en jaulas', color: capturas ? HEX_ESTADO.K[0] : null });
+  else if (d.monitoreos.length) kp.push({ v: String(insectos), l: 'Insectos en trampas UV', s: `${d.monitoreos.length} monitoreos` });
+  h += infKpis(kp);
+  if (jaulas.length && d.monitoreos.length) h += infKpis([{ v: String(insectos), l: 'Insectos en trampas UV', s: `${d.monitoreos.length} monitoreos` }, { v: String(palomasTot), l: 'Palomas capturadas', s: `${d.palomas.length} visitas` }]);
+
+  if (!d.registros.length && !d.monitoreos.length && !d.palomas.length) {
+    h += infObs('Sin tareas', `No hay tareas registradas de ${planta.nombre} en ${nombreMes(o.mes)}.`);
+    return h;
+  }
+  if (desrat.length) {
+    h += infSeccion('Consumo de cebo por semana', 'Estaciones que se encontraron con el cebo consumido, semana por semana.');
+    h += await infGrafico(svgBarrasV(semanas.map((s, i) => ({ label: etSem(s), v: porSemana[i] })), { titulo: 'Consumo por semana' }), pdf);
+  }
+  if (plano && Object.keys(consumo).length) {
+    const zonas = {};
+    Object.keys(consumo).forEach(n => {
+      const u = ubicacionEn(plano, 'c', n);
+      const z = u ? (u.zona ? u.zona.replace(/^cerca de /, '') : 'Exterior') + ` (hoja ${u.hoja})` : 'Sin ubicar';
+      zonas[z] = (zonas[z] || 0) + consumo[n];
+    });
+    const zl = Object.keys(zonas).map(k => ({ label: k, v: zonas[k] })).sort((a, b) => b.v - a.v).slice(0, 8);
+    h += infSeccion('¿Dónde se consumió más?', 'Consumos por zona del plano en el mes.');
+    h += await infGrafico(svgBarrasH(zl, { titulo: 'Consumo por zona', mL: 250 }), pdf);
+  }
+  const top = Object.keys(consumo).map(n => ({ n, v: consumo[n] })).sort((a, b) => b.v - a.v).slice(0, 8);
+  if (top.length) {
+    h += infSeccion('Estaciones que más consumieron');
+    h += await infGrafico(svgBarrasH(top.map(t => {
+      const u = ubicacionEn(plano, 'c', t.n);
+      return { label: `Cebo ${t.n}` + (u ? ` · ${(u.zona || 'exterior').replace(/^cerca de /, '')}` : ''), v: t.v, txt: `${t.v} ${t.v === 1 ? 'vez' : 'veces'}` };
+    }), { titulo: 'Estaciones que más consumieron', mL: 250 }), pdf);
+  }
+  const pl = Object.values(prods).sort((a, b) => b.veces - a.veces);
+  if (pl.length) {
+    h += infSeccion('Productos aplicados', 'Total del mes, de todos los recorridos.');
+    h += `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; font-size:13px; margin:0 20px; width:auto">`;
+    h += `<tr><td style="padding:6px 24px 6px 0; font-size:11px; font-weight:700; color:${INF.ink3}; border-bottom:1.5px solid ${INF.line}">PRODUCTO</td><td style="padding:6px 24px 6px 0; font-size:11px; font-weight:700; color:${INF.ink3}; border-bottom:1.5px solid ${INF.line}">CANTIDAD</td><td style="padding:6px 0; font-size:11px; font-weight:700; color:${INF.ink3}; border-bottom:1.5px solid ${INF.line}">REPOSICIONES</td></tr>`;
+    pl.forEach(p => { h += `<tr><td style="padding:7px 24px 7px 0; border-bottom:1px solid ${INF.line}; color:${INF.ink}">${esc(p.n)}</td><td style="padding:7px 24px 7px 0; border-bottom:1px solid ${INF.line}; font-weight:700; color:${INF.ink}">${p.cant ? fmtNum(p.cant) + ' ' + esc(p.u) : '—'}</td><td style="padding:7px 0; border-bottom:1px solid ${INF.line}; font-weight:700; color:${INF.ink}">${p.veces}</td></tr>`; });
+    h += '</table>';
+  }
+  if (arreglos.length) {
+    h += infSeccion('Arreglos y cambios del mes', 'Estaciones faltantes, rotas u ocultas, y placas o tubos renovados.');
+    h += `<table cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; font-size:12.5px; margin:0 20px">`;
+    arreglos.slice(0, 40).forEach(({ r, f }) => {
+      h += `<tr><td style="padding:6px 14px 6px 0; border-bottom:1px solid ${INF.line}; vertical-align:top">${infEstacionBadge(f.t, f.n, f.nombre)}</td>
+        <td style="padding:6px 14px 6px 0; border-bottom:1px solid ${INF.line}; vertical-align:top">${infPill(f.k)}</td>
+        <td style="padding:6px 14px 6px 0; border-bottom:1px solid ${INF.line}; vertical-align:top; color:${INF.ink2}; white-space:nowrap">${fFecha(r.fecha)}</td>
+        <td style="padding:6px 0; border-bottom:1px solid ${INF.line}; vertical-align:top; color:${INF.ink2}">${esc(f.u ? textoUbicacion(f.u) : '')}${f.d.nota ? ' · ' + esc(f.d.nota) : ''}</td></tr>`;
+    });
+    h += '</table>';
+    if (arreglos.length > 40) h += `<div style="font-family:Arial, Helvetica, sans-serif; font-size:12px; color:${INF.ink2}; padding:6px 20px">y ${arreglos.length - 40} más.</div>`;
+  }
+  if (jaulas.length && Object.keys(capturasJ).length) {
+    h += infSeccion('Capturas por jaula');
+    h += await infGrafico(svgBarrasH(Object.keys(capturasJ).map(k => ({ label: k, v: capturasJ[k] })).sort((a, b) => b.v - a.v).slice(0, 8), { titulo: 'Capturas por jaula', mL: 210 }), pdf);
+  }
+  const ie = Object.keys(insPorEquipo).map(k => ({ label: k, v: insPorEquipo[k] })).sort((a, b) => b.v - a.v);
+  if (ie.length) {
+    h += infSeccion('Insectos capturados por equipo UV', 'Suma de moscas, polillas, gorgojos y otros en el mes.');
+    h += await infGrafico(svgBarrasH(ie, { titulo: 'Insectos por equipo', mL: 250 }), pdf);
+  }
+  if (fotos.length) {
+    await fotosRemotas(fotos.filter(x => x.f.d.fotoDrive).map(x => x.f.d.fotoDrive));
+    const lista = [];
+    for (const { r, f } of fotos) {
+      const local = f.d.foto ? await fotoLeer(f.d.foto) : null;
+      const id = local ? f.d.foto : (f.d.fotoDrive ? 'drive:' + f.d.fotoDrive : null);
+      if (id) lista.push({ id, tit: `${f.nombre} · ${nombreEstado(f.k)}`, sub: `${fFecha(r.fecha)}${f.u ? ' · ' + textoUbicacion(f.u, true) : ''}` });
+    }
+    h += await infGaleria(lista, pdf, 'Fotos de las novedades del mes');
+  }
+  if (plano) {
+    const maxC = Math.max(1, ...Object.values(consumo));
+    const celda = (t, n) => {
+      if (t !== 'c') return { dim: true };
+      const v = consumo[n] || 0;
+      if (!v) return { txt: '·', fill: '#FFFFFF', ink: '#9AA09C' };
+      const p = Math.min(3, Math.floor((v / maxC) * 3.999));
+      return { txt: String(v), fill: AZUL[p], ink: p >= 2 ? '#FFFFFF' : '#0d366b', ring: v === maxC ? '#0d366b' : null };
+    };
+    const ley = leyendaTipos(['c']) + ' · el número en la cajita es cuántas veces se encontró consumido en el mes (más oscuro = más consumo).';
+    h += await infPlanos(plano, celda, ley, pdf, 'Mapa de consumo del mes sobre el plano.');
+  }
+  return h;
 }
 
 /* ============ tablero del supervisor ============ */
@@ -3874,7 +4410,8 @@ function generarEjemplo(planta) {
 }
 function datosTablero(planta) {
   const ej = tablero.ejemplo;
-  const src = ej ? generarEjemplo(planta) : {
+  const cc = centralCache[planta.id];
+  const src = ej ? generarEjemplo(planta) : (cc && cc.items) ? unirDatos(planta, cc.items, new Date(0)) : {
     registros: DB.registros.filter(r => r.plantaId === planta.id || (!r.plantaId && r.plantaNombre === planta.nombre)),
     monitoreos: (DB.monitoreos || []).filter(m => m.plantaId === planta.id),
     palomas: (DB.palomas || []).filter(p => p.plantaId === planta.id),
@@ -3924,7 +4461,7 @@ function vizCard(titulo, sub, cuerpo) {
   return `<div class="card viz-card"><h3>${esc(titulo)}</h3>${sub ? `<p class="sub">${esc(sub)}</p>` : ''}<div class="viz">${cuerpo}</div></div>`;
 }
 
-function renderTablero() {
+function renderTablero(soloRender) {
   // filtros
   const pc = $('tabPlantas'); pc.innerHTML = '';
   DB.plantas.forEach(p => {
@@ -3943,11 +4480,16 @@ function renderTablero() {
   if (!planta) { cuerpo.innerHTML = '<p class="lead">No hay plantas cargadas.</p>'; $('tabAcciones').hidden = true; return; }
   const plano = planoDePlanta(planta.nombre);
   $('tabAcciones').hidden = !plano;
+  const selMes = $('tabMes');
+  if (!selMes.options.length) selMes.innerHTML = opcionesMes().map(m => `<option value="${m}">${nombreMes(m).replace(/^./, c => c.toUpperCase())}</option>`).join('');
+  $('tabFuente').textContent = textoFuenteTablero(planta);
+  const cc = centralCache[planta.id];
+  if (!soloRender && !tablero.ejemplo && (!cc || !cc.cuando || Date.now() - cc.cuando > 60000)) refrescarTableroCentral();
   const { registros, monitoreos, palomas, desde } = datosTablero(planta);
   const desrat = registros.filter(r => r.tipoTarea !== 'jaulas');
   const jaulas = registros.filter(r => r.tipoTarea === 'jaulas');
   if (!registros.length && !monitoreos.length && !palomas.length) {
-    cuerpo.innerHTML = `<div class="card"><p style="font-weight:650">Todavía no hay tareas de ${esc(planta.nombre)} en esta tablet para el período elegido.</p><p class="lead" style="font-size:15px">Cuando los operarios terminen recorridos acá vas a ver el consumo, las capturas y el mapa de la planta. Para ver cómo queda, activá “Datos de ejemplo”.</p></div>`;
+    cuerpo.innerHTML = `<div class="card"><p style="font-weight:650">Todavía no hay tareas de ${esc(planta.nombre)} para el período elegido.</p><p class="lead" style="font-size:15px">Cuando los operarios terminen recorridos acá vas a ver el consumo, las capturas y el mapa de la planta. Para ver cómo queda, activá “Datos de ejemplo”.</p></div>`;
     return;
   }
   // semanas del período
@@ -4081,10 +4623,11 @@ function agregarProducto() {
   persistir(); $('nuevoProducto').value = ''; $('nuevoProductoU').value = '';
   renderProductos(); toast('Producto agregado');
 }
-function cambiarPinSupervisor() {
+async function cambiarPinSupervisor() {
   const nuevo = prompt('Nuevo PIN del supervisor (4 a 8 dígitos):');
   if (nuevo === null) return;
   if (!/^\d{4,8}$/.test(nuevo)) { toast('El PIN debe tener entre 4 y 8 dígitos'); return; }
+  if (!(await cambiarPinServicio('sup', nuevo))) return;
   DB.config.supPin = nuevo; persistir(); toast('PIN del supervisor actualizado');
 }
 
@@ -4120,6 +4663,12 @@ document.addEventListener('DOMContentLoaded', () => {
     $('palomasError').style.display = 'none';
   });
   go('scr-quien');
+  // datos centrales: bajar la configuración y subir lo pendiente
+  bajarConfig().then(() => programarSync());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - ultimaBajada > 60000) bajarConfig().then(() => programarSync());
+  });
+  window.addEventListener('online', () => programarSync());
 });
 </script>
 </body>
