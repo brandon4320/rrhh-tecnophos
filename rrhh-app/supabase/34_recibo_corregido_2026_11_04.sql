@@ -72,8 +72,15 @@ alter table public.recibo_mails add constraint recibo_mails_tipo_check
 
 -- Entra al tope de uno por día: si se corrigen tres liquidaciones de la misma
 -- persona en la misma tarde, va UN mail con las tres.
-drop index if exists recibo_mails_uno_por_dia;
-create unique index if not exists recibo_mails_uno_por_dia
+--
+-- ⚠ El índice va con OTRO NOMBRE a propósito. Las migraciones 31 y 33 crean
+-- `recibo_mails_uno_por_dia` con una lista de tipos más corta, y las tres
+-- dicen que se pueden correr más de una vez: si alguien reaplica la 33
+-- después de esta para verificar que quedó bien, recrearía el índice viejo y
+-- el tope dejaría de valer para los mails de corrección. Con nombres
+-- distintos los dos conviven, y como el viejo cubre un subconjunto de los
+-- tipos, que vuelva a aparecer no rompe nada.
+create unique index if not exists recibo_mails_uno_por_dia_tipo
   on public.recibo_mails (empleado_id, dia, tipo)
   where tipo in ('aviso', 'recordatorio', 'adicional', 'correccion') and estado = 'enviado';
 
