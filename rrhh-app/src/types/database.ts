@@ -1241,6 +1241,7 @@ export type Database = {
           origen_hash: string | null
           path: string
           periodo: string
+          recibo_numero: string | null
           secuencia: number
           size_bytes: number | null
           tipo: string
@@ -1268,6 +1269,7 @@ export type Database = {
           origen_hash?: string | null
           path: string
           periodo: string
+          recibo_numero?: string | null
           secuencia?: number
           size_bytes?: number | null
           tipo?: string
@@ -1295,6 +1297,7 @@ export type Database = {
           origen_hash?: string | null
           path?: string
           periodo?: string
+          recibo_numero?: string | null
           secuencia?: number
           size_bytes?: number | null
           tipo?: string
