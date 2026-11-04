@@ -29,7 +29,10 @@ function errorInsert(error: { code?: string; message: string }) {
   console.error('[api/recibos] insert:', error.message)
   // 23505 = unique_violation. Solo la clave natural (empleado, período, tipo) es un 409 "ya existe";
   // un choque en el índice de path es otra cosa (no minteamos ese path) y se trata como error.
-  if (error.message.includes('recibos_sueldo_empleado_id_periodo_tipo_key')) {
+  // La migración 33 le sumó la secuencia a esa clave y por lo tanto le cambió el
+  // nombre. Se aceptan los dos a propósito: el código se deploya solo con el
+  // push y la migración se aplica a mano, así que hay un rato con el nombre viejo.
+  if (/recibos_sueldo_empleado_(id_)?periodo_tipo(_seq)?_key/.test(error.message)) {
     return NextResponse.json({ error: 'Ya hay un comprobante de ese período y tipo para este empleado. Eliminalo primero si querés reemplazarlo.' }, { status: 409 })
   }
   return NextResponse.json({ error: `No se pudo registrar el comprobante: ${error.message}` }, { status: 500 })

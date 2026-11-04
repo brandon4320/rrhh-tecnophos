@@ -306,11 +306,13 @@ export type Database = {
         Row: {
           activo: boolean | null
           apellido: string | null
+          base_sueldos: string | null
           created_at: string | null
           cuil: string | null
           email: string | null
           empresa_id: string | null
           id: string
+          legajo: number | null
           nombre: string
           sector: string | null
           updated_at: string | null
@@ -318,11 +320,13 @@ export type Database = {
         Insert: {
           activo?: boolean | null
           apellido?: string | null
+          base_sueldos?: string | null
           created_at?: string | null
           cuil?: string | null
           email?: string | null
           empresa_id?: string | null
           id?: string
+          legajo?: number | null
           nombre: string
           sector?: string | null
           updated_at?: string | null
@@ -330,11 +334,13 @@ export type Database = {
         Update: {
           activo?: boolean | null
           apellido?: string | null
+          base_sueldos?: string | null
           created_at?: string | null
           cuil?: string | null
           email?: string | null
           empresa_id?: string | null
           id?: string
+          legajo?: number | null
           nombre?: string
           sector?: string | null
           updated_at?: string | null
@@ -1235,6 +1241,7 @@ export type Database = {
           origen_hash: string | null
           path: string
           periodo: string
+          secuencia: number
           size_bytes: number | null
           tipo: string
           uploaded_by: string | null
@@ -1261,6 +1268,7 @@ export type Database = {
           origen_hash?: string | null
           path: string
           periodo: string
+          secuencia?: number
           size_bytes?: number | null
           tipo?: string
           uploaded_by?: string | null
@@ -1287,6 +1295,7 @@ export type Database = {
           origen_hash?: string | null
           path?: string
           periodo?: string
+          secuencia?: number
           size_bytes?: number | null
           tipo?: string
           uploaded_by?: string | null
