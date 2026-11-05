@@ -140,6 +140,8 @@ export interface Aprobacion {
    * manda es una sola (ver hashQueCuenta en carga.ts).
    */
   hash: string | null
+  /** Dónde va la firma en este recibo. null = no se le estampa nada. */
+  firma: CajaFirma | null
 }
 
 function texto(v: unknown): string | null {
@@ -176,6 +178,7 @@ export function leerAprobacion(detalle: unknown, hash: string): Aprobacion | nul
     archivo: texto(a.archivo),
     origenAt: texto(a.origenAt),
     hash: texto(a.hash) ?? hash,
+    firma: leerCajaFirma(a.firma),
   }
 }
 
@@ -194,4 +197,63 @@ export function leerAprobacion(detalle: unknown, hash: string): Aprobacion | nul
 export function loteCortado(detalle: unknown): boolean {
   if (!detalle || typeof detalle !== 'object') return false
   return (detalle as Record<string, unknown>).puedeEnviar === false
+}
+
+// ============================================================
+// Dónde va la firma en el recibo.
+//
+// La posición NO se adivina ni vive en el código: la BUSCA el lector, que abre
+// el PDF y mide el lugar libre arriba de la palabra "Firma" impresa. Acá solo
+// se la revisa antes de guardarla. Así el servidor no necesita abrir el PDF
+// para saber dónde dibujar, y si mañana el recibo de aguinaldo tiene otro
+// formato la firma lo sigue sola.
+//
+// ⚠ Las coordenadas llegan YA convertidas a las de pdf-lib: origen abajo a la
+// izquierda, en puntos (una A4 son 595 × 842). La cuenta la hace el lector, que
+// es el único que ve las de pymupdf (origen arriba). Ver migración 32.
+// ============================================================
+
+/** El recuadro donde entra la firma, como lo guarda `recibos_sueldo`. */
+export interface CajaFirma {
+  pagina: number
+  x: number
+  y: number
+  ancho: number
+  alto: number
+}
+
+/** Ninguna hoja de papel normal pasa de esto. Un valor mayor es un error. */
+const MAX_PUNTOS = 5000
+
+function numero(v: unknown): number | null {
+  // Solo número o texto que sea un número. Sin esto `Number(null)` y
+  // `Number([])` dan 0 y una caja a medias entraría como una caja en el 0.
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null
+  if (typeof v !== 'string' || !v.trim()) return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+
+/**
+ * La caja, si es una caja.
+ *
+ * Lo que no cierra se devuelve como null y no como error: sin posición el
+ * recibo se carga igual y simplemente no se le estampa nada. Perder la firma
+ * de uno es malo; perder el recibo entero porque el buscador midió raro, peor.
+ * Además la migración 32 tiene un CHECK de "o está toda o no está ninguna":
+ * mandar media caja haría fallar el insert completo.
+ */
+export function leerCajaFirma(v: unknown): CajaFirma | null {
+  if (!v || typeof v !== 'object') return null
+  const c = v as Record<string, unknown>
+  const pagina = numero(c.pagina)
+  const x = numero(c.x)
+  const y = numero(c.y)
+  const ancho = numero(c.ancho)
+  const alto = numero(c.alto)
+  if (pagina === null || x === null || y === null || ancho === null || alto === null) return null
+  if (!Number.isInteger(pagina) || pagina < 1 || pagina > 1000) return null
+  if (x < 0 || y < 0 || ancho <= 0 || alto <= 0) return null
+  if (x + ancho > MAX_PUNTOS || y + alto > MAX_PUNTOS) return null
+  return { pagina, x, y, ancho, alto }
 }

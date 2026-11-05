@@ -110,6 +110,7 @@ export async function POST(req: Request) {
       periodo: documento.periodo,
       tipo: tipoDeConcepto(documento.concepto),
       concepto: documento.concepto ?? null,
+      firma: documento.firma ?? null,
       hash,
       origenAt,
       ...decision,
@@ -129,6 +130,11 @@ export async function POST(req: Request) {
     const entrada: Json = {
       empleadoId: a.empleadoId, legajo: a.legajo, recibo: a.recibo, periodo: a.periodo,
       tipo: a.tipo, concepto: a.concepto, archivo: a.archivo, origenAt: a.origenAt, hash: a.hash,
+      // Campo por campo y no el objeto: el vale es jsonb y tiene que entrar
+      // como datos, no como un tipo nuestro que mañana cambia de forma.
+      firma: a.firma
+        ? { pagina: a.firma.pagina, x: a.firma.x, y: a.firma.y, ancho: a.firma.ancho, alto: a.firma.alto }
+        : null,
     }
     for (const copia of a.copias) vale[copia] = entrada
   }

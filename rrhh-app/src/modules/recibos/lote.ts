@@ -35,6 +35,7 @@
 // verifica además contra el nombre y el CUIL impresos, que también salen de
 // adentro.
 // ============================================================
+import type { CajaFirma } from './archivo'
 import { soloDigitos } from './reglas'
 
 /**
@@ -151,6 +152,8 @@ export interface Hoja {
   huella?: string | null
   /** sha256 del ARCHIVO. Identifica al PDF cargado, para no cargarlo dos veces. */
   sha256?: string | null
+  /** Dónde va la firma en esta hoja, en coordenadas de pdf-lib. */
+  firma?: CajaFirma | null
   /**
    * Cuándo se escribió el archivo del que salió esta hoja.
    *
@@ -196,6 +199,8 @@ export interface DocumentoLeido {
   copiasDistintas?: boolean
   /** Versiones anteriores de esta misma liquidación que se descartaron. */
   versionesDescartadas?: number
+  /** Dónde va la firma, según la versión que quedó. */
+  firma?: CajaFirma | null
 }
 
 /**
@@ -215,7 +220,7 @@ export function armarDocumentos(hojas: readonly Hoja[]): DocumentoLeido[] {
 
   const nuevo = (h: Hoja): DocumentoLeido => ({
     hojas: [h], base: h.base, periodo: h.periodo, legajo: h.legajo,
-    cuil: h.cuil, nombre: h.nombre, recibo: h.recibo, concepto: h.concepto,
+    cuil: h.cuil, nombre: h.nombre, recibo: h.recibo, concepto: h.concepto, firma: h.firma,
     legajosEnLasHojas: h.legajo == null ? [] : [h.legajo],
   })
 
@@ -292,6 +297,7 @@ export function elegirVersion(doc: DocumentoLeido): DocumentoLeido {
     cuil: cabeza.cuil,
     nombre: cabeza.nombre,
     concepto: cabeza.concepto,
+    firma: cabeza.firma,
     copiasDistintas: false,
     versionesDescartadas: doc.hojas.length - hojas.length,
   }

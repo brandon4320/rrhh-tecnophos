@@ -191,6 +191,7 @@ export async function POST(req: Request) {
     origenHash: hash ?? sha,
     origenAt: aprobacion.origenAt,
     notas: aprobacion.concepto,
+    firma: aprobacion.firma,
   }
 
   let reciboId: string | null = null
