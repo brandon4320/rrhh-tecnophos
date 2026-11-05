@@ -6,7 +6,8 @@ import { deleteFromR2, uploadToR2 } from '@/lib/r2/operations'
 import { esPeriodoFuturo, esTipoRecibo } from '@/lib/recibos'
 import { hashQueCuenta, decidirCarga } from '@/modules/recibos/carga'
 import {
-  esPdf, leerAprobacion, MAX_RECIBO_SUBIDA_BYTES, nombreDeRecibo, rutaDeRecibo, siguienteSecuencia,
+  esPdf, leerAprobacion, loteCortado, MAX_RECIBO_SUBIDA_BYTES, nombreDeRecibo, rutaDeRecibo,
+  siguienteSecuencia,
 } from '@/modules/recibos/archivo'
 import {
   anularRecibos, CHOQUE_UNICO, detalleDeCarga, empresaDeEmpleado, insertarRecibo, recibosDeEmpleado,
@@ -87,6 +88,15 @@ export async function POST(req: Request) {
   }
   if (detalle === null) {
     return NextResponse.json({ error: 'Esa corrida no existe.' }, { status: 404 })
+  }
+
+  if (loteCortado(detalle)) {
+    // /lote ya dijo que de ese lote no sale nada: la asignación puede estar
+    // sistemáticamente mal y es justo donde no se quiere escribir un legajo.
+    return NextResponse.json(
+      { error: 'Esa corrida quedó cortada: no se carga nada de ese lote.', accion: 'lote_cortado' },
+      { status: 409 }
+    )
   }
 
   const aprobacion = leerAprobacion(detalle, sha)
@@ -180,6 +190,16 @@ export async function POST(req: Request) {
         .from('recibos_sueldo').select('id, path').eq('origen_hash', fila.origenHash).maybeSingle()
       if (data?.path !== path) await deleteFromR2(path).catch(() => {})
       return NextResponse.json({ ...comun, accion: 'ya_estaba', reciboId: data?.id ?? null })
+    }
+    if (r.choque === 'path') {
+      // Ese lugar de R2 ya es de otra fila. No se reintenta (el path sale del
+      // hash: saldria siempre igual) y no se borra nada: el objeto no es
+      // nuestro. Se dice qué pasó, que es lo único que ayuda a desatarlo.
+      console.error('[externo/recibos/archivo] path tomado:', path, r.error)
+      return NextResponse.json(
+        { error: 'Ese archivo ya tiene lugar asignado en otro comprobante de esta persona.', accion: 'path_tomado' },
+        { status: 409 }
+      )
     }
     if (r.choque === 'secuencia' && intento < REINTENTOS_SECUENCIA) {
       // Otro proceso numero primero. Se vuelve a mirar la base y se sigue.

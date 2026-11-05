@@ -143,6 +143,13 @@ export async function POST(req: Request) {
   const esperados = padron.filter((e) => e.activo)
   const sinRecibo = faltantes(esperados, revision.asignados)
 
+  // Liquidaciones que vinieron reemitidas: se tomó la última y se descartaron
+  // las anteriores. No frena nada, pero tiene que estar a la vista — es un
+  // recibo que alguien rehizo.
+  const variasVersiones = documentos
+    .filter((d) => d.versionesDescartadas)
+    .map((d) => ({ legajo: d.legajo, recibo: d.recibo ?? null, descartadas: d.versionesDescartadas }))
+
   // El CUIL confirmó quién es, pero el nombre está escrito distinto en Gestión.
   // No frena nada; se avisa para que la oficina empareje el dato.
   const nombresDistintos = [
@@ -175,6 +182,7 @@ export async function POST(req: Request) {
       personasConRecibo: agruparPorEmpleado(revision.asignados).length,
       sinRecibo: sinRecibo.map((e) => e.legajo),
       nombresDistintos,
+      variasVersiones,
       problemas: problemas.map((p) => ({ archivo: p.archivo, motivo: p.motivo })),
       aprobados: vale,
     },
@@ -197,6 +205,7 @@ export async function POST(req: Request) {
       esperados: esperados.length,
       sinRecibo: sinRecibo.length,
       nombresDistintos: nombresDistintos.length,
+      variasVersiones: variasVersiones.length,
     },
     // Lo que el lector tiene que subir, y nada más. Sin nombres ni CUIL: de
     // este lado no hacen falta y del otro ya los tiene.
@@ -208,5 +217,6 @@ export async function POST(req: Request) {
     problemas,
     sinRecibo: sinRecibo.map((e) => e.legajo),
     nombresDistintos,
+    variasVersiones,
   })
 }

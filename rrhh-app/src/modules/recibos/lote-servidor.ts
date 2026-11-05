@@ -215,7 +215,7 @@ export const CHOQUE_UNICO = '23505'
 export interface ResultadoInsert {
   id: string | null
   /** Contra qué índice chocó, si chocó. */
-  choque: 'secuencia' | 'hash' | null
+  choque: 'secuencia' | 'hash' | 'path' | null
   error: string | null
   /** El código de Postgres, para saber si el conflicto es con otra fila. */
   codigo: string | null
@@ -229,11 +229,18 @@ export interface ResultadoInsert {
  *  · hash → ese mismo PDF ya está cargado. No es un error: alguien lo subió
  *    entre que se decidió y se subió. Se trata como "ya estaba".
  *
- * ★ Cualquier otro choque se devuelve como error común, por NOMBRE y no por
- * descarte. `recibos_sueldo` tiene un tercer índice único, sobre `path`
- * (migración 15): tomarlo por un choque de secuencia haría reintentar con el
- * mismo path —cosa que no puede salir bien— y terminar borrando de R2 un
- * objeto que es de la fila que ya estaba.
+ *  · path → ese lugar de R2 ya es de otra fila. Es el tercer índice único de
+ *    la tabla (migración 15) y se reconoce aparte porque NO se arregla
+ *    reintentando: el path sale del hash, así que el reintento escribiría
+ *    siempre lo mismo. Hace falta que dos liquidaciones distintas del mismo
+ *    período compartan los primeros 16 hex de su sha —o que a una fila le
+ *    hayan cambiado el `origen_hash` por SQL dejándola sin corresponder con su
+ *    propio path, que es como apareció esto—. Avisarlo por su nombre convierte
+ *    un 500 mudo en algo que se puede leer.
+ *
+ * ★ Se clasifica por NOMBRE y no por descarte. Tomar un choque de path por uno
+ * de secuencia haría reintentar tres veces con el mismo path y terminar
+ * borrando de R2 un objeto que es de la fila que ya estaba.
  *
  * Los dos nombres de la clave de secuencia conviven a propósito: la migración
  * 33 la recreó con otro nombre y el código se deploya solo con el push,
@@ -242,6 +249,7 @@ export interface ResultadoInsert {
  */
 const INDICE_HASH = /recibos_origen_hash_idx/
 const INDICE_SECUENCIA = /recibos_sueldo_empleado_(id_)?periodo_tipo(_seq)?_key/
+const INDICE_PATH = /recibos_sueldo_path_idx/
 export async function insertarRecibo(admin: Admin, f: FilaRecibo): Promise<ResultadoInsert> {
   const { data, error } = await admin
     .from('recibos_sueldo')
@@ -270,6 +278,7 @@ export async function insertarRecibo(admin: Admin, f: FilaRecibo): Promise<Resul
   if (error.code === CHOQUE_UNICO) {
     if (INDICE_HASH.test(error.message)) return { ...comun, choque: 'hash' }
     if (INDICE_SECUENCIA.test(error.message)) return { ...comun, choque: 'secuencia' }
+    if (INDICE_PATH.test(error.message)) return { ...comun, choque: 'path' }
   }
   return { ...comun, choque: null }
 }

@@ -113,10 +113,88 @@ describe('armarDocumentos', () => {
     expect(docs).toHaveLength(2)
   })
 
-  it('★ copias con texto distinto quedan marcadas', () => {
+  it('★ copias con texto distinto y sin fecha quedan marcadas', () => {
     const docs = armarDocumentos([hoja({ huella: 'aaa' }), hoja({ huella: 'bbb' })])
     expect(docs).toHaveLength(1)
     expect(docs[0].copiasDistintas).toBe(true)
+  })
+
+  describe('★★ una liquidación reemitida: gana la más nueva', () => {
+    // Pasó de verdad: en agosto de 2026 la liquidación final del legajo 15 se
+    // rehízo tres veces en 45 minutos, siempre con el recibo 0001, y las tres
+    // quedaron en la carpeta. Antes eso cortaba el mes entero.
+    const v = (huella: string, origenAt: string | null, p: Partial<Hoja> = {}) =>
+      hoja({ huella, origenAt, archivo: `${huella}.pdf`, ...p })
+
+    it('se queda con la del archivo más nuevo y descarta las anteriores', () => {
+      const docs = armarDocumentos([
+        v('primera', '2026-08-24T13:29:49-03:00'),
+        v('tercera', '2026-08-24T14:12:14-03:00'),
+        v('segunda', '2026-08-24T13:46:29-03:00'),
+      ])
+      expect(docs).toHaveLength(1)
+      expect(docs[0].copiasDistintas).toBe(false)
+      expect(docs[0].hojas.map((h) => h.huella)).toEqual(['tercera'])
+      expect(docs[0].versionesDescartadas).toBe(2)
+    })
+
+    it('★ la liquidación dice lo que dice la versión que ganó', () => {
+      // Al corregir puede haber cambiado el concepto, y hasta cómo está
+      // escrito el nombre. Quedarse con lo de la primera hoja leída sería
+      // mostrar datos de un papel que ya no vale.
+      const docs = armarDocumentos([
+        v('vieja', '2026-08-24T13:29:49-03:00', { concepto: 'AGOSTO 2026' }),
+        v('nueva', '2026-08-24T14:12:14-03:00', { concepto: 'LIQ FINAL AGOSTO 2026' }),
+      ])
+      expect(docs[0].concepto).toBe('LIQ FINAL AGOSTO 2026')
+    })
+
+    it('las otras copias de la versión que ganó siguen contando', () => {
+      // El mismo papel exportado dos veces: una en su archivo y otra en el de
+      // lote. No son versiones distintas.
+      const docs = armarDocumentos([
+        v('vieja', '2026-08-24T13:29:49-03:00'),
+        v('nueva', '2026-08-24T14:12:14-03:00', { archivo: 'individual.pdf' }),
+        v('nueva', '2026-08-24T14:30:00-03:00', { archivo: 'lote.pdf' }),
+      ])
+      expect(docs[0].hojas.map((h) => h.archivo)).toEqual(['individual.pdf', 'lote.pdf'])
+      expect(docs[0].versionesDescartadas).toBe(1)
+    })
+
+    it('★ sin la fecha de algún archivo no se elige: eso sí corta', () => {
+      const docs = armarDocumentos([
+        v('primera', '2026-08-24T13:29:49-03:00'),
+        v('segunda', null),
+      ])
+      expect(docs[0].copiasDistintas).toBe(true)
+      expect(docs[0].hojas).toHaveLength(2)
+    })
+
+    it('★ dos textos distintos con la MISMA fecha tampoco se eligen', () => {
+      // Empate: no hay una más nueva. Tiene que mirarlo una persona.
+      const docs = armarDocumentos([
+        v('una', '2026-08-24T14:12:14-03:00'),
+        v('otra', '2026-08-24T14:12:14-03:00'),
+      ])
+      expect(docs[0].copiasDistintas).toBe(true)
+    })
+
+    it('una fecha ilegible cuenta como fecha que falta', () => {
+      const docs = armarDocumentos([
+        v('una', 'cuando quieras'),
+        v('otra', '2026-08-24T14:12:14-03:00'),
+      ])
+      expect(docs[0].copiasDistintas).toBe(true)
+    })
+
+    it('si todas las copias dicen lo mismo, no se descarta ninguna', () => {
+      const docs = armarDocumentos([
+        v('igual', '2026-08-24T13:29:49-03:00', { archivo: 'a.pdf' }),
+        v('igual', '2026-08-24T14:12:14-03:00', { archivo: 'b.pdf' }),
+      ])
+      expect(docs[0].hojas).toHaveLength(2)
+      expect(docs[0].versionesDescartadas).toBeUndefined()
+    })
   })
 
   it('una hoja sin legajo o sin recibo queda sola: sin clave no se agrupa', () => {

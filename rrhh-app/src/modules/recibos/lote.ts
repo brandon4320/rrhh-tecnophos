@@ -151,6 +151,13 @@ export interface Hoja {
   huella?: string | null
   /** sha256 del ARCHIVO. Identifica al PDF cargado, para no cargarlo dos veces. */
   sha256?: string | null
+  /**
+   * Cuándo se escribió el archivo del que salió esta hoja.
+   *
+   * Es lo que decide cuál versión vale cuando una misma liquidación fue
+   * reemitida: ver `elegirVersion`.
+   */
+  origenAt?: string | null
 }
 
 /**
@@ -181,8 +188,14 @@ export interface DocumentoLeido {
   concepto?: string | null
   /** Legajos distintos encontrados en sus hojas. Más de uno = mal cortado. */
   legajosEnLasHojas?: number[]
-  /** Las copias traían textos distintos: no son la misma liquidación. */
+  /**
+   * Las copias decían cosas distintas y NO se pudo saber cuál es la buena.
+   * Cuando sí se puede (hay una más nueva), esto queda en false y la elegida
+   * es la única que sobrevive: ver `elegirVersion`.
+   */
   copiasDistintas?: boolean
+  /** Versiones anteriores de esta misma liquidación que se descartaron. */
+  versionesDescartadas?: number
 }
 
 /**
@@ -219,12 +232,64 @@ export function armarDocumentos(hojas: readonly Hoja[]): DocumentoLeido[] {
       continue
     }
     actual.hojas.push(h)
-    // Dos copias del mismo recibo tienen que decir lo mismo.
-    const huellas = new Set(actual.hojas.map((x) => x.huella ?? '').filter(Boolean))
-    if (huellas.size > 1) actual.copiasDistintas = true
   }
 
-  return [...porClave.values(), ...sueltas]
+  return [...porClave.values(), ...sueltas].map(elegirVersion)
+}
+
+function enMilis(f: string | null | undefined): number | null {
+  if (!f) return null
+  const t = new Date(f).getTime()
+  return Number.isFinite(t) ? t : null
+}
+
+/**
+ * Cuando las copias del mismo recibo dicen cosas distintas, cuál es la buena.
+ *
+ * ★ Esto pasa de verdad y no es raro: en agosto de 2026 la liquidación final
+ * del legajo 15 se rehízo TRES veces en 45 minutos, siempre con el número de
+ * recibo 0001, y las tres quedaron en la carpeta. Quien liquida corrige y
+ * vuelve a exportar; el número de recibo no cambia.
+ *
+ * Regla (decisión de Agustín, 05/11/2026): gana la del archivo más nuevo y
+ * las anteriores se descartan, porque eso es lo que significa corregir. Antes
+ * se cortaba el lote entero, y una sola corrección dejaba al mes sin mandar
+ * nada: con los datos de agosto habrían quedado 51 liquidaciones sin cargar
+ * por una.
+ *
+ * Lo que SÍ sigue cortando es la ambigüedad de verdad: si falta la fecha de
+ * algún archivo, o si las dos versiones más nuevas tienen la misma fecha y
+ * dicen cosas distintas, no hay con qué elegir y tiene que mirarlo una
+ * persona. Ahí la cautela no cuesta un mes: cuesta esa liquidación.
+ */
+export function elegirVersion(doc: DocumentoLeido): DocumentoLeido {
+  const huellas = new Set(doc.hojas.map((h) => h.huella ?? '').filter(Boolean))
+  if (huellas.size <= 1) return doc
+
+  const fechas = doc.hojas.map((h) => enMilis(h.origenAt))
+  if (fechas.some((f) => f === null)) return { ...doc, copiasDistintas: true }
+
+  const masNueva = Math.max(...(fechas as number[]))
+  const arriba = new Set(
+    doc.hojas.filter((_, i) => fechas[i] === masNueva).map((h) => h.huella ?? '')
+  )
+  // Empate entre dos textos distintos: no hay cuál es más nueva.
+  if (arriba.size !== 1) return { ...doc, copiasDistintas: true }
+
+  const gana = [...arriba][0]
+  const hojas = doc.hojas.filter((h) => (h.huella ?? '') === gana)
+  // La liquidación es la que dice la versión que ganó, no la primera que se
+  // leyó: el concepto y hasta el nombre pueden haber cambiado al corregir.
+  const cabeza = hojas[0]
+  return {
+    ...doc,
+    hojas,
+    cuil: cabeza.cuil,
+    nombre: cabeza.nombre,
+    concepto: cabeza.concepto,
+    copiasDistintas: false,
+    versionesDescartadas: doc.hojas.length - hojas.length,
+  }
 }
 
 export type MotivoProblema =

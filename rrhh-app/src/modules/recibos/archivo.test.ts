@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   carpetaEmpresa, esPdf, nombreDeRecibo, rutaDeRecibo, siguienteSecuencia,
-  leerAprobacion,
+  leerAprobacion, loteCortado,
 } from './archivo'
 
 describe('carpetaEmpresa', () => {
@@ -176,5 +176,23 @@ describe('leerAprobacion', () => {
 
   it('un legajo que no es un entero queda en null, no se inventa', () => {
     expect(leerAprobacion(vale({ legajo: '83' }), 'h1')?.legajo).toBeNull()
+  })
+})
+
+describe('loteCortado', () => {
+  it('★ un lote cortado no deja cargar nada', () => {
+    expect(loteCortado({ puedeEnviar: false })).toBe(true)
+  })
+
+  it('un lote que se puede mandar deja cargar', () => {
+    expect(loteCortado({ puedeEnviar: true })).toBe(false)
+  })
+
+  it('★ ante la duda no corta', () => {
+    // Un detalle de una versión vieja, sin el dato, no puede dejar sin cargar
+    // un mes entero.
+    for (const d of [null, undefined, {}, 'texto', 42, { puedeEnviar: 'no' }]) {
+      expect(loteCortado(d), JSON.stringify(d)).toBe(false)
+    }
   })
 })
