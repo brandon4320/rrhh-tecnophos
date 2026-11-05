@@ -4169,9 +4169,18 @@ async function infGrafico(svg, pdf) {
 async function datosDelMes(planta, mes, ejemplo) {
   const [desde, hasta] = rangoMes(mes);
   if (ejemplo) {
+    // Los datos de ejemplo son de las últimas semanas: se toman 4 semanas y
+    // se corren al mes elegido, así los totales coinciden con los gráficos.
     const ej = generarEjemplo(planta);
-    // los datos de ejemplo son de las últimas semanas: se muestran como si fueran del mes
-    return { registros: ej.registros, ordenes: [], monitoreos: ej.monitoreos, palomas: ej.palomas, fuente: 'Datos de ejemplo' };
+    const todos = [].concat(ej.registros, ej.monitoreos, ej.palomas);
+    const ultima = Math.max(...todos.map(x => new Date(x.fecha).getTime()));
+    const corte = ultima - 28 * 86400000;
+    const primera = Math.min(...todos.map(x => new Date(x.fecha).getTime()).filter(t => t > corte));
+    const corrimiento = desde.getTime() + 86400000 - lunesDe(new Date(primera)).getTime();
+    const mover = lista => lista.filter(x => new Date(x.fecha).getTime() > corte)
+      .map(x => Object.assign({}, x, { fecha: new Date(new Date(x.fecha).getTime() + corrimiento).toISOString() }))
+      .filter(x => new Date(x.fecha) < hasta);
+    return { registros: mover(ej.registros), ordenes: [], monitoreos: mover(ej.monitoreos), palomas: mover(ej.palomas), fuente: 'Datos de ejemplo' };
   }
   const items = await datosCentrales(planta, desde, hasta);
   const d = unirDatos(planta, items, desde, hasta);
