@@ -178,3 +178,20 @@ export function leerAprobacion(detalle: unknown, hash: string): Aprobacion | nul
     hash: texto(a.hash) ?? hash,
   }
 }
+
+/**
+ * ¿Esa corrida quedó cortada?
+ *
+ * Cuando /lote corta el lote está diciendo que la asignación puede estar
+ * sistemáticamente mal, y es justo ahí donde NO se quiere cargar un PDF en el
+ * legajo de nadie. El lector ya respeta `puedeEnviar`, pero el vale queda
+ * escrito igual: sin esta puerta, cualquiera que mande los bytes de un lote
+ * cortado los carga lo mismo.
+ *
+ * Ante la duda NO corta: un detalle de una versión vieja, sin el dato, no
+ * puede dejar sin cargar un mes entero.
+ */
+export function loteCortado(detalle: unknown): boolean {
+  if (!detalle || typeof detalle !== 'object') return false
+  return (detalle as Record<string, unknown>).puedeEnviar === false
+}

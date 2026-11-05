@@ -216,6 +216,9 @@ export function leerManifiesto(m: Manifiesto): LecturaDelManifiesto {
       // El texto, no los bytes: ver el comentario de Hoja.huella.
       huella: p.huella,
       sha256: a.sha256,
+      // Cuándo se escribió el archivo: es lo que decide cuál versión vale si
+      // la liquidación fue reemitida (elegirVersion en lote.ts).
+      origenAt: a.origen_at,
     })
   }
 
