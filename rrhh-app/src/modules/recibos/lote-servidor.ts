@@ -126,3 +126,138 @@ export async function registrarCarga(admin: Admin, d: DatosCarga): Promise<strin
   }
   return data?.id ?? null
 }
+
+// ============================================================
+// Lado base de la SUBIDA del PDF aprobado (fase 2).
+//
+// El orden de las operaciones está pensado: ver el comentario de la ruta
+// /api/externo/recibos/archivo.
+// ============================================================
+
+/** El recibo ya cargado, con lo que hace falta para decidir Y para numerarlo. */
+export interface ReciboDelEmpleado extends ReciboExistente {
+  periodo: string
+  tipo: string
+  secuencia: number
+}
+
+/** Todos los recibos de una persona. Son pocos: no hace falta paginar por período. */
+export async function recibosDeEmpleado(
+  admin: Admin,
+  empleadoId: string
+): Promise<ReciboDelEmpleado[]> {
+  const { data, error } = await traerTodo<ReciboDelEmpleado>((desde, hasta) =>
+    admin
+      .from('recibos_sueldo')
+      .select('id, origen_hash, recibo_numero, estado, origen_at, periodo, tipo, secuencia')
+      .eq('empleado_id', empleadoId)
+      .order('id', { ascending: true })
+      .range(desde, hasta)
+  )
+  if (error) throw new Error(`no se pudieron leer los recibos: ${error.message}`)
+  return data ?? []
+}
+
+/**
+ * La empresa del empleado, para saber en qué carpeta de R2 va el archivo.
+ *
+ * Devuelve null si el empleado no existe: el vale puede ser de una corrida
+ * vieja y la persona pudo haberse borrado desde entonces.
+ */
+export async function empresaDeEmpleado(admin: Admin, empleadoId: string): Promise<string | null> {
+  const { data, error } = await admin
+    .from('empleados')
+    .select('id, empresa:empresas(slug)')
+    .eq('id', empleadoId)
+    .maybeSingle()
+  if (error) throw new Error(`no se pudo leer el empleado: ${error.message}`)
+  if (!data) return null
+  const emp = Array.isArray(data.empresa) ? data.empresa[0] : data.empresa
+  return (emp as { slug?: string } | null)?.slug ?? null
+}
+
+/** El detalle de una corrida, que es donde vive el vale. */
+export async function detalleDeCarga(admin: Admin, cargaId: string): Promise<Json | null> {
+  const { data, error } = await admin
+    .from('recibo_cargas')
+    .select('detalle')
+    .eq('id', cargaId)
+    .maybeSingle()
+  if (error) throw new Error(`no se pudo leer la corrida: ${error.message}`)
+  return (data?.detalle ?? null) as Json | null
+}
+
+export interface FilaRecibo {
+  empleadoId: string
+  periodo: string
+  tipo: string
+  secuencia: number
+  nombreArchivo: string
+  path: string
+  sizeBytes: number
+  reciboNumero: string | null
+  origenArchivo: string | null
+  origenHash: string | null
+  origenAt: string | null
+  notas: string | null
+}
+
+/** Código de unique_violation de Postgres. */
+export const CHOQUE_UNICO = '23505'
+
+export interface ResultadoInsert {
+  id: string | null
+  /** Qué índice chocó, si chocó: 'secuencia' | 'hash' | null. */
+  choque: 'secuencia' | 'hash' | null
+  error: string | null
+}
+
+/**
+ * Inserta el recibo. Distingue los dos choques posibles porque significan
+ * cosas distintas:
+ *
+ *  · secuencia → otro proceso numeró primero. Se reintenta con el número que
+ *    sigue y listo.
+ *  · hash → ese mismo PDF ya está cargado. No es un error: alguien lo subió
+ *    entre que se decidió y se subió. Se trata como "ya estaba".
+ */
+export async function insertarRecibo(admin: Admin, f: FilaRecibo): Promise<ResultadoInsert> {
+  const { data, error } = await admin
+    .from('recibos_sueldo')
+    .insert({
+      empleado_id: f.empleadoId,
+      periodo: f.periodo,
+      tipo: f.tipo,
+      secuencia: f.secuencia,
+      nombre_archivo: f.nombreArchivo,
+      path: f.path,
+      mime_type: 'application/pdf',
+      size_bytes: f.sizeBytes,
+      recibo_numero: f.reciboNumero,
+      origen: 'automatico',
+      origen_archivo: f.origenArchivo,
+      origen_hash: f.origenHash,
+      origen_at: f.origenAt,
+      notas: f.notas,
+      estado: 'pendiente',
+    })
+    .select('id')
+    .single()
+
+  if (!error) return { id: data?.id ?? null, choque: null, error: null }
+  if (error.code === CHOQUE_UNICO) {
+    if (/recibos_origen_hash_idx/.test(error.message)) return { id: null, choque: 'hash', error: error.message }
+    return { id: null, choque: 'secuencia', error: error.message }
+  }
+  return { id: null, choque: null, error: error.message }
+}
+
+/** El recibo que quedó sin efecto. El PDF y la firma que tuviera NO se borran. */
+export async function anularRecibos(admin: Admin, ids: readonly string[]): Promise<void> {
+  if (!ids.length) return
+  const { error } = await admin
+    .from('recibos_sueldo')
+    .update({ estado: 'anulado' })
+    .in('id', [...ids])
+  if (error) throw new Error(`no se pudieron anular los recibos reemplazados: ${error.message}`)
+}

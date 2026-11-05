@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { Json } from '@/types/database'
 import { tokenDeIntegracionValido } from '@/lib/integraciones'
 import { decidirCarga, hashQueCuenta } from '@/modules/recibos/carga'
 import {
@@ -100,7 +101,9 @@ export async function POST(req: Request) {
       // Ruta relativa dentro de la carpeta de la empresa: el lector la abre
       // tal cual. El nombre solo no alcanza, se repite entre corridas.
       archivo: documento.hojas[0]?.archivo ?? null,
-      copias: documento.hojas.length,
+      // Las huellas de TODAS las copias de esta misma liquidación: el lector
+      // sube una y tiene que ser reconocida venga de la que venga.
+      copias: documento.hojas.map((h) => h.sha256).filter((s): s is string => !!s),
       empleadoId: empleado.id,
       legajo: empleado.legajo,
       recibo: documento.recibo ?? null,
@@ -112,6 +115,23 @@ export async function POST(req: Request) {
       ...decision,
     }
   })
+
+  // ★ El vale de la corrida, indexado por la huella de CADA copia del PDF.
+  //
+  // Es lo que hace que la subida no tenga que creerle al lector de quién es el
+  // archivo: manda los bytes, Gestión los reconoce por su sha256 y saca de acá
+  // el dueño que YA decidió. Un archivo mal emparejado no está en el vale y no
+  // se guarda. Entran todas las liquidaciones decididas y no solo las que hay
+  // que cargar, para que subir una que ya estaba conteste "ya estaba" y no
+  // "esto no lo aprobé".
+  const vale: Record<string, Json> = {}
+  for (const a of aprobados) {
+    const entrada: Json = {
+      empleadoId: a.empleadoId, legajo: a.legajo, recibo: a.recibo, periodo: a.periodo,
+      tipo: a.tipo, concepto: a.concepto, archivo: a.archivo, origenAt: a.origenAt, hash: a.hash,
+    }
+    for (const copia of a.copias) vale[copia] = entrada
+  }
 
   const aCargar = aprobados.filter((a) => a.accion === 'nueva' || a.accion === 'correccion')
   const yaEstaban = aprobados.filter((a) => a.accion === 'ya_estaba').length
@@ -156,6 +176,7 @@ export async function POST(req: Request) {
       sinRecibo: sinRecibo.map((e) => e.legajo),
       nombresDistintos,
       problemas: problemas.map((p) => ({ archivo: p.archivo, motivo: p.motivo })),
+      aprobados: vale,
     },
   })
 
