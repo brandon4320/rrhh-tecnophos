@@ -55,3 +55,17 @@ export async function getSignedUploadUrl(
     { expiresIn }
   )
 }
+
+/**
+ * Baja un archivo de R2 a memoria.
+ *
+ * Es para lo que el server TIENE que abrir —hoy, estampar la firma en el PDF
+ * del recibo—, no para pasárselo al navegador: para eso está la URL firmada,
+ * que no hace pasar los bytes por la función.
+ */
+export async function downloadFromR2(path: string): Promise<Uint8Array> {
+  const obj = await r2.send(new GetObjectCommand({ Bucket: R2_BUCKET, Key: path }))
+  const bytes = await obj.Body?.transformToByteArray()
+  if (!bytes) throw new Error(`el archivo ${path} vino vacío`)
+  return bytes
+}

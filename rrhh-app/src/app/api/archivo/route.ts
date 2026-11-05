@@ -29,7 +29,21 @@ export async function GET(request: NextRequest) {
       : path.startsWith('documentos/') ? 'documentos_mensuales'
       : 'archivos'
     const { data: fila } = await supabase.from(tabla).select('id').eq('path', path).maybeSingle()
-    if (!fila) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+
+    // Un recibo tiene DOS archivos: el original (`path`) y, una vez que el
+    // empleado lo firmó, la copia firmada (`firmado_path`). Sin este segundo
+    // intento la copia firmada no se podría abrir desde Gestión, que es
+    // justamente la que la oficina necesita mirar.
+    //
+    // Va como segunda consulta y no como un `or`: el path viene de la query
+    // string, y armar un filtro `or` concatenando texto de afuera es meter al
+    // usuario adentro del filtro. Las dos consultas pasan por la RLS igual.
+    let firmado = null
+    if (!fila && tabla === 'recibos_sueldo') {
+      const r = await supabase.from(tabla).select('id').eq('firmado_path', path).maybeSingle()
+      firmado = r.data
+    }
+    if (!fila && !firmado) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 
   const url = await getSignedDownloadUrl(path, 120)
