@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getSignedDownloadUrl } from '@/lib/r2/operations'
-import {
-  MENSAJE_BLOQUEADO, MENSAJE_CUIL_INCORRECTO, MENSAJE_LINK_INVALIDO,
-  coincideUltimos4, nombreDePila, rotuloPeriodo, rotuloTipo, soloDigitos,
-} from '@/modules/recibos/reglas'
-import {
-  buscarToken, comparaSegura, estadoDe, evaluarIntento, recibosPendientes, registrarIntento,
-} from '@/modules/recibos/servidor'
+import { nombreFirmado } from '@/modules/recibos/estampa'
+import { confirmarIdentidad } from '@/modules/recibos/identidad'
+import { nombreDePila, rotuloPeriodo, rotuloTipo } from '@/modules/recibos/reglas'
+import { firmaGuardada, recibosPendientes } from '@/modules/recibos/servidor'
 
 /**
  * Confirmación de los últimos 4 del CUIL para ver los recibos. PÚBLICA: la
@@ -19,66 +16,51 @@ import {
  */
 export const dynamic = 'force-dynamic'
 
-/** Siempre el mismo cuerpo para "no sirve": no se puede distinguir por qué. */
-function invalido() {
-  return NextResponse.json({ error: MENSAJE_LINK_INVALIDO }, { status: 403 })
-}
-
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const admin = createAdminClient()
 
   const cuerpo = (await request.json().catch(() => null)) as { cuil4?: unknown } | null
-  const escrito = soloDigitos(typeof cuerpo?.cuil4 === 'string' ? cuerpo.cuil4 : '')
-  if (escrito.length !== 4) {
-    return NextResponse.json({ error: 'Escribí los últimos 4 números de tu CUIL.' }, { status: 400 })
-  }
+  const quien = await confirmarIdentidad(admin, token, cuerpo?.cuil4)
+  if ('error' in quien) return quien.error
+  const { fila } = quien
 
-  let fila
+  let recibos
+  let firma
   try {
-    fila = await buscarToken(admin, token)
+    ;[recibos, firma] = await Promise.all([
+      recibosPendientes(admin, fila.empleado_id),
+      firmaGuardada(admin, fila.empleado_id),
+    ])
   } catch {
-    // Una caída de la base no puede verse igual que un link vencido: el
-    // empleado tiene que saber que es el sistema y no su link.
     return NextResponse.json({ error: 'El sistema no está disponible. Probá en unos minutos.' }, { status: 503 })
   }
-  if (!fila) return invalido()
-
-  const estado = estadoDe(fila)
-  if (estado === 'invalido') return invalido()
-  if (estado === 'bloqueado') return NextResponse.json({ error: MENSAJE_BLOQUEADO }, { status: 429 })
-
-  const cuil = soloDigitos(fila.empleado.cuil)
-  // Sin CUIL cargado no hay forma de confirmar quién es: no se muestra nada.
-  const acierto = coincideUltimos4(cuil, escrito) && comparaSegura(cuil.slice(-4), escrito)
-
-  const resultado = evaluarIntento(acierto, fila.intentos)
-  await registrarIntento(admin, fila.id, resultado)
-
-  if (!resultado.ok) {
-    return NextResponse.json(
-      { error: resultado.mensaje ?? MENSAJE_CUIL_INCORRECTO },
-      { status: resultado.bloqueadoHasta ? 429 : 401 }
-    )
-  }
-
-  const recibos = await recibosPendientes(admin, fila.empleado_id)
 
   // Cada PDF se abre con una URL firmada de pocos minutos, nunca con un link
   // permanente. Si una falla, el recibo igual aparece: se ve que está y que no
   // se pudo abrir, en vez de desaparecer de la lista sin explicación.
   const conUrl = await Promise.all(
-    recibos.map(async (r) => ({
-      id: r.id,
-      tipo: rotuloTipo(r.tipo),
-      periodo: rotuloPeriodo(r.periodo),
-      nombre: r.nombre_archivo,
-      url: await getSignedDownloadUrl(r.path, 300, r.nombre_archivo).catch(() => null),
-    }))
+    recibos.map(async (r) => {
+      const firmado = r.estado === 'firmado' && r.firmado_path
+      const path = firmado ? r.firmado_path! : r.path
+      const nombre = firmado ? nombreFirmado(r.nombre_archivo) : r.nombre_archivo
+      return {
+        id: r.id,
+        estado: r.estado,
+        tipo: rotuloTipo(r.tipo),
+        periodo: rotuloPeriodo(r.periodo),
+        nombre,
+        url: await getSignedDownloadUrl(path, 300, nombre).catch(() => null),
+      }
+    })
   )
 
   return NextResponse.json({
     nombre: nombreDePila(fila.empleado.nombre),
+    // Si ya dibujó la firma alguna vez, el celular se la muestra y le ofrece
+    // reusarla, en vez de pedirle que la vuelva a hacer con el dedo en cada
+    // recibo.
+    firmaUrl: firma ? await getSignedDownloadUrl(firma.path, 300).catch(() => null) : null,
     recibos: conUrl,
   })
 }

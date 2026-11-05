@@ -91,18 +91,131 @@ export interface ReciboPendiente {
   periodo: string
   nombre_archivo: string
   path: string
+  estado: string
+  firmado_path: string | null
 }
 
-/** Los recibos que este empleado todavía no firmó, del más nuevo al más viejo. */
+/**
+ * Los recibos que este empleado ve en su link, del más nuevo al más viejo.
+ *
+ * Vienen los pendientes Y los que ya firmó: después de firmar el último, la
+ * pantalla tiene que seguir mostrando algo: su copia firmada, que es lo que la
+ * persona va a querer guardar. Los anulados no: esos ya no valen (migración
+ * 34) y mostrarlos solo confunde.
+ */
 export async function recibosPendientes(admin: Admin, empleadoId: string): Promise<ReciboPendiente[]> {
   const { data, error } = await admin
     .from('recibos_sueldo')
-    .select('id, tipo, periodo, nombre_archivo, path')
+    .select('id, tipo, periodo, nombre_archivo, path, estado, firmado_path')
     .eq('empleado_id', empleadoId)
-    .eq('estado', 'pendiente')
+    .in('estado', ['pendiente', 'firmado'])
     .order('periodo', { ascending: false })
   if (error) throw new Error(`no se pudieron leer los recibos: ${error.message}`)
   return (data ?? []) as ReciboPendiente[]
+}
+
+// ============================================================
+// Firmar
+// ============================================================
+
+export interface ReciboParaFirmar extends ReciboPendiente {
+  empleado_id: string
+  estado: string
+  firmado_path: string | null
+  firma_pagina: number | null
+  firma_x: number | null
+  firma_y: number | null
+  firma_ancho: number | null
+  firma_alto: number | null
+}
+
+/**
+ * El recibo que se va a firmar, buscado SIEMPRE junto al empleado del token.
+ *
+ * El id del recibo lo manda el celular, así que no alcanza con que exista: la
+ * condición por `empleado_id` es la que impide que alguien con un link válido
+ * firme —y se lleve— el recibo de otra persona.
+ */
+export async function reciboParaFirmar(
+  admin: Admin,
+  empleadoId: string,
+  reciboId: string
+): Promise<ReciboParaFirmar | null> {
+  const { data, error } = await admin
+    .from('recibos_sueldo')
+    .select('id, empleado_id, tipo, periodo, nombre_archivo, path, estado, firmado_path, firma_pagina, firma_x, firma_y, firma_ancho, firma_alto')
+    .eq('id', reciboId)
+    .eq('empleado_id', empleadoId)
+    .maybeSingle()
+  if (error) throw new Error(`no se pudo leer el recibo: ${error.message}`)
+  return (data as ReciboParaFirmar | null) ?? null
+}
+
+export interface FirmaGuardada {
+  path: string
+  ancho: number | null
+  alto: number | null
+}
+
+/** La firma que esta persona ya dibujó alguna vez, si la hay. */
+export async function firmaGuardada(admin: Admin, empleadoId: string): Promise<FirmaGuardada | null> {
+  const { data, error } = await admin
+    .from('firmas_empleado')
+    .select('path, ancho, alto')
+    .eq('empleado_id', empleadoId)
+    .maybeSingle()
+  if (error) throw new Error(`no se pudo leer la firma: ${error.message}`)
+  return (data as FirmaGuardada | null) ?? null
+}
+
+/**
+ * Guarda (o reemplaza) la firma dibujada. Una sola por persona: la tabla tiene
+ * `empleado_id` único, así que volver a dibujar pisa la anterior y la
+ * auditoría (migración 31) deja el rastro de que cambió.
+ */
+export async function guardarFirma(
+  admin: Admin,
+  empleadoId: string,
+  firma: FirmaGuardada
+): Promise<void> {
+  const { error } = await admin
+    .from('firmas_empleado')
+    .upsert(
+      { empleado_id: empleadoId, ...firma, actualizada_at: new Date().toISOString() },
+      { onConflict: 'empleado_id' }
+    )
+  if (error) throw new Error(`no se pudo guardar la firma: ${error.message}`)
+}
+
+export interface Firmado {
+  firmadoPath: string
+  ip: string | null
+  agente: string | null
+}
+
+/**
+ * Marca el recibo como firmado. Devuelve false si OTRO lo marcó primero.
+ *
+ * La condición `estado = 'pendiente'` es la que hace que dos toques seguidos
+ * en el celular —o un reintento por mala señal— no pisen la fecha de la firma
+ * de verdad. El PDF firmado se reescribe sobre la misma clave de R2 (los
+ * mismos bytes), así que repetir no deja basura.
+ */
+export async function marcarFirmado(admin: Admin, reciboId: string, f: Firmado): Promise<boolean> {
+  const { data, error } = await admin
+    .from('recibos_sueldo')
+    .update({
+      estado: 'firmado',
+      firmado_at: new Date().toISOString(),
+      firmado_path: f.firmadoPath,
+      firma_ip: f.ip,
+      firma_agente: f.agente,
+    })
+    .eq('id', reciboId)
+    .eq('estado', 'pendiente')
+    .select('id')
+  if (error) throw new Error(`no se pudo marcar el recibo como firmado: ${error.message}`)
+  return (data ?? []).length > 0
 }
 
 /**
