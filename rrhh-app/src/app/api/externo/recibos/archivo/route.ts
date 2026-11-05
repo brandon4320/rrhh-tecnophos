@@ -153,6 +153,24 @@ export async function POST(req: Request) {
   }
 
   const path = rutaDeRecibo(empleado.slug, aprobacion.empleadoId, aprobacion.periodo, aprobacion.tipo, hash ?? sha)
+
+  // ★ Antes de escribir: que ese lugar no sea de otro comprobante. El PUT va
+  // ANTES del insert, asi que sin esta consulta el choque con el indice unico
+  // de `path` se descubriria con el PDF ajeno ya pisado. Es una lectura por
+  // el indice unico que ya existe.
+  const { data: duenio, error: errorDuenio } = await admin
+    .from('recibos_sueldo').select('id').eq('path', path).maybeSingle()
+  if (errorDuenio) {
+    console.error('[externo/recibos/archivo] duenio del path:', errorDuenio.message)
+    return NextResponse.json({ error: 'No disponible' }, { status: 503 })
+  }
+  if (duenio) {
+    return NextResponse.json(
+      { error: 'Ese archivo ya tiene lugar asignado en otro comprobante de esta persona.', accion: 'path_tomado' },
+      { status: 409 }
+    )
+  }
+
   try {
     await uploadToR2(path, bytes, 'application/pdf')
   } catch (e) {

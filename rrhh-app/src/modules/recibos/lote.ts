@@ -266,6 +266,11 @@ export function elegirVersion(doc: DocumentoLeido): DocumentoLeido {
   const huellas = new Set(doc.hojas.map((h) => h.huella ?? '').filter(Boolean))
   if (huellas.size <= 1) return doc
 
+  // ★ Una copia de la que no se pudo leer el texto no puede ganar. Sin huella
+  // no hay con qué compararla, y si justo es la del archivo más nuevo se
+  // quedaría ella y se tirarían las versiones que SÍ se leyeron.
+  if (doc.hojas.some((h) => !h.huella)) return { ...doc, copiasDistintas: true }
+
   const fechas = doc.hojas.map((h) => enMilis(h.origenAt))
   if (fechas.some((f) => f === null)) return { ...doc, copiasDistintas: true }
 

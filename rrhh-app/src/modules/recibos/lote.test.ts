@@ -480,3 +480,18 @@ describe('faltantes', () => {
     expect(faltantes(padron, [{ documento: doc(), empleado: padron[0] }])).toEqual([])
   })
 })
+
+describe('elegirVersion — el borde que no se ve', () => {
+  it('★ una copia sin huella no puede ganar', () => {
+    // Sin texto no hay con qué compararla: si justo es la del archivo más
+    // nuevo, se quedaría ella y se tirarían las versiones que sí se leyeron.
+    const docs = armarDocumentos([
+      hoja({ huella: 'legible', origenAt: '2026-08-24T13:00:00-03:00', archivo: 'a.pdf' }),
+      hoja({ huella: 'otra', origenAt: '2026-08-24T13:30:00-03:00', archivo: 'b.pdf' }),
+      hoja({ huella: null, origenAt: '2026-08-24T14:00:00-03:00', archivo: 'c.pdf' }),
+    ])
+    expect(docs[0].copiasDistintas).toBe(true)
+    expect(docs[0].hojas).toHaveLength(3)
+    expect(docs[0].versionesDescartadas).toBeUndefined()
+  })
+})
