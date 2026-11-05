@@ -161,19 +161,26 @@ export async function recibosDeEmpleado(
 /**
  * La empresa del empleado, para saber en qué carpeta de R2 va el archivo.
  *
- * Devuelve null si el empleado no existe: el vale puede ser de una corrida
- * vieja y la persona pudo haberse borrado desde entonces.
+ * ★ Se distinguen dos cosas que parecen la misma: que el empleado no exista
+ * —el vale puede ser de una corrida vieja y la persona pudo haberse borrado—
+ * y que exista sin empresa, que es posible porque `empleados.empresa_id` es
+ * nullable. Si no se separaran, a esa persona se le rechazaría el recibo
+ * todos los meses con un "ya no existe" que manda a buscar a alguien que está
+ * ahí. Sin empresa el archivo va igual: `carpetaEmpresa` lo pone en 'docs'.
  */
-export async function empresaDeEmpleado(admin: Admin, empleadoId: string): Promise<string | null> {
+export async function empresaDeEmpleado(
+  admin: Admin,
+  empleadoId: string
+): Promise<{ existe: boolean; slug: string | null }> {
   const { data, error } = await admin
     .from('empleados')
     .select('id, empresa:empresas(slug)')
     .eq('id', empleadoId)
     .maybeSingle()
   if (error) throw new Error(`no se pudo leer el empleado: ${error.message}`)
-  if (!data) return null
+  if (!data) return { existe: false, slug: null }
   const emp = Array.isArray(data.empresa) ? data.empresa[0] : data.empresa
-  return (emp as { slug?: string } | null)?.slug ?? null
+  return { existe: true, slug: (emp as { slug?: string } | null)?.slug ?? null }
 }
 
 /** El detalle de una corrida, que es donde vive el vale. */
@@ -207,20 +214,34 @@ export const CHOQUE_UNICO = '23505'
 
 export interface ResultadoInsert {
   id: string | null
-  /** Qué índice chocó, si chocó: 'secuencia' | 'hash' | null. */
+  /** Contra qué índice chocó, si chocó. */
   choque: 'secuencia' | 'hash' | null
   error: string | null
+  /** El código de Postgres, para saber si el conflicto es con otra fila. */
+  codigo: string | null
 }
 
 /**
- * Inserta el recibo. Distingue los dos choques posibles porque significan
- * cosas distintas:
+ * Inserta el recibo. Distingue los dos choques que SÍ sabe qué significan:
  *
  *  · secuencia → otro proceso numeró primero. Se reintenta con el número que
  *    sigue y listo.
  *  · hash → ese mismo PDF ya está cargado. No es un error: alguien lo subió
  *    entre que se decidió y se subió. Se trata como "ya estaba".
+ *
+ * ★ Cualquier otro choque se devuelve como error común, por NOMBRE y no por
+ * descarte. `recibos_sueldo` tiene un tercer índice único, sobre `path`
+ * (migración 15): tomarlo por un choque de secuencia haría reintentar con el
+ * mismo path —cosa que no puede salir bien— y terminar borrando de R2 un
+ * objeto que es de la fila que ya estaba.
+ *
+ * Los dos nombres de la clave de secuencia conviven a propósito: la migración
+ * 33 la recreó con otro nombre y el código se deploya solo con el push,
+ * mientras que la migración se aplica a mano. Mismo criterio que
+ * /api/recibos.
  */
+const INDICE_HASH = /recibos_origen_hash_idx/
+const INDICE_SECUENCIA = /recibos_sueldo_empleado_(id_)?periodo_tipo(_seq)?_key/
 export async function insertarRecibo(admin: Admin, f: FilaRecibo): Promise<ResultadoInsert> {
   const { data, error } = await admin
     .from('recibos_sueldo')
@@ -244,12 +265,13 @@ export async function insertarRecibo(admin: Admin, f: FilaRecibo): Promise<Resul
     .select('id')
     .single()
 
-  if (!error) return { id: data?.id ?? null, choque: null, error: null }
+  if (!error) return { id: data?.id ?? null, choque: null, error: null, codigo: null }
+  const comun = { id: null, error: error.message, codigo: error.code ?? null }
   if (error.code === CHOQUE_UNICO) {
-    if (/recibos_origen_hash_idx/.test(error.message)) return { id: null, choque: 'hash', error: error.message }
-    return { id: null, choque: 'secuencia', error: error.message }
+    if (INDICE_HASH.test(error.message)) return { ...comun, choque: 'hash' }
+    if (INDICE_SECUENCIA.test(error.message)) return { ...comun, choque: 'secuencia' }
   }
-  return { id: null, choque: null, error: error.message }
+  return { ...comun, choque: null }
 }
 
 /** El recibo que quedó sin efecto. El PDF y la firma que tuviera NO se borran. */

@@ -9,7 +9,7 @@ import {
   esPdf, leerAprobacion, MAX_RECIBO_SUBIDA_BYTES, nombreDeRecibo, rutaDeRecibo, siguienteSecuencia,
 } from '@/modules/recibos/archivo'
 import {
-  anularRecibos, detalleDeCarga, empresaDeEmpleado, insertarRecibo, recibosDeEmpleado,
+  anularRecibos, CHOQUE_UNICO, detalleDeCarga, empresaDeEmpleado, insertarRecibo, recibosDeEmpleado,
 } from '@/modules/recibos/lote-servidor'
 
 /**
@@ -108,11 +108,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'El período no puede ser un mes futuro.' }, { status: 409 })
   }
 
-  let slug: string | null
+  let empleado
   let previos
   try {
-    slug = await empresaDeEmpleado(admin, aprobacion.empleadoId)
-    if (slug === null) {
+    // Sin empresa el recibo entra igual (va a la carpeta 'docs'): lo unico que
+    // corta es que la persona ya no este.
+    empleado = await empresaDeEmpleado(admin, aprobacion.empleadoId)
+    if (!empleado.existe) {
       return NextResponse.json({ error: 'El empleado de esa liquidación ya no existe.' }, { status: 409 })
     }
     previos = await recibosDeEmpleado(admin, aprobacion.empleadoId)
@@ -140,7 +142,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ...comun, accion: 'superada', reciboId: decision.porId })
   }
 
-  const path = rutaDeRecibo(slug, aprobacion.empleadoId, aprobacion.periodo, aprobacion.tipo, hash ?? sha)
+  const path = rutaDeRecibo(empleado.slug, aprobacion.empleadoId, aprobacion.periodo, aprobacion.tipo, hash ?? sha)
   try {
     await uploadToR2(path, bytes, 'application/pdf')
   } catch (e) {
@@ -191,7 +193,10 @@ export async function POST(req: Request) {
       continue
     }
     console.error('[externo/recibos/archivo] insert:', r.error)
-    await deleteFromR2(path).catch(() => {})
+    // Un choque con otra fila quiere decir que ese lugar NO es nuestro: puede
+    // ser el PDF de un recibo que ya existe y borrarlo lo dejaria sin archivo.
+    // Solo se limpia lo que seguro quedo huerfano.
+    if (r.codigo !== CHOQUE_UNICO) await deleteFromR2(path).catch(() => {})
     return NextResponse.json({ error: 'No se pudo registrar la liquidación.' }, { status: 500 })
   }
 
