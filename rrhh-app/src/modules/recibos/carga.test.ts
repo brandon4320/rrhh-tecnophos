@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { decidirCarga, tipoDeMail, type ReciboExistente } from './carga'
+import { decidirCarga, hashQueCuenta, tipoDeMail, type ReciboExistente } from './carga'
 
 const rec = (p: Partial<ReciboExistente> & { id: string }): ReciboExistente => ({
   origen_hash: 'hash-viejo', recibo_numero: '4821', estado: 'pendiente', ...p,
@@ -103,6 +103,26 @@ describe('decidirCarga', () => {
     // Pasa a tratarse por número de recibo, que es lo correcto.
     expect(decidirCarga({ hash: null, reciboNumero: '4821' }, [rec({ id: 'a' })]))
       .toMatchObject({ accion: 'correccion' })
+  })
+})
+
+describe('hashQueCuenta', () => {
+  it('★ si una de las copias ya está cargada, vale esa', () => {
+    // El mismo recibo llega como archivo individual y adentro de uno de lote,
+    // con bytes distintos porque el PDF lleva su fecha de creación adentro.
+    // Elegir al azar haría ver como corrección algo que ya está cargado.
+    const previos = [rec({ id: 'a', origen_hash: 'delLote' })]
+    expect(hashQueCuenta(['individual', 'delLote'], previos)).toBe('delLote')
+  })
+
+  it('si ninguna está cargada, la primera (estable entre corridas)', () => {
+    expect(hashQueCuenta(['uno', 'dos'], [])).toBe('uno')
+  })
+
+  it('ignora las vacías y aguanta quedarse sin ninguna', () => {
+    expect(hashQueCuenta([null, '  ', 'uno'], [])).toBe('uno')
+    expect(hashQueCuenta([null, undefined], [])).toBeNull()
+    expect(hashQueCuenta([], [])).toBeNull()
   })
 })
 

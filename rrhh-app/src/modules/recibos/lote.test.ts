@@ -202,11 +202,32 @@ describe('resolverDestino', () => {
   })
 
   it('★ dos hermanos del mismo apellido no se confunden', () => {
+    // Sin CUIL en el recibo, el nombre es la única verificación que queda.
     const r = resolverDestino(
       doc({ nombre: 'GARCIA JONATAN ANDRES' }),
       [emp({ id: 'a', apellido: 'GARCIA', nombre: 'JOSE ORLANDO' })]
     )
     expect(r).toMatchObject({ motivo: 'nombre_no_coincide' })
+  })
+
+  it('★★ con el CUIL correcto, un nombre escrito distinto NO frena el recibo', () => {
+    // Apareció corriendo octubre de verdad: el CUIL coincidía y el nombre
+    // estaba escrito distinto —una letra cambiada y un segundo nombre que
+    // figura en Gestión y no en el recibo— y esa persona quedaba sin su
+    // recibo a cambio de nada. Se anota y sigue.
+    const r = resolverDestino(
+      doc({ cuil: '20111111117', nombre: 'GUTIERRES JUAN' }),
+      [emp({ id: 'a', cuil: '20111111117', apellido: 'GUTIERREZ', nombre: 'JUAN FEDERICO' })]
+    )
+    expect(r).toEqual({ ok: true, empleado: expect.objectContaining({ id: 'a' }), nombreDistinto: true })
+  })
+
+  it('★★ pero con el CUIL de OTRO el nombre no lo salva', () => {
+    const r = resolverDestino(
+      doc({ cuil: '27222222224', nombre: 'PEREZ JUAN' }),
+      [emp({ id: 'a', cuil: '20111111117' })]
+    )
+    expect(r).toMatchObject({ motivo: 'cuil_no_coincide' })
   })
 
   it('el nombre coincide aunque esté en otro orden o con acentos', () => {
