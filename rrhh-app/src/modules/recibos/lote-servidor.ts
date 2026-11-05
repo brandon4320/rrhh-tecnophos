@@ -13,6 +13,7 @@ import 'server-only'
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { traerTodo } from '@/lib/paginar'
 import type { Json } from '@/types/database'
+import type { CajaFirma } from './archivo'
 import type { ReciboExistente } from './carga'
 import type { EmpleadoPadron } from './lote'
 
@@ -207,6 +208,8 @@ export interface FilaRecibo {
   origenHash: string | null
   origenAt: string | null
   notas: string | null
+  /** Dónde estampar la firma. O está toda o no está: lo exige la migración 32. */
+  firma: CajaFirma | null
 }
 
 /** Código de unique_violation de Postgres. */
@@ -269,6 +272,11 @@ export async function insertarRecibo(admin: Admin, f: FilaRecibo): Promise<Resul
       origen_at: f.origenAt,
       notas: f.notas,
       estado: 'pendiente',
+      firma_pagina: f.firma?.pagina ?? null,
+      firma_x: f.firma?.x ?? null,
+      firma_y: f.firma?.y ?? null,
+      firma_ancho: f.firma?.ancho ?? null,
+      firma_alto: f.firma?.alto ?? null,
     })
     .select('id')
     .single()

@@ -7,6 +7,7 @@
 // valida todo y después Gestión vuelve a decidir por su cuenta de quién es
 // cada cosa — el lector no asigna nada, solo cuenta lo que vio.
 // ============================================================
+import { leerCajaFirma, type CajaFirma } from './archivo'
 import { baseDeCarpeta, esBaseConocida, periodoDeCarpeta, type Hoja } from './lote'
 
 /** Topes para no quedar a merced de lo que mande el otro lado. */
@@ -24,6 +25,8 @@ export interface PersonaManifiesto {
   concepto?: string | null
   paginas?: number[]
   huella?: string | null
+  /** Dónde va la firma en esta liquidación, ya en coordenadas de pdf-lib. */
+  firma?: CajaFirma | null
 }
 
 export interface ArchivoManifiesto {
@@ -143,6 +146,9 @@ export function validarManifiesto(cuerpo: unknown): Validacion {
           nombre: texto(q.nombre),
           concepto: texto(q.concepto),
           huella: texto(q.huella, 80),
+          // Una caja que no cierra queda en null y el recibo se carga igual:
+          // sin posición no se estampa, que es mejor que no tener el recibo.
+          firma: leerCajaFirma(q.firma),
         }
       }),
     })
@@ -216,6 +222,7 @@ export function leerManifiesto(m: Manifiesto): LecturaDelManifiesto {
       // El texto, no los bytes: ver el comentario de Hoja.huella.
       huella: p.huella,
       sha256: a.sha256,
+      firma: p.firma,
       // Cuándo se escribió el archivo: es lo que decide cuál versión vale si
       // la liquidación fue reemitida (elegirVersion en lote.ts).
       origenAt: a.origen_at,

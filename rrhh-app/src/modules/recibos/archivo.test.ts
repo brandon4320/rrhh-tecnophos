@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   carpetaEmpresa, esPdf, nombreDeRecibo, rutaDeRecibo, siguienteSecuencia,
-  leerAprobacion, loteCortado,
+  leerAprobacion, loteCortado, leerCajaFirma,
 } from './archivo'
 
 describe('carpetaEmpresa', () => {
@@ -194,5 +194,38 @@ describe('loteCortado', () => {
     for (const d of [null, undefined, {}, 'texto', 42, { puedeEnviar: 'no' }]) {
       expect(loteCortado(d), JSON.stringify(d)).toBe(false)
     }
+  })
+})
+
+describe('leerCajaFirma', () => {
+  const caja = (p: Record<string, unknown> = {}) =>
+    ({ pagina: 1, x: 370.47, y: 195.29, ancho: 120, alto: 50, ...p })
+
+  it('acepta la caja que manda el lector', () => {
+    expect(leerCajaFirma(caja())).toEqual({ pagina: 1, x: 370.47, y: 195.29, ancho: 120, alto: 50 })
+  })
+
+  it('★ una caja a medias no se guarda a medias', () => {
+    // La migración 32 tiene un CHECK de "o está toda o no está ninguna":
+    // mandar media caja haría fallar el insert del recibo entero.
+    for (const falta of ['pagina', 'x', 'y', 'ancho', 'alto']) {
+      expect(leerCajaFirma(caja({ [falta]: null })), falta).toBeNull()
+    }
+  })
+
+  it('★ una medida imposible se descarta en vez de dibujar en el borde', () => {
+    for (const malo of [{ pagina: 0 }, { pagina: 1.5 }, { x: -1 }, { y: -1 },
+                        { ancho: 0 }, { alto: 0 }, { x: 99999 }, { alto: 99999 }]) {
+      expect(leerCajaFirma(caja(malo)), JSON.stringify(malo)).toBeNull()
+    }
+  })
+
+  it('lo que no es una caja no revienta', () => {
+    for (const v of [null, undefined, 'texto', 42, [], {}]) expect(leerCajaFirma(v)).toBeNull()
+  })
+
+  it('un número que viene como texto se entiende igual', () => {
+    // El manifiesto es JSON escrito por otro proceso: no se le exige el tipo.
+    expect(leerCajaFirma(caja({ x: '370.47' }))?.x).toBe(370.47)
   })
 })
