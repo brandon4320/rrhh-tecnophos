@@ -126,3 +126,160 @@ export async function registrarCarga(admin: Admin, d: DatosCarga): Promise<strin
   }
   return data?.id ?? null
 }
+
+// ============================================================
+// Lado base de la SUBIDA del PDF aprobado (fase 2).
+//
+// El orden de las operaciones está pensado: ver el comentario de la ruta
+// /api/externo/recibos/archivo.
+// ============================================================
+
+/** El recibo ya cargado, con lo que hace falta para decidir Y para numerarlo. */
+export interface ReciboDelEmpleado extends ReciboExistente {
+  periodo: string
+  tipo: string
+  secuencia: number
+}
+
+/** Todos los recibos de una persona. Son pocos: no hace falta paginar por período. */
+export async function recibosDeEmpleado(
+  admin: Admin,
+  empleadoId: string
+): Promise<ReciboDelEmpleado[]> {
+  const { data, error } = await traerTodo<ReciboDelEmpleado>((desde, hasta) =>
+    admin
+      .from('recibos_sueldo')
+      .select('id, origen_hash, recibo_numero, estado, origen_at, periodo, tipo, secuencia')
+      .eq('empleado_id', empleadoId)
+      .order('id', { ascending: true })
+      .range(desde, hasta)
+  )
+  if (error) throw new Error(`no se pudieron leer los recibos: ${error.message}`)
+  return data ?? []
+}
+
+/**
+ * La empresa del empleado, para saber en qué carpeta de R2 va el archivo.
+ *
+ * ★ Se distinguen dos cosas que parecen la misma: que el empleado no exista
+ * —el vale puede ser de una corrida vieja y la persona pudo haberse borrado—
+ * y que exista sin empresa, que es posible porque `empleados.empresa_id` es
+ * nullable. Si no se separaran, a esa persona se le rechazaría el recibo
+ * todos los meses con un "ya no existe" que manda a buscar a alguien que está
+ * ahí. Sin empresa el archivo va igual: `carpetaEmpresa` lo pone en 'docs'.
+ */
+export async function empresaDeEmpleado(
+  admin: Admin,
+  empleadoId: string
+): Promise<{ existe: boolean; slug: string | null }> {
+  const { data, error } = await admin
+    .from('empleados')
+    .select('id, empresa:empresas(slug)')
+    .eq('id', empleadoId)
+    .maybeSingle()
+  if (error) throw new Error(`no se pudo leer el empleado: ${error.message}`)
+  if (!data) return { existe: false, slug: null }
+  const emp = Array.isArray(data.empresa) ? data.empresa[0] : data.empresa
+  return { existe: true, slug: (emp as { slug?: string } | null)?.slug ?? null }
+}
+
+/** El detalle de una corrida, que es donde vive el vale. */
+export async function detalleDeCarga(admin: Admin, cargaId: string): Promise<Json | null> {
+  const { data, error } = await admin
+    .from('recibo_cargas')
+    .select('detalle')
+    .eq('id', cargaId)
+    .maybeSingle()
+  if (error) throw new Error(`no se pudo leer la corrida: ${error.message}`)
+  return (data?.detalle ?? null) as Json | null
+}
+
+export interface FilaRecibo {
+  empleadoId: string
+  periodo: string
+  tipo: string
+  secuencia: number
+  nombreArchivo: string
+  path: string
+  sizeBytes: number
+  reciboNumero: string | null
+  origenArchivo: string | null
+  origenHash: string | null
+  origenAt: string | null
+  notas: string | null
+}
+
+/** Código de unique_violation de Postgres. */
+export const CHOQUE_UNICO = '23505'
+
+export interface ResultadoInsert {
+  id: string | null
+  /** Contra qué índice chocó, si chocó. */
+  choque: 'secuencia' | 'hash' | null
+  error: string | null
+  /** El código de Postgres, para saber si el conflicto es con otra fila. */
+  codigo: string | null
+}
+
+/**
+ * Inserta el recibo. Distingue los dos choques que SÍ sabe qué significan:
+ *
+ *  · secuencia → otro proceso numeró primero. Se reintenta con el número que
+ *    sigue y listo.
+ *  · hash → ese mismo PDF ya está cargado. No es un error: alguien lo subió
+ *    entre que se decidió y se subió. Se trata como "ya estaba".
+ *
+ * ★ Cualquier otro choque se devuelve como error común, por NOMBRE y no por
+ * descarte. `recibos_sueldo` tiene un tercer índice único, sobre `path`
+ * (migración 15): tomarlo por un choque de secuencia haría reintentar con el
+ * mismo path —cosa que no puede salir bien— y terminar borrando de R2 un
+ * objeto que es de la fila que ya estaba.
+ *
+ * Los dos nombres de la clave de secuencia conviven a propósito: la migración
+ * 33 la recreó con otro nombre y el código se deploya solo con el push,
+ * mientras que la migración se aplica a mano. Mismo criterio que
+ * /api/recibos.
+ */
+const INDICE_HASH = /recibos_origen_hash_idx/
+const INDICE_SECUENCIA = /recibos_sueldo_empleado_(id_)?periodo_tipo(_seq)?_key/
+export async function insertarRecibo(admin: Admin, f: FilaRecibo): Promise<ResultadoInsert> {
+  const { data, error } = await admin
+    .from('recibos_sueldo')
+    .insert({
+      empleado_id: f.empleadoId,
+      periodo: f.periodo,
+      tipo: f.tipo,
+      secuencia: f.secuencia,
+      nombre_archivo: f.nombreArchivo,
+      path: f.path,
+      mime_type: 'application/pdf',
+      size_bytes: f.sizeBytes,
+      recibo_numero: f.reciboNumero,
+      origen: 'automatico',
+      origen_archivo: f.origenArchivo,
+      origen_hash: f.origenHash,
+      origen_at: f.origenAt,
+      notas: f.notas,
+      estado: 'pendiente',
+    })
+    .select('id')
+    .single()
+
+  if (!error) return { id: data?.id ?? null, choque: null, error: null, codigo: null }
+  const comun = { id: null, error: error.message, codigo: error.code ?? null }
+  if (error.code === CHOQUE_UNICO) {
+    if (INDICE_HASH.test(error.message)) return { ...comun, choque: 'hash' }
+    if (INDICE_SECUENCIA.test(error.message)) return { ...comun, choque: 'secuencia' }
+  }
+  return { ...comun, choque: null }
+}
+
+/** El recibo que quedó sin efecto. El PDF y la firma que tuviera NO se borran. */
+export async function anularRecibos(admin: Admin, ids: readonly string[]): Promise<void> {
+  if (!ids.length) return
+  const { error } = await admin
+    .from('recibos_sueldo')
+    .update({ estado: 'anulado' })
+    .in('id', [...ids])
+  if (error) throw new Error(`no se pudieron anular los recibos reemplazados: ${error.message}`)
+}
