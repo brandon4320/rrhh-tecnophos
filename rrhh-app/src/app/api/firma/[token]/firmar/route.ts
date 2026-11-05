@@ -168,13 +168,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
   }
 
   try {
-    // Si devuelve false, otro pedido lo marcó primero (doble toque): los bytes
-    // son los mismos y se contesta igual que si lo hubiéramos marcado nosotros.
-    await marcarFirmado(admin, recibo.id, {
+    const marcado = await marcarFirmado(admin, recibo.id, {
       firmadoPath: destino,
       ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
       agente: request.headers.get('user-agent')?.slice(0, MAX_AGENTE) || null,
     })
+    // No se marcó porque dejó de estar pendiente mientras estampábamos. Son
+    // dos cosas muy distintas y hay que mirar cuál pasó: si otro pedido lo
+    // firmó (doble toque, reintento por señal) está todo bien; si en el medio
+    // entró una corrección y quedó anulado, decirle "listo, firmaste" sería
+    // mentirle sobre un papel que ya no vale.
+    if (!marcado) {
+      const ahora = await reciboParaFirmar(admin, empleadoId, recibo.id)
+      if (ahora?.estado !== 'firmado') {
+        return NextResponse.json(
+          { error: 'Ese recibo quedó sin efecto porque se corrigió. Firmá el nuevo.' },
+          { status: 409 }
+        )
+      }
+    }
   } catch (e) {
     console.error('[firma] marcar firmado:', e)
     return noDisponible()
