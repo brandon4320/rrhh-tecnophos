@@ -2217,6 +2217,13 @@ async function enviarReporte(tipo, obj, boton) {
   const payload = { clave: CLAVE_ENVIO, tipo, para, empresa: empresaDe(obj) };
   try {
     payload[tipo] = await objetoParaEnvio(obj);
+    // Plantas con plano digitalizado: el plano con el estado y el consumo de
+    // cada estación va adjunto junto con la planilla oficial.
+    if (tipo === 'registro') {
+      if (boton) boton.textContent = 'Armando el plano…';
+      try { const pl = await planoParaPlanta(obj); if (pl) payload.plano = pl; } catch (e) { /* sale la planilla sola */ }
+      if (boton) boton.textContent = 'Enviando…';
+    }
     const res = await fetch(servicioUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -2226,8 +2233,10 @@ async function enviarReporte(tipo, obj, boton) {
     if (!j || !j.ok) throw new Error((j && j.error) || 'respuesta inválida');
     obj.enviado = hoyISO();
     if (j.pdfUrl && typeof j.pdfUrl === 'string' && j.pdfUrl.indexOf('https://drive.google.com/') === 0) obj.pdfUrl = j.pdfUrl;
+    if (typeof j.planoUrl === 'string' && j.planoUrl.indexOf('https://drive.google.com/') === 0) obj.planoUrl = j.planoUrl;
     persistir();
-    toast('Reporte enviado por mail ✓');
+    if (payload.plano && !j.planoUrl) toast('Planilla enviada por mail ✓ El plano no salió: falta actualizar el servicio de Google (Nueva versión).');
+    else toast(payload.plano ? 'Planilla y plano enviados por mail ✓' : 'Reporte enviado por mail ✓');
     if (boton) boton.textContent = 'Enviado ✓';
   } catch (e) {
     toast('No se pudo enviar. Revisá la conexión o la configuración en Ajustes.');
@@ -3463,9 +3472,9 @@ async function infFotoImg(id, anchoPdf, anchoPantalla, pdf) {
 function linkMapa(gps) {
   return gps ? `<a href="https://www.google.com/maps?q=${gps.lat.toFixed(6)},${gps.lon.toFixed(6)}" style="color:${INF.azul}; font-size:11.5px">Ver en el mapa</a>` : '';
 }
-async function infPlanos(plano, celda, leyendaHtml, pdf, subtitulo) {
+async function infPlanos(plano, celda, leyendaHtml, pdf, subtitulo, sinSalto) {
   if (!plano) return '';
-  let h = `<div style="page-break-before:always"></div>` + infSeccion('Planos de la planta', subtitulo);
+  let h = (sinSalto ? '' : `<div style="page-break-before:always"></div>`) + infSeccion('Planos de la planta', subtitulo);
   h += `<div style="font-family:Arial, Helvetica, sans-serif; padding:0 20px 6px; font-size:12px; color:${INF.ink2}">${leyendaHtml}</div>`;
   for (let i = 0; i < plano.hojas.length; i++) {
     const hj = plano.hojas[i];
@@ -3538,6 +3547,89 @@ function totalesProducto(filas) {
 const fmtNum = v => (Math.round(v * 10) / 10).toLocaleString('es-AR');
 function textoProducto(p) { return p.cant ? `${fmtNum(p.cant)} ${p.u}` : `${p.veces} ${p.veces === 1 ? 'vez' : 'veces'}`; }
 
+// Piezas compartidas por el informe del supervisor y el plano que recibe la planta.
+function infDonde(f) {
+  return f.u ? `Hoja ${f.u.hoja} · ${esc(f.u.nombreHoja)}${f.u.zona ? `<br><span style="color:${INF.ink2}">${esc(f.u.zona)}</span>` : ''}` : '—';
+}
+function infHecho(f) {
+  const hecho = [];
+  if (f.d.prod) hecho.push(`<b>${esc(f.d.prod)}</b>${f.d.cant ? ' · ' + fmtNum(f.d.cant) + ' ' + esc(f.d.unidad || unidadDe(f.d.prod)) : ''}`);
+  if (f.k === 'K') hecho.push(`<b>${f.d.capt || 1}</b> ${(f.d.capt || 1) === 1 ? 'roedor capturado' : 'roedores capturados'}`);
+  if (f.d.nota) hecho.push(`<span style="color:${INF.ink2}">“${esc(f.d.nota)}”</span>`);
+  return hecho.join('<br>') || `<span style="color:${INF.ink3}">—</span>`;
+}
+function infProductos(prods) {
+  if (!prods.length) return '';
+  let h = infSeccion('Productos utilizados', 'Total del recorrido');
+  h += `<table cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; margin:0 20px">`;
+  prods.forEach(p => {
+    h += `<tr><td style="padding:6px 18px 6px 0; font-size:13px; color:${INF.ink}; border-bottom:1px solid ${INF.line}">${esc(p.n)}</td><td style="padding:6px 18px 6px 0; font-size:13px; font-weight:700; color:${INF.ink}; border-bottom:1px solid ${INF.line}; text-align:right">${p.cant ? fmtNum(p.cant) + ' ' + esc(p.u) : '—'}</td><td style="padding:6px 0; font-size:12px; color:${INF.ink2}; border-bottom:1px solid ${INF.line}">${p.veces} ${p.veces === 1 ? 'estación' : 'estaciones'}</td></tr>`;
+  });
+  return h + '</table>';
+}
+// Hojas del plano con el estado de cada estación del registro.
+async function planosRegistro(r, plano, pdf, subtitulo, sinSalto) {
+  const jaulas = r.tipoTarea === 'jaulas';
+  const tC = tipoPlanoDe(r, 'cebo'), tU = r.uvTotal ? tipoPlanoDe(r, 'uv') : null;
+  const celda = (t, n) => {
+    let k;
+    if (t === tC) k = (r.cebos || {})[n];
+    else if (tU && t === tU) k = (r.uv || {})[n];
+    else return { dim: true };
+    if (!k) return { txt: '–', fill: '#FFFFFF', ink: '#9AA09C' };
+    const [col, soft] = HEX_ESTADO[k];
+    return k === 'B' ? { txt: 'B', fill: soft, ink: col } : { txt: k, fill: col, ink: '#FFFFFF', ring: col };
+  };
+  const ordenC = jaulas ? ESTADOS_JAULA : ESTADOS_CEBO;
+  const orden = Array.from(new Set(ordenC.concat(tU ? estadosUVDe(r.plantaNombre) : [])));
+  const tipos = [tC].concat(tU ? [tU] : []);
+  const ley = leyendaTipos(tipos) + '<br>' + leyendaEstados(orden, `<span style="display:inline-block; margin:0 12px 4px 0">– Sin revisar</span><span style="display:inline-block">Las demás estaciones aparecen atenuadas</span>`);
+  return infPlanos(plano, celda, ley, pdf, subtitulo, sinSalto);
+}
+
+/* Plano para la planta: va adjunto al mail junto con la planilla oficial.
+   Muestra la numeración de cada estación con el estado en que quedó y el
+   consumo que cargó el operario. Sin fotos ni horarios (eso es del informe
+   del supervisor). Devuelve null si la planta no tiene plano. */
+async function planoParaPlanta(r) {
+  const plano = planoDePlanta(r.plantaNombre);
+  if (!plano) return null;
+  await prepararIconos();
+  const jaulas = r.tipoTarea === 'jaulas';
+  const filas = filasRegistro(r);
+  const total = (r.cebosTotal || 0) + (r.uvTotal || 0);
+  const conNovedad = filas.filter(f => f.k !== 'B').length;
+  const detalle = filas.filter(f => f.k !== 'B' || f.d.prod || f.d.nota);
+  const prods = totalesProducto(filas);
+  const titulo = `Plano ${jaulas ? 'Jaulas' : 'Desratizacion'} - ${r.plantaNombre || ''} - ${fFecha(r.fecha).replace(/\//g, '-')}`;
+
+  let h = infCabecera('PLANO DE ESTACIONES', jaulas ? 'Jaulas para roedores' : 'Desratización',
+    `${r.plantaNombre || ''} · ${r.sectorNombre}`,
+    [['Fecha', fFecha(r.fecha)], ['Operario', r.operario || ''], ['Revisadas', `${filas.length} de ${total}`], ['Con novedad', String(conNovedad)]],
+    empresaDe(r));
+  h += await planosRegistro(r, plano, true, 'Cada estación lleva su número y, en la cajita, la letra del estado en que quedó. Las que tienen novedad están remarcadas.', true);
+
+  h += `<div style="page-break-before:always"></div>`;
+  h += infSeccion(jaulas ? 'Detalle por jaula' : 'Consumo y novedades por estación',
+    detalle.length ? 'Estaciones con novedad o donde el operario repuso producto.' : '');
+  if (!detalle.length) {
+    h += `<div style="font-family:Arial, Helvetica, sans-serif; margin:0 20px; padding:12px 14px; background:${HEX_ESTADO.B[1]}; color:${HEX_ESTADO.B[0]}; border-radius:10px; font-size:13.5px; font-weight:700">Sin novedades: todas las estaciones revisadas están en buen estado.</div>`;
+  } else {
+    const th = `font-size:10.5px; letter-spacing:.5px; font-weight:700; color:${INF.ink3}; text-align:left; padding:8px 8px; border-bottom:1.5px solid ${INF.line}`;
+    h += `<table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; padding:0 12px"><tr>
+      <th style="${th}">ESTACIÓN</th><th style="${th}">ESTADO</th><th style="${th}">DÓNDE</th><th style="${th}">${jaulas ? 'DETALLE' : 'CONSUMO / REPOSICIÓN'}</th></tr>`;
+    detalle.forEach(f => {
+      const td = `padding:8px 8px; border-bottom:1px solid ${INF.line}; vertical-align:top; font-size:12.5px; color:${INF.ink}`;
+      h += `<tr><td style="${td}">${infEstacionBadge(f.t, f.n, f.nombre)}</td><td style="${td}">${infPill(f.k)}</td><td style="${td}">${infDonde(f)}</td><td style="${td}">${infHecho(f)}</td></tr>`;
+    });
+    h += '</table>';
+  }
+  h += infProductos(prods);
+  h += infObs('Observaciones del operario', r.obs);
+  h += `<div style="font-family:Arial, Helvetica, sans-serif; padding:22px 20px 20px; font-size:11px; color:${INF.ink3}">Acompaña a la planilla oficial del ${fFecha(r.fecha)}. Generado por el sistema de control de plagas de ${empresaDe(r) === 'TECNOPHOS' ? 'Tecnophos' : 'ADC Fumigación'}.</div>`;
+  return { nombre: titulo + '.pdf', html: documentoInforme(h, titulo) };
+}
+
 async function informeRegistro(r, pdf) {
   const modelo = modeloPara(r.plantaNombre);
   const plano = planoDePlanta(r.plantaNombre);
@@ -3583,44 +3675,18 @@ async function informeRegistro(r, pdf) {
       <th style="${th}">ESTACIÓN</th><th style="${th}">ESTADO</th><th style="${th}">DÓNDE</th><th style="${th}">QUÉ SE HIZO</th><th style="${th}">HORA</th><th style="${th}">FOTO</th></tr>`;
     for (const f of novedades) {
       const td = `padding:8px 8px; border-bottom:1px solid ${INF.line}; vertical-align:top; font-size:12.5px; color:${INF.ink}`;
-      const hecho = [];
-      if (f.d.prod) hecho.push(`<b>${esc(f.d.prod)}</b>${f.d.cant ? ' · ' + fmtNum(f.d.cant) + ' ' + esc(f.d.unidad || unidadDe(f.d.prod)) : ''}`);
-      if (f.k === 'K') hecho.push(`<b>${f.d.capt || 1}</b> ${(f.d.capt || 1) === 1 ? 'roedor capturado' : 'roedores capturados'}`);
-      if (f.d.nota) hecho.push(`<span style="color:${INF.ink2}">“${esc(f.d.nota)}”</span>`);
       h += `<tr><td style="${td}">${infEstacionBadge(f.t, f.n, f.nombre)}</td><td style="${td}">${infPill(f.k)}</td>
-        <td style="${td}">${f.u ? `Hoja ${f.u.hoja} · ${esc(f.u.nombreHoja)}${f.u.zona ? `<br><span style="color:${INF.ink2}">${esc(f.u.zona)}</span>` : ''}` : '—'}${f.d.gps ? '<br>' + linkMapa(f.d.gps) : ''}</td>
-        <td style="${td}">${hecho.join('<br>') || `<span style="color:${INF.ink3}">—</span>`}</td>
+        <td style="${td}">${infDonde(f)}${f.d.gps ? '<br>' + linkMapa(f.d.gps) : ''}</td>
+        <td style="${td}">${infHecho(f)}</td>
         <td style="${td}; white-space:nowrap">${f.d.t ? fHora(f.d.t) : '—'}</td>
         <td style="${td}">${f.d.foto ? await infFotoImg(f.d.foto, 120, 120, pdf) : `<span style="color:${INF.ink3}">—</span>`}</td></tr>`;
     }
     h += '</table>';
   }
-  if (prods.length) {
-    h += infSeccion('Productos utilizados', 'Total del recorrido');
-    h += `<table cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; margin:0 20px">`;
-    prods.forEach(p => {
-      h += `<tr><td style="padding:6px 18px 6px 0; font-size:13px; color:${INF.ink}; border-bottom:1px solid ${INF.line}">${esc(p.n)}</td><td style="padding:6px 18px 6px 0; font-size:13px; font-weight:700; color:${INF.ink}; border-bottom:1px solid ${INF.line}; text-align:right">${p.cant ? fmtNum(p.cant) + ' ' + esc(p.u) : '—'}</td><td style="padding:6px 0; font-size:12px; color:${INF.ink2}; border-bottom:1px solid ${INF.line}">${p.veces} ${p.veces === 1 ? 'estación' : 'estaciones'}</td></tr>`;
-    });
-    h += '</table>';
-  }
+  h += infProductos(prods);
   h += infObs('Observaciones del operario', r.obs);
 
-  if (plano) {
-    const tC = tipoPlanoDe(r, 'cebo'), tU = r.uvTotal ? tipoPlanoDe(r, 'uv') : null;
-    const celda = (t, n) => {
-      let k;
-      if (t === tC) k = (r.cebos || {})[n];
-      else if (tU && t === tU) k = (r.uv || {})[n];
-      else return { dim: true };
-      if (!k) return { txt: '–', fill: '#FFFFFF', ink: '#9AA09C' };
-      const [col, soft] = HEX_ESTADO[k];
-      return k === 'B' ? { txt: 'B', fill: soft, ink: col } : { txt: k, fill: col, ink: '#FFFFFF', ring: col };
-    };
-    const orden = Array.from(new Set(ordenC.concat(tU ? estadosUVDe(r.plantaNombre) : [])));
-    const tipos = [tC].concat(tU ? [tU] : []);
-    const ley = leyendaTipos(tipos) + '<br>' + leyendaEstados(orden, `<span style="display:inline-block; margin:0 12px 4px 0">– Sin revisar</span><span style="display:inline-block">Las demás estaciones aparecen atenuadas</span>`);
-    h += await infPlanos(plano, celda, ley, pdf, 'Cada estación muestra el estado en que quedó. Las que tienen novedad están remarcadas.');
-  }
+  if (plano) h += await planosRegistro(r, plano, pdf, 'Cada estación muestra el estado en que quedó. Las que tienen novedad están remarcadas.');
   h += await infGaleria(fotos.map(f => ({ id: f.d.foto, tit: `${f.nombre} · ${nombreEstado(f.k)}`, sub: textoUbicacion(f.u) || '' })), pdf);
   return h;
 }
