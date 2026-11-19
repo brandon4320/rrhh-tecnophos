@@ -169,7 +169,8 @@ export default async function DashboardPage({
   const tipoTitular = (c: (typeof conEstado)[number]): AlertaInicio['tipoTitular'] =>
     c.empleado ? 'persona' : c.vehiculo ? 'vehiculo' : c.equipo ? 'equipo' : 'empresa'
   function alerta(c: (typeof conEstado)[number]): AlertaInicio {
-    const href = hrefCertificado(c) ?? conEmpresas('/vencimientos')
+    // Una persona: su legajo en la hoja de Empleados con ese certificado abierto; el resto, su link de siempre.
+    const href = c.empleado ? `/empleados?legajo=${c.empleado.id}&cert=${c.id}` : hrefCertificado(c) ?? conEmpresas('/vencimientos')
     const empresa = empresaDeCertificado(c)
     return {
       id: c.id,

@@ -108,7 +108,7 @@ export default function RecibosSueldo({ empleadoId, empresaSlug, recibos, canEdi
   const grupos = agruparPorAnio(recibos)
 
   return (
-    <section className="mt-10">
+    <section>
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold text-foreground">Comprobantes de sueldo</h2>

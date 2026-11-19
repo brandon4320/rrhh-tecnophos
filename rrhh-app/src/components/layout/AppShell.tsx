@@ -285,7 +285,8 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
     grupos.push({
       titulo: 'Administración',
       items: [
-        { key: 'nuevo-empleado', label: 'Nuevo empleado', href: '/admin/empleados/nuevo', icon: UserPlus, active: pathname.startsWith('/admin/empleados') },
+        // El alta se abre en una hoja sobre Empleados (/admin/empleados/nuevo sigue existiendo).
+        { key: 'nuevo-empleado', label: 'Nuevo empleado', href: una ? `/empleados?empresa=${una.slug}&nuevo=1` : '/empleados?nuevo=1', icon: UserPlus, active: pathname.startsWith('/admin/empleados') },
         { key: 'usuarios', label: 'Usuarios', href: '/admin/usuarios', icon: Users, active: pathname.startsWith('/admin/usuarios') },
         // Quién cargó o cambió cada cosa (tabla `auditoria`): solo el administrador general.
         ...(sesion.superAdmin ? [{ key: 'historial', label: 'Historial', href: '/admin/historial', icon: ClockCounterClockwise, active: pathname.startsWith('/admin/historial') }] : []),
@@ -633,7 +634,7 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           </section>
         </div>
       </Hoja>
-      <Paleta abierta={paleta} onCerrar={() => setPaleta(false)} pantallas={pantallas} empresas={empresasPaleta} hrefPersona={(id) => `/legajo/${id}`} />
+      <Paleta abierta={paleta} onCerrar={() => setPaleta(false)} pantallas={pantallas} empresas={empresasPaleta} hrefPersona={(id) => `/empleados?legajo=${id}`} />
     </div>
   )
 }

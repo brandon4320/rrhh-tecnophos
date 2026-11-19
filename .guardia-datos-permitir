@@ -1,0 +1,14 @@
+# Overhaul de diseño 18/11/2026 (skill diseno-sistemas, demo aprobada por Brandon).
+# Cambios de firma hechos a propósito, con las decisiones ya aprobadas por Brandon:
+
+# El legajo se abre en hoja lateral con ?legajo= (Enter en el buscador ya no navega a /legajo/<id>;
+# /legajo/<id> sigue existiendo y es el href de cada fila y "Legajo completo").
+push(/legajo/${})
+
+# El alta de empleado pasa a una hoja sobre Empleados (?nuevo=1); /admin/empleados/nuevo sigue
+# existiendo y funcionando, solo el menú deja de llevar ahí.
+link /admin/empleados/nuevo
+
+# Columna "Próximo vencimiento" de Empleados: el select de certificados suma el nombre del tipo
+# (solo lectura, sin tocar el esquema; "si el dato existe en la base, calculalo en el loader").
+certificados(fecha_vencimiento,alerta_dias))

@@ -53,7 +53,7 @@ export function CargarCertificado({ abierta, onCerrar, empresas }: { abierta: bo
       for (const e of p.data) {
         const emp = ids.get(e.empresa_id ?? '')
         if (!emp) continue
-        out.push({ key: `p${e.id}`, tipo: 'persona', texto: [e.nombre, e.apellido].filter(Boolean).join(' '), detalle: nombreCorto(emp.nombre), slug: emp.slug, href: `/legajo/${e.id}?cargar=1` })
+        out.push({ key: `p${e.id}`, tipo: 'persona', texto: [e.nombre, e.apellido].filter(Boolean).join(' '), detalle: nombreCorto(emp.nombre), slug: emp.slug, href: `/empleados?legajo=${e.id}&cargar=1` })
       }
       for (const x of v.data) {
         const emp = ids.get(x.empresa_id ?? '')
