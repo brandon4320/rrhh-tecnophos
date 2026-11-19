@@ -346,10 +346,11 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
       {/* ── Las tarjetas de arriba son el filtro por estado ── */}
       <section aria-label="Estado de la documentación del personal">
         <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pt-0.5 pb-3 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:gap-[14px] md:overflow-visible md:p-0 xl:grid-cols-[1.25fr_repeat(3,minmax(0,1fr))] [&>*]:min-w-0 max-md:[&>*]:shrink-0 max-md:[&>*]:basis-[84%] max-md:[&>*]:snap-center">
-          <button
-            type="button"
-            aria-pressed={estado === 'proximo'}
-            onClick={() => { cambiarVista(false); cambiarEstado(estado === 'proximo' ? '' : 'proximo') }}
+          {/* Enlace (como en la demo): con clic filtra en el lugar; el href lleva al mismo filtro. */}
+          <a
+            href="?estado=proximo"
+            aria-current={estado === 'proximo' ? 'true' : undefined}
+            onClick={(e) => { e.preventDefault(); cambiarVista(false); cambiarEstado(estado === 'proximo' ? '' : 'proximo') }}
             className={cn('relative flex min-h-[228px] cursor-pointer flex-col overflow-hidden rounded-2xl p-6 text-left text-white shadow-heroe', estado === 'proximo' && 'shadow-[0_0_0_3px_color-mix(in_oklch,var(--primary)_30%,transparent),var(--sombra-heroe)]')}
             style={{ background: 'radial-gradient(120% 140% at 100% 0%, #6d63ff 0%, transparent 55%), linear-gradient(150deg, #3730a3, #4f46e5 60%, #4338ca)' }}
           >
@@ -371,10 +372,10 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
                 )}
               </span>
             )}
-          </button>
+          </a>
 
           <button type="button" aria-pressed={estado === 'vencido'} onClick={() => { cambiarVista(false); cambiarEstado(estado === 'vencido' ? '' : 'vencido') }} className={kpiCls('vencido')}>
-            <span className="flex items-center gap-2 py-2 pr-3 pl-[17px] text-[13px] font-medium text-texto-2"><WarningCircle size={16} className="text-muted-foreground" aria-hidden />Con vencidos</span>
+            <span className="flex w-full items-center gap-2 py-2 pr-3 pl-[17px] text-[13px] font-medium text-texto-2"><WarningCircle size={16} className="text-muted-foreground" aria-hidden />Con vencidos</span>
             <span className="block w-full flex-1 rounded-interno border border-border bg-card p-4 shadow-min">
               <span className="block text-[32px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={cVen} /></span>
               <span className="mt-1 block text-xs text-muted-foreground">{plural(resumen.certsVencidos, 'certificado vencido', 'certificados vencidos')}</span>
@@ -386,7 +387,7 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
           </button>
 
           <button type="button" aria-pressed={estado === 'vigente'} onClick={() => { cambiarVista(false); cambiarEstado(estado === 'vigente' ? '' : 'vigente') }} className={kpiCls('vigente')}>
-            <span className="flex items-center gap-2 py-2 pr-3 pl-[17px] text-[13px] font-medium text-texto-2"><CheckCircle size={16} className="text-muted-foreground" aria-hidden />Al día</span>
+            <span className="flex w-full items-center gap-2 py-2 pr-3 pl-[17px] text-[13px] font-medium text-texto-2"><CheckCircle size={16} className="text-muted-foreground" aria-hidden />Al día</span>
             <span className="block w-full flex-1 rounded-interno border border-border bg-card p-4 shadow-min">
               <span className="block text-[32px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={cOk} /><small className="ml-1 text-xl font-normal tracking-[-0.01em] text-muted-foreground">de {n}</small></span>
               <span className="mt-1 block text-xs text-muted-foreground">{Math.round((cOk / Math.max(1, n)) * 100)} % del personal sin pendientes</span>
@@ -396,7 +397,7 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
           </button>
 
           <button type="button" aria-pressed={estado === 'sin_fecha'} onClick={() => { cambiarVista(false); cambiarEstado(estado === 'sin_fecha' ? '' : 'sin_fecha') }} className={kpiCls('sin_fecha')}>
-            <span className="flex items-center gap-2 py-2 pr-3 pl-[17px] text-[13px] font-medium text-texto-2"><CircleDashed size={16} className="text-muted-foreground" aria-hidden />Sin datos</span>
+            <span className="flex w-full items-center gap-2 py-2 pr-3 pl-[17px] text-[13px] font-medium text-texto-2"><CircleDashed size={16} className="text-muted-foreground" aria-hidden />Sin datos</span>
             <span className="block w-full flex-1 rounded-interno border border-border bg-card p-4 shadow-min">
               <span className="block text-[32px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={cSin} /></span>
               <span className="mt-1 block text-xs text-muted-foreground">Sin vencimientos cargados</span>
@@ -525,7 +526,7 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
                       <Link
                         href={`/legajo/${emp.id}`}
                         onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; e.preventDefault(); abrir(emp.id) }}
-                        className="truncate after:absolute after:inset-0 focus:outline-none focus-visible:underline"
+                        className="truncate after:absolute after:inset-0 focus:outline-none focus-visible:underline max-md:-my-[13px] max-md:py-[13px]"
                       >
                         {emp.nombreCompleto}
                       </Link>
@@ -582,7 +583,7 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
             )}
           </div>
         </div>
-        <div className="sticky bottom-0 z-[3] flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-[13px] text-muted-foreground md:rounded-t-none md:rounded-b-2xl md:border-0 md:border-t md:border-divisor md:px-5">
+        <div className="sticky bottom-0 z-[3] flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-[13px] text-muted-foreground md:rounded-t-none md:rounded-b-2xl md:border-0 md:border-t md:border-divisor md:px-4">
           <span><b className="font-medium text-foreground">{plural(visibles.length, verBajas ? 'baja' : 'empleado', verBajas ? 'bajas' : 'empleados')}</b>{vencidosVisibles ? <> · <span className="font-medium text-danger">{vencidosVisibles} con vencidos</span></> : null}</span>
           <span className="ml-auto hidden items-center gap-3 md:flex">
             <span><kbd className="rounded-md border border-border px-1 font-mono text-[11px]">↑</kbd> <kbd className="rounded-md border border-border px-1 font-mono text-[11px]">↓</kbd> para moverte</span>
