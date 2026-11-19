@@ -546,7 +546,7 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           )}
           {/* Barra de arriba: migas a la izquierda; buscar y avisos a la derecha. */}
           <header className="relative flex h-[60px] items-center gap-3 px-4 md:h-[58px] md:border-b md:border-border md:px-7 print:hidden">
-            <div className="flex min-w-0 items-center gap-2 font-medium text-muted-foreground">
+            <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">
               <Link href={hrefInicio} className="truncate transition-colors hover:text-foreground max-md:hidden">{padre}</Link>
               <CaretRight size={12} className="shrink-0 max-md:hidden" aria-hidden />
               <b className="truncate font-medium text-foreground">{titulo}</b>

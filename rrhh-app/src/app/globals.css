@@ -361,13 +361,23 @@ select:-webkit-autofill {
 @keyframes entra {
   from { opacity: 0; transform: translateY(6px); }
 }
+@keyframes crece {
+  from { transform: scaleX(0); }
+}
+@keyframes dibujar {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes aparece {
+  from { opacity: 0; }
+}
 @keyframes destello {
   0%, 35% { background: color-mix(in oklch, var(--primary) 14%, var(--card)); }
 }
 .entra { animation: entra 0.45s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 35ms); }
 .destello { animation: destello 2s var(--ease-out); }
 @media (prefers-reduced-motion: reduce) {
-  .entra, .destello { animation: none; }
+  .entra, .destello, [class*='animate-['] { animation: none !important; }
   *, *::before, *::after { transition-duration: 0s !important; }
 }
 

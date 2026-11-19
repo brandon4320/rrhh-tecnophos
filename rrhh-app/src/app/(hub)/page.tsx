@@ -8,36 +8,15 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
 
+import {
+  CHECKLIST_MAQUINARIA_URL, CRM_URL, MARCAS, SERVIWHITE_ERP_URL, SERVIWHITE_LIMPIEZA_URL, UNIPAR_APP_URL,
+} from '@/config/sistemas'
+
 interface EmpresaRow {
   id: string
   nombre: string
   slug: string
 }
-
-// Marcas del grupo: agrupan las empresas (sedes) por prefijo de slug
-const MARCAS = [
-  { key: 'tecnophos', nombre: 'Tecnophos', logo: '/logo-tecnophos-iso.png', match: (s: string) => s.startsWith('tecnophos') },
-  { key: 'adc', nombre: 'ADC S.R.L.', logo: '/logo-adc.png', match: (s: string) => s === 'adc' },
-  { key: 'serviwhite', nombre: 'Serviwhite', logo: '/logo-serviwhite-iso.png', match: (s: string) => s === 'serviwhite' },
-] as const
-
-// Sistema del servicio de limpieza para UNIPAR (deploy propio, fuera de este repo).
-const UNIPAR_APP_URL = 'https://unipar-app.vercel.app/'
-// Checklist de maquinaria pesada (fotos, chequeo interior y horómetro por turno):
-// otro proyecto con deploy propio, carpeta `C:\Dev\Detalle maquinaria`. Apunta al
-// panel de administración, que es lo que usa la oficina; los operarios entran por
-// su propio enlace.
-const CHECKLIST_MAQUINARIA_URL = 'https://checklist.serviwhite.com/admin'
-// ERP de Serviwhite (alquiler y venta de módulos): otro repo, con su propio login.
-// La raíz redirige sola al login si no hay sesión.
-const SERVIWHITE_ERP_URL = 'https://gestion.serviwhite.com/'
-// El Sistema de Gestión Comercial nuevo (otro proyecto, en Cloudflare; repo comercial-tecnophos), con
-// su propio login. `?empresa=` abre esa empresa (la suma a las que se miran). El módulo /comercial
-// de acá es el CRM viejo: queda en el código pero el inicio ya no lo ofrece.
-const CRM_URL = 'https://crm.tecnophos.com.ar/'
-// Recorrido de limpieza de baños: vive en el ERP de Serviwhite (arma el recorrido
-// y el link del encargado). Se pide con el mismo login del ERP.
-const SERVIWHITE_LIMPIEZA_URL = 'https://gestion.serviwhite.com/limpieza'
 
 function nombreSede(nombreEmpresa: string) {
   return nombreEmpresa.replace(/^Tecnophos\s+/i, '')
@@ -60,6 +39,11 @@ export default async function HubPage() {
   if (modulos.length === 1) redirect(modulos[0].href)
 
   const puedeRrhh = modulos.some((m) => m.key === 'rrhh')
+
+  // Overhaul 18/11/2026 (decisión aprobada): para Gestión de Recursos el hub y el Resumen general
+  // son UNA pantalla, el Inicio (/dashboard), con los otros sistemas de cada marca adentro. Esta
+  // página queda para los roles que no entran a Gestión de Recursos.
+  if (puedeRrhh) redirect('/dashboard')
 
   const marcas = MARCAS.map((m) => ({
     ...m,
