@@ -370,3 +370,12 @@ select:-webkit-autofill {
   .entra, .destello { animation: none; }
   *, *::before, *::after { transition-duration: 0s !important; }
 }
+
+/* Mientras hay una hoja abierta, el relleno de la pantalla pasa a borde: nunca dos botones
+   rellenos a la vista (skill §5 "Botones rellenos"). La pantalla marca el suyo con data-principal. */
+body[data-capa] [data-principal] {
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  box-shadow: var(--sombra-min);
+}
