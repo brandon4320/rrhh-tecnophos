@@ -121,11 +121,11 @@ export default async function EmpresaPage({
     const programasSeguridad = (certsEmpresa ?? []).filter((c) => c.categoria === 'programa_seguridad')
 
     return (
-      <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8" id="documentacion">
+      <div className="mx-auto max-w-6xl px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10" id="documentacion">
         <div className="mb-8 flex items-center gap-4">
           <Monograma nombre={empresa.nombre} size="lg" variant="accent" />
           <div>
-            <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Documentación</h1>
+            <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Documentación</h1>
           </div>
         </div>
 
@@ -391,7 +391,7 @@ export default async function EmpresaPage({
   const sede = slug.startsWith('tecnophos') ? empresa.nombre.replace(/^Tecnophos\s+/i, '') : null
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
       {/* ── Hero ── */}
       <section className="rounded-2xl bg-zona p-6 text-zona-foreground sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -408,7 +408,7 @@ export default async function EmpresaPage({
                 )}
               </div>
             ) : (
-              <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">{empresa.nombre}</h1>
+              <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">{empresa.nombre}</h1>
             )}
             <div className="mt-4 flex flex-wrap items-center gap-3">
               {vencidos.length === 0 ? (

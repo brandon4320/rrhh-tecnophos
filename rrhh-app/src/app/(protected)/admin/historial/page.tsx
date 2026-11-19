@@ -76,8 +76,8 @@ export default async function HistorialPage({
   })()
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Historial</h1>
+    <div className="mx-auto max-w-5xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+      <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Historial</h1>
 
       <FiltrosHistorial
         personas={(perfiles ?? []).filter((p) => p.nombre).map((p) => ({ id: p.id, nombre: p.nombre! }))}

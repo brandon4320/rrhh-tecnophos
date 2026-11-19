@@ -37,7 +37,7 @@ export default function AjustesPage() {
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
-      <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em] mb-6">Ajustes del sistema</h1>
+      <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em] mb-6">Ajustes del sistema</h1>
 
       <div className="bg-card rounded-2xl border border-border p-6 shadow-tarjeta">
         <h2 className="text-lg font-semibold text-foreground mb-4">Logo de la empresa</h2>

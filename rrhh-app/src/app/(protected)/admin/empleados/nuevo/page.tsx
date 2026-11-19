@@ -36,7 +36,7 @@ export default async function NuevoEmpleadoPage({
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Nuevo empleado</h1>
+        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Nuevo empleado</h1>
       </div>
 
       <NuevoEmpleadoForm

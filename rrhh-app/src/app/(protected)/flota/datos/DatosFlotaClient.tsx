@@ -65,7 +65,7 @@ export default function DatosFlotaClient({ vehiculos, volver, variasEmpresas }: 
   }
 
   return (
-    <form onSubmit={guardar} className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <form onSubmit={guardar} className="mx-auto max-w-4xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Link href={volver} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">

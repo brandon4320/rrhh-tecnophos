@@ -1,12 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { getEstadoVencimiento, diasHastaVencimiento } from '@/types'
-import { format } from 'date-fns'
-import Link from 'next/link'
-import { ChevronRight, ArrowRight } from 'lucide-react'
-import { Monograma } from '@/components/ui/monograma'
-import { EstadoBadgeSuave } from '@/components/ui/estado-pill'
-import { SegmentedLocal } from '@/components/ui/segmented-local'
 import { TZ_AR } from '@/lib/fechas-ar'
+import { getSesion } from '@/lib/auth/session'
+import { tieneRol, LEGAJO_ESCRITURA } from '@/lib/auth/roles'
+import { puedeVerArcor } from '@/modules/arcor/acceso'
+import {
+  CHECKLIST_MAQUINARIA_URL, CONTROL_PLAGAS_URL, CRM_URL, MARCAS, SERVIWHITE_ERP_URL, SERVIWHITE_LIMPIEZA_URL, UNIPAR_APP_URL,
+} from '@/config/sistemas'
+import InicioVista from './InicioVista'
+import { cargarRecursos, curvaVencimientos, mensualPorEmpresa } from './recursos'
+import type { AlertaInicio, DatosInicio, SistemaInicio } from './tipos'
 import { filtroEmpresas, slugsDe } from '@/lib/empresas-vistas'
 import { traerTodo } from '@/lib/paginar'
 import {
@@ -14,8 +17,6 @@ import {
   unirPorId,
 } from '@/lib/vencimientos'
 
-/** Casos por lista en "Vencimientos prioritarios" (el resto, en /vencimientos). */
-const CASOS_VISIBLES = 15
 
 const CERT_COLUMNAS = `
   id, fecha_vencimiento, alerta_dias, tipo_nombre_custom,
@@ -26,6 +27,12 @@ const CERT_COLUMNAS = `
   empresa:empresas(id, nombre, slug)
 `
 
+/**
+ * Inicio de Gestión de Recursos (overhaul 18/11/2026): junta el hub (/) y el dashboard. Esta
+ * página LEE y arma los números; la vista (InicioVista) solo dibuja. Las consultas de antes
+ * quedan iguales; se suman las de lo nuevo de la demo aprobada (bajas, curva de 9 semanas,
+ * documentación mensual y recursos), todas en el mismo batch.
+ */
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -43,7 +50,7 @@ export default async function DashboardPage({
   // (+1 de holgura); los certificados con una alerta más larga (si alguien la
   // carga) se traen aparte hasta el máximo que admite el formulario. Antes se
   // traía un año entero de certificados para quedarse con un mes.
-  const [{ data: certsMes }, { data: certsAlertaLarga }, { data: empresas }, { data: empleados }, { count: certsSinEmpleado }, { count: certsEmpleadosActivos }, livianos] = await Promise.all([
+  const [{ data: certsMes }, { data: certsAlertaLarga }, { data: empresas }, { data: empleados }, { count: certsSinEmpleado }, { count: certsEmpleadosActivos }, livianos, sesion, { data: bajas }] = await Promise.all([
     supabase
       .from('certificados')
       .select(CERT_COLUMNAS)
@@ -80,6 +87,9 @@ export default async function DashboardPage({
             .range(d, h)
         )
       : Promise.resolve({ data: null, error: null }),
+    getSesion(), // cacheada por request: el layout ya la resolvió
+    // Dados de baja por empresa: el pie de "Empleados activos".
+    supabase.from('empleados').select('id, empresa_id').eq('activo', false),
   ])
 
   const filtro = filtroEmpresas(sp.empresa, (empresas ?? []).map((e) => e.slug))
@@ -115,7 +125,6 @@ export default async function DashboardPage({
     : (certsSinEmpleado ?? 0) + (certsEmpleadosActivos ?? 0)
   const empleadosVistos = (empleados ?? []).filter((e) => enFiltro(e.empresa_id))
   const alDia = totalConFecha - vencidos.length - proximos.length
-  const total = Math.max(1, totalConFecha)
 
   const masUrgente = vencidos[0]
   const diasUrgente = masUrgente ? Math.abs(diasHastaVencimiento(masUrgente.fecha_vencimiento!)) : 0
@@ -135,257 +144,124 @@ export default async function DashboardPage({
     }
   })
 
-  // Fecha del encabezado en hora AR (Vercel corre en UTC: desde las 21 ya era mañana).
+  // Fecha del encabezado en hora AR (Vercel corre en UTC: desde las 21 ya era mañana), sin el año.
+  const ahora = new Date()
   const hoyTexto = new Intl.DateTimeFormat('es-AR', {
-    timeZone: TZ_AR, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  }).format(new Date()).replace(',', '')
-  // Solo la primera letra (la clase `capitalize` dejaba "Jueves 2 De Octubre De 2026").
+    timeZone: TZ_AR, weekday: 'long', day: 'numeric', month: 'long',
+  }).format(ahora).replace(',', '')
+  // Solo la primera letra (la clase `capitalize` dejaba "Jueves 2 De Octubre").
   const hoyLargo = hoyTexto.charAt(0).toUpperCase() + hoyTexto.slice(1)
+  const hora = Number(new Intl.DateTimeFormat('en-US', { timeZone: TZ_AR, hour: 'numeric', hour12: false }).format(ahora)) % 24
+  const saludo = hora < 6 ? 'Buenas noches' : hora < 13 ? 'Buenos días' : hora < 20 ? 'Buenas tardes' : 'Buenas noches'
+  const mesNombre = new Intl.DateTimeFormat('es-AR', { timeZone: TZ_AR, month: 'long' }).format(ahora)
 
-  // Los 3 tabs viajan en el mismo payload (SegmentedLocal): cambiar de tab no
-  // vuelve al server. Cada lista muestra hasta CASOS_VISIBLES y su "Ver todos"
-  // abre /vencimientos en la MISMA vista.
-  function listaAlertas(alertas: typeof conEstado, hrefVerTodos: string) {
-    const visibles = alertas.slice(0, CASOS_VISIBLES)
-    return (
-      <>
-        <div className="mt-4 space-y-2">
-          {visibles.length === 0 && (
-            <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-              Sin alertas en esta vista.
-            </p>
-          )}
-          {visibles.map((c) => {
-            const dias = diasHastaVencimiento(c.fecha_vencimiento!)
-            const titular = titularCertificado(c)
-            const empresaNombre = empresaDeCertificado(c).nombre
-            const label =
-              dias < 0
-                ? `Venció hace ${Math.abs(dias)} ${Math.abs(dias) === 1 ? 'día' : 'días'}`
-                : dias === 0
-                  ? 'Vence hoy'
-                  : `Vence en ${dias} ${dias === 1 ? 'día' : 'días'}`
-            return (
-              <Link
-                key={c.id}
-                href={hrefCertificado(c) ?? hrefVerTodos}
-                className="flex items-center gap-4 rounded-xl border border-border px-4 py-3 transition-colors hover:bg-muted/50"
-              >
-                <Monograma nombre={titular} size="md" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{titular}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {[c.tipo?.nombre ?? c.tipo_nombre_custom ?? 'Certificado', empresaNombre].filter(Boolean).join(' · ')}
-                  </p>
-                </div>
-                <EstadoBadgeSuave estado={c.estado} label={label} className="shrink-0" />
-                <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:block">
-                  {format(new Date(c.fecha_vencimiento!.slice(0, 10) + 'T12:00:00'), 'dd/MM/yyyy')}
-                </span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" strokeWidth={1.75} />
-              </Link>
-            )
-          })}
-        </div>
+  const empresasVistas = (empresas ?? []).filter((emp) => enFiltro(emp.id))
+  const puedeCargar = tieneRol(sesion?.rol ?? null, LEGAJO_ESCRITURA)
+  const verArcor = !!sesion && puedeVerArcor(sesion)
 
-        {alertas.length > 0 && (
-          <div className="mt-4 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              {visibles.length} {visibles.length === 1 ? 'caso visible' : 'casos visibles'} de {alertas.length} alertas
-            </p>
-            <Link
-              href={hrefVerTodos}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              Ver todos
-            </Link>
-          </div>
-        )}
-      </>
-    )
+  // Lo nuevo de la demo, en paralelo; cada parte que falla se dice sin tirar el Inicio.
+  const [mensual, curva, recursos] = await Promise.all([
+    mensualPorEmpresa(supabase, empresasVistas),
+    curvaVencimientos(supabase, enFiltro),
+    cargarRecursos(supabase, empresasVistas, { hrefFlota: conEmpresas('/flota'), arcor: verArcor }),
+  ])
+
+  const tipoTitular = (c: (typeof conEstado)[number]): AlertaInicio['tipoTitular'] =>
+    c.empleado ? 'persona' : c.vehiculo ? 'vehiculo' : c.equipo ? 'equipo' : 'empresa'
+  function alerta(c: (typeof conEstado)[number]): AlertaInicio {
+    // Una persona: su legajo en la hoja de Empleados con ese certificado abierto; el resto, su link de siempre.
+    const href = c.empleado ? `/empleados?legajo=${c.empleado.id}&cert=${c.id}` : hrefCertificado(c) ?? conEmpresas('/vencimientos')
+    const empresa = empresaDeCertificado(c)
+    return {
+      id: c.id,
+      estado: c.estado === 'vencido' ? 'vencido' : 'proximo',
+      dias: diasHastaVencimiento(c.fecha_vencimiento!),
+      fecha: c.fecha_vencimiento!.slice(0, 10),
+      titular: titularCertificado(c),
+      tipoTitular: tipoTitular(c),
+      empresaSlug: empresa.slug,
+      empresaNombre: empresa.nombre,
+      tipo: c.tipo?.nombre ?? c.tipo_nombre_custom ?? 'Certificado',
+      href,
+      // Renovar: el certificado de una persona se abre con las fechas nuevas para guardar; el resto,
+      // en su pantalla de siempre. Solo para quien puede editar (espejo de la RLS).
+      hrefRenovar: !puedeCargar ? null : c.empleado ? `${href}&renovar=1` : hrefCertificado(c),
+    }
   }
 
-  const kpiLink = 'block rounded-xl px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/60'
+  const sistemas: SistemaInicio[] = MARCAS
+    .filter((m) => empresasVistas.some((e) => m.match(e.slug)))
+    .map((m) => ({
+      key: m.key,
+      nombre: m.nombre,
+      icono: m.icono,
+      links: [
+        ...(m.key === 'tecnophos' && verArcor ? [{ icono: 'contenedor' as const, label: 'Contenedores - ARCOR', href: '/arcor', externo: false }] : []),
+        ...(m.key === 'adc'
+          ? [
+              { icono: 'escoba' as const, label: 'Sistema limpieza - UNIPAR', href: UNIPAR_APP_URL, externo: true },
+              { icono: 'bicho' as const, label: 'Control de Plagas', href: CONTROL_PLAGAS_URL, externo: true },
+              { icono: 'checklist' as const, label: 'Checklist de maquinaria', href: CHECKLIST_MAQUINARIA_URL, externo: true },
+            ]
+          : []),
+        ...(m.key === 'serviwhite'
+          ? [
+              { icono: 'cuadros' as const, label: 'Sistema de gestión', href: SERVIWHITE_ERP_URL, externo: true },
+              { icono: 'mapa' as const, label: 'Recorrido de limpieza', href: SERVIWHITE_LIMPIEZA_URL, externo: true },
+            ]
+          : []),
+        { icono: 'apreton' as const, label: 'Gestión Comercial', href: `${CRM_URL}?empresa=${m.key}`, externo: true },
+      ],
+    }))
 
-  return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Dashboard</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">{hoyLargo}</p>
-      </div>
+  const tipos = (['persona', 'vehiculo', 'equipo', 'empresa'] as const)
+    .map((t) => ({ tipo: t, n: proximos.filter((c) => tipoTitular(c) === t).length }))
+    .filter((x) => x.n > 0)
+  const diasVencidos = vencidos.map((c) => -diasHastaVencimiento(c.fecha_vencimiento!))
+  const bajasVistas = (bajas ?? []).filter((e) => enFiltro(e.empresa_id)).length
 
-      {/* ── Estado general + Atención ── */}
-      <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-          <h2 className="text-lg font-semibold tracking-tight">Estado general</h2>
+  const datos: DatosInicio = {
+    fecha: hoyLargo,
+    saludo,
+    nombre: (sesion?.nombre ?? sesion?.email ?? 'Usuario').split(' ')[0],
+    hrefs: {
+      empleados: conEmpresas('/empleados'),
+      vencimientos: conEmpresas('/vencimientos'),
+      vencidos: conEmpresas('/vencimientos?estado=vencido'),
+      proximos: conEmpresas('/vencimientos?estado=proximo'),
+      vigentes: conEmpresas('/vencimientos?estado=vigente'),
+    },
+    proximos: {
+      total: proximos.length,
+      semana: proximos.filter((c) => diasHastaVencimiento(c.fecha_vencimiento!) <= 7).length,
+      porTipo: tipos,
+      curva,
+    },
+    vencidos: {
+      total: vencidos.length,
+      masAntiguo: masUrgente ? diasUrgente : 0,
+      hasta7: diasVencidos.filter((x) => x <= 7).length,
+      mas7: diasVencidos.filter((x) => x > 7).length,
+    },
+    alDia: { total: alDia, conFecha: totalConFecha },
+    empleados: {
+      total: empleadosVistos.length,
+      bajas: bajasVistas,
+      porEmpresa: byEmpresa.map((e) => ({ slug: e.slug, nombre: e.nombre, n: e.total })),
+    },
+    alertas: {
+      todos: [...vencidos, ...proximos].map(alerta),
+      vencidos: vencidos.map(alerta),
+      proximos: proximos.map(alerta),
+    },
+    tab,
+    empresas: byEmpresa.map((e) => ({ id: e.id, slug: e.slug, nombre: e.nombre, empleados: e.total, vencidos: e.vencidos, proximos: e.proximos, mensual: mensual.get(e.id) ?? null })),
+    mes: mesNombre,
+    recursos: recursos.tarjetas,
+    fallas: recursos.fallas,
+    sistemas,
+    puedeCargar,
+  }
 
-          <div className="mt-5 grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:divide-x sm:divide-border">
-            <div className="sm:pr-6">
-              <Link href={conEmpresas('/empleados')} className={kpiLink}>
-                <p className="text-3xl font-semibold tabular-nums">{empleadosVistos.length}</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">Empleados</p>
-              </Link>
-            </div>
-            <div className="sm:px-6">
-              <Link href={conEmpresas('/vencimientos?estado=vencido')} className={kpiLink}>
-                <p className={`text-3xl font-semibold tabular-nums ${vencidos.length > 0 ? 'text-danger' : ''}`}>
-                  {vencidos.length}
-                </p>
-                <p className="mt-0.5 text-sm text-muted-foreground">Vencidos</p>
-              </Link>
-            </div>
-            <div className="sm:px-6">
-              <Link href={conEmpresas('/vencimientos?estado=proximo')} className={kpiLink}>
-                <p className={`text-3xl font-semibold tabular-nums ${proximos.length > 0 ? 'text-warning' : ''}`}>
-                  {proximos.length}
-                </p>
-                <p className="mt-0.5 text-sm text-muted-foreground">Por vencer</p>
-              </Link>
-            </div>
-            <div className="sm:pl-6">
-              <Link href={conEmpresas('/vencimientos?estado=vigente')} className={kpiLink}>
-                <p className="text-3xl font-semibold tabular-nums text-success">{alDia}</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">Al día</p>
-              </Link>
-            </div>
-          </div>
-
-          {/* Barra apilada */}
-          <div className="mt-6 flex h-2 w-full gap-1 overflow-hidden rounded-full">
-            {alDia > 0 && <div className="rounded-full bg-success" style={{ width: `${(alDia / total) * 100}%` }} />}
-            {proximos.length > 0 && (
-              <div className="rounded-full bg-warning" style={{ width: `${(proximos.length / total) * 100}%` }} />
-            )}
-            {vencidos.length > 0 && (
-              <div className="rounded-full bg-danger" style={{ width: `${(vencidos.length / total) * 100}%` }} />
-            )}
-          </div>
-        </div>
-
-        {/* Atención */}
-        <div className="flex flex-col justify-between rounded-2xl bg-zona p-6 text-zona-foreground">
-          {vencidos.length > 0 ? (
-            <>
-              <div>
-                <p className="text-2xl font-semibold tracking-tight">
-                  <span className="text-danger tabular-nums">{vencidos.length}</span>{' '}
-                  {vencidos.length === 1 ? 'certificado vencido' : 'certificados vencidos'}
-                </p>
-                <p className="mt-1 text-sm text-texto-2">
-                  El caso más urgente venció hace {diasUrgente} {diasUrgente === 1 ? 'día' : 'días'}.
-                </p>
-              </div>
-              <Link
-                href={conEmpresas('/vencimientos?estado=vencido')}
-                className="mt-5 inline-flex items-center justify-between gap-2 rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.97]"
-              >
-                Revisar vencimientos
-                <ArrowRight className="size-4" strokeWidth={2} />
-              </Link>
-            </>
-          ) : (
-            <>
-              <div>
-                <p className="text-2xl font-semibold tracking-tight">Sin certificados vencidos</p>
-                <p className="mt-1 text-sm text-texto-2">
-                  {proximos.length > 0
-                    ? `${proximos.length} por vencer.`
-                    : 'Toda la documentación está vigente.'}
-                </p>
-              </div>
-              <Link
-                href={conEmpresas('/vencimientos')}
-                className="mt-5 inline-flex items-center justify-between gap-2 rounded-[10px] border border-border-strong bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-[background-color,transform] hover:bg-muted active:scale-[0.97]"
-              >
-                Ver vencimientos
-                <ArrowRight className="size-4" strokeWidth={2} />
-              </Link>
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* ── Prioritarios + columna derecha ── */}
-      <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-          <h2 className="text-lg font-semibold tracking-tight">Vencimientos prioritarios</h2>
-
-          <SegmentedLocal
-            className="mt-4"
-            inicial={tab}
-            tabs={[
-              { key: 'todos', label: 'Todos', content: listaAlertas([...vencidos, ...proximos], conEmpresas('/vencimientos')) },
-              { key: 'vencidos', label: 'Vencidos', content: listaAlertas(vencidos, conEmpresas('/vencimientos?estado=vencido')) },
-              { key: 'proximos', label: 'Próximos', content: listaAlertas(proximos, conEmpresas('/vencimientos?estado=proximo')) },
-            ]}
-          />
-        </div>
-
-        <div className="space-y-6">
-          {/* Empresas */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-            <h2 className="text-lg font-semibold tracking-tight">Empresas</h2>
-
-            <div className="mt-4">
-              <div className="grid grid-cols-[1fr_44px_44px] gap-2 border-b border-border pb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                <span>Empresa</span>
-                <span className="text-right">Venc.</span>
-                <span className="text-right">Próx.</span>
-              </div>
-              <div className="divide-y divide-border">
-                {byEmpresa.map((emp) => (
-                  <div key={emp.id} className="grid grid-cols-[1fr_44px_44px] items-center gap-2 py-1.5">
-                    <Link href={`/empresa/${emp.slug}`} className="min-w-0 rounded-lg px-1 py-1 -mx-1 transition-colors hover:bg-muted/40">
-                      <span className="block truncate text-sm font-medium">{emp.nombre}</span>
-                      <span className="block text-[11px] text-muted-foreground">
-                        {emp.total} {emp.total === 1 ? 'empleado' : 'empleados'}
-                      </span>
-                    </Link>
-                    {/* Cada número abre los vencimientos de ESA empresa en ese estado. */}
-                    <Link
-                      href={`/vencimientos?empresa=${emp.slug}&estado=vencido`}
-                      title={`Vencidos de ${emp.nombre}`}
-                      className={`rounded-lg py-1.5 text-right text-sm font-semibold tabular-nums transition-colors hover:bg-muted/60 ${emp.vencidos > 0 ? 'text-danger' : 'text-muted-foreground/50'}`}
-                    >
-                      {emp.vencidos}
-                    </Link>
-                    <Link
-                      href={`/vencimientos?empresa=${emp.slug}&estado=proximo`}
-                      title={`Por vencer de ${emp.nombre}`}
-                      className={`rounded-lg py-1.5 text-right text-sm font-semibold tabular-nums transition-colors hover:bg-muted/60 ${emp.proximos > 0 ? 'text-warning' : 'text-muted-foreground/50'}`}
-                    >
-                      {emp.proximos}
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Distribución documental */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-            <h2 className="text-lg font-semibold tracking-tight">Distribución documental</h2>
-
-            <div className="mt-4 space-y-4">
-              {[
-                { label: 'Al día', count: alDia, color: 'bg-success', href: conEmpresas('/vencimientos?estado=vigente') },
-                { label: 'Por vencer', count: proximos.length, color: 'bg-warning', href: conEmpresas('/vencimientos?estado=proximo') },
-                { label: 'Vencidos', count: vencidos.length, color: 'bg-danger', href: conEmpresas('/vencimientos?estado=vencido') },
-              ].map((f) => (
-                <Link key={f.label} href={f.href} className="block rounded-lg transition-opacity hover:opacity-80">
-                  <div className="mb-1.5 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">{f.label}</span>
-                    <span className="text-sm font-semibold tabular-nums">{f.count}</span>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                    <div className={`h-full rounded-full ${f.color}`} style={{ width: `${(f.count / total) * 100}%` }} />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  )
+  return <InicioVista d={datos} />
 }

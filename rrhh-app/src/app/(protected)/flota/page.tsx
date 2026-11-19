@@ -55,8 +55,8 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
     flota = await cargarFlota(supabase, todas ? {} : { empresaId: empresaSel.id })
   } catch (e) {
     return (
-      <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
-        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Flota</h1>
+      <div className="mx-auto max-w-6xl px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Flota</h1>
         <div className="mt-6 rounded-2xl border border-danger/30 bg-danger-subtle px-5 py-4 text-sm text-danger">
           No se pudo cargar la flota. Detalle técnico: {e instanceof Error ? e.message : String(e)}
         </div>
@@ -74,10 +74,10 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
   const sinDatos = filas.filter(({ v }) => !v.marca || !v.modelo || !v.anio).length
   const boton = 'inline-flex items-center gap-2 rounded-[10px] border border-border-strong bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-[background-color,transform] hover:bg-muted active:scale-[0.97]'
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Flota</h1>
+          <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Flota</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {filas.length} {filas.length === 1 ? 'vehículo' : 'vehículos'} · {todas ? alcance : empresaSel.nombre}
           </p>

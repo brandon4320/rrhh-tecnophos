@@ -33,7 +33,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           disableTransitionOnChange
         >
           {children}
-          <Toaster richColors position="top-center" />
+          {/* Aviso de la skill: oscuro abajo a la derecha (claro en el tema oscuro), con su acción. */}
+          <Toaster
+            position="bottom-right"
+            offset={28}
+            mobileOffset={{ bottom: 'calc(96px + env(safe-area-inset-bottom))', left: 16, right: 16 }}
+            toastOptions={{
+              style: {
+                background: 'var(--tip)',
+                color: 'var(--tip-foreground)',
+                border: '0',
+                borderRadius: 16,
+                boxShadow: 'var(--sombra-flotante)',
+              },
+              classNames: {
+                description: '!text-tip-2',
+                actionButton: '!bg-transparent !text-tip-foreground hover:!bg-white/10 !font-medium',
+                error: '[&_[data-icon]]:!text-rojo-g',
+                success: '[&_[data-icon]]:!text-verde-g',
+              },
+            }}
+          />
           <SpeedInsights />
         </ThemeProvider>
       </body>

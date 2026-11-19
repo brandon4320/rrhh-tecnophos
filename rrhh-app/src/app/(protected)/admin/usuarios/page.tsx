@@ -301,7 +301,7 @@ export default async function AdminUsuariosPage({
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
       <div>
-        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Usuarios</h1>
+        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Usuarios</h1>
       </div>
 
       <div className="bg-card rounded-2xl border border-border p-6 shadow-tarjeta">
