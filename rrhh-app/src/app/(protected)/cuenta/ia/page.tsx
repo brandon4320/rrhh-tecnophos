@@ -17,8 +17,8 @@ export default async function ConectarIaPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6 lg:p-8">
-      <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Conectar una IA</h1>
+    <div className="mx-auto max-w-3xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+      <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Conectar una IA</h1>
       <ClavesIa
         claves={(data ?? []).map((c) => ({
           id: c.id,

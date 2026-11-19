@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 // se re-muestra al cambiar el slug, que es la navegación empresa→empresa.
 export default function Loading() {
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
       {/* Hero */}
       <section className="rounded-2xl bg-zona p-6 sm:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">

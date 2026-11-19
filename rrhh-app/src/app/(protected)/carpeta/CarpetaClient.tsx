@@ -257,7 +257,7 @@ export default function CarpetaClient({
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 pb-32 sm:p-6 sm:pb-32 lg:p-8 lg:pb-32">
       <div>
-        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Armar carpeta para planta</h1>
+        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Armar carpeta para planta</h1>
       </div>
 
       {/* ── Personas ── */}

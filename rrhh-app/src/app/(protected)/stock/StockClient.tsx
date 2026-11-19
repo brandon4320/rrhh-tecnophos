@@ -339,11 +339,11 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
   const filtrando = !!busqueda.trim() || vista !== 'todo'
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
       {/* ── Header ── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Stock</h1>
+          <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Stock</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {activos.length} {activos.length === 1 ? 'ítem' : 'ítems'} · {empresa.nombre}
           </p>

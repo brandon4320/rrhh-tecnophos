@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 // Sin esto, cada navegación espera el payload completo con la pantalla congelada.
 export default function Loading() {
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
       <div className="space-y-2">
         <Skeleton className="h-7 w-48" />
         <Skeleton className="h-4 w-72" />

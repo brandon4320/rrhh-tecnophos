@@ -33,10 +33,10 @@ export default async function ArcorAlertasPage() {
   const paraRevisar = pub?.revisar ?? []
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Alertas</h1>
+          <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Alertas</h1>
         </div>
         <AutoRefresh generado={ahora.toISOString()} />
       </div>

@@ -279,7 +279,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
   const [comparar, setComparar] = useState(false)
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
       <div>
         <Link href={`/flota?empresa=${vehiculo.empresa.slug}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" /> Flota de {vehiculo.empresa.nombre}
