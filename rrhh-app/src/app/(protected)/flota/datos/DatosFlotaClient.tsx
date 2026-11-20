@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { mensajeError } from '@/lib/errores'
 import { TIPOS_VEHICULO, TIPO_VEHICULO_LABEL, tipoDe, type TipoVehiculo } from '@/modules/flota/reglas'
 
 interface Vehiculo {
@@ -48,16 +49,26 @@ export default function DatosFlotaClient({ vehiculos, volver, variasEmpresas }: 
       if (a && (!/^\d{4}$/.test(a) || Number(a) < 1980 || Number(a) > tope)) return toast.error(`El año de ${v.patente} no es válido.`)
     }
     setSaving(true)
+    // ★ El `.select('id')` no es decorativo: un UPDATE que no alcanza ninguna
+    // fila —porque la RLS lo filtró, o porque la camioneta ya no está—
+    // devuelve `error: null`. Sin mirar lo que volvió, la pantalla decía
+    // "Se guardaron 2 camionetas", el refresh traía los valores viejos y
+    // quedaba como que el sistema no anda. Ninguna fila devuelta = no se
+    // guardó, y hay que decirlo.
     const resultados = await Promise.all(cambiadas.map((v) => {
       const f = filas[v.id]
       return supabase.from('vehiculos').update({
         marca: f.marca.trim() || null, modelo: f.modelo.trim() || null, anio: f.anio.trim() ? Number(f.anio) : null, tipo: f.tipo,
-      }).eq('id', v.id).then(({ error }) => ({ patente: v.patente, error }))
+      }).eq('id', v.id).select('id').then(({ data, error }) => ({ patente: v.patente, error, vacio: !error && !data?.length }))
     }))
     setSaving(false)
-    const fallidas = resultados.filter((r) => r.error)
+    const fallidas = resultados.filter((r) => r.error || r.vacio)
     if (fallidas.length) {
-      toast.error(`No se pudieron guardar: ${fallidas.map((r) => r.patente).join(', ')}. ${fallidas[0].error?.message ?? ''}`)
+      const patentes = fallidas.map((r) => r.patente).join(', ')
+      const motivo = fallidas.find((r) => r.error)?.error
+      toast.error(motivo
+        ? `No se pudieron guardar: ${patentes}. ${mensajeError(motivo, 'guardar')}`
+        : `No se pudieron guardar: ${patentes}. No tenés permiso para editar esas camionetas.`)
     } else {
       toast.success(cambiadas.length === 1 ? 'Se guardó 1 camioneta.' : `Se guardaron ${cambiadas.length} camionetas.`)
     }
