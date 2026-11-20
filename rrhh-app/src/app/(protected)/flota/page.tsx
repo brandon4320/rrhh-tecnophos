@@ -86,7 +86,11 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
           {canEdit && filas.length > 0 && (
             <Link href={todas ? '/flota/datos' : `/flota/datos?empresa=${empresaSel.slug}`} className={boton}>
               <PencilLine className="size-4" strokeWidth={1.75} />
-              Cargar marca, modelo y año
+              {/* "Cargar" se lee como "poner lo que falta", así que el que
+                  quiere CORREGIR una marca ya cargada no toca este botón y
+                  concluye que no se puede. Esa misma pantalla hace las dos
+                  cosas. (Rosario, 20/11/2026) */}
+              Editar marca, modelo y año
             </Link>
           )}
           {!todas && filas.length > 0 && (

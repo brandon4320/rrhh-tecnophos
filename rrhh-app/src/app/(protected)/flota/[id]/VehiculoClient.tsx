@@ -251,13 +251,17 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
     if (cada == null || !Number.isInteger(cada) || cada < 1 || cada > 90) return toast.error('El checklist tiene que ser cada 1 a 90 días.')
     setSaving(true)
     const kmCambio = km !== vehiculo.kmActual
-    const { error } = await supabase.from('vehiculos').update({
+    // ★ `.select('id')`: un UPDATE que la RLS filtra devuelve `error: null` y
+    // cero filas. Sin mirarlo, la pantalla decía "Datos guardados" y el
+    // refresh traía los valores de antes.
+    const { data, error } = await supabase.from('vehiculos').update({
       marca: datos.marca.trim() || null, modelo: datos.modelo.trim() || null, anio, tipo: datos.tipo,
       conductor_nombre: datos.conductor.trim().replace(/\s+/g, ' ') || null, checklist_cada_dias: cada, checklist_activo: datos.activo,
       ...(kmCambio ? { km_actual: km, km_actualizado_at: new Date().toISOString() } : {}),
-    }).eq('id', vehiculo.id)
+    }).eq('id', vehiculo.id).select('id')
     setSaving(false)
     if (error) return toast.error(mensajeError(error, 'guardar'))
+    if (!data?.length) return toast.error('No se guardó: no tenés permiso para editar esta camioneta.')
     toast.success('Datos guardados.')
     router.refresh()
   }
@@ -268,8 +272,11 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
     const bytes = new Uint8Array(12)
     crypto.getRandomValues(bytes)
     const token = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
-    const { error } = await supabase.from('vehiculos').update({ checklist_token: token }).eq('id', vehiculo.id)
+    const { data, error } = await supabase.from('vehiculos').update({ checklist_token: token }).eq('id', vehiculo.id).select('id')
     if (error) return toast.error(mensajeError(error, 'generar el QR nuevo'))
+    // Decir "QR nuevo generado" sin haberlo generado es peor que fallar: se
+    // imprime y se pega una etiqueta que no abre nada.
+    if (!data?.length) return toast.error('No se generó: no tenés permiso para editar esta camioneta.')
     toast.success('QR nuevo generado. Imprimilo y reemplazá el de la camioneta.')
     router.refresh()
   }
