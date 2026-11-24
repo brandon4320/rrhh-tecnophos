@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { downloadFromR2, getSignedDownloadUrl, uploadToR2 } from '@/lib/r2/operations'
 import { leerCajaFirma } from '@/modules/recibos/archivo'
-import { leerFirmaPng, medidasPng, nombreFirmado, rutaFirmado } from '@/modules/recibos/estampa'
+import { nombreFirmado, rutaFirmado } from '@/modules/recibos/estampa'
+import { guardarFirmaDibujada } from '@/modules/recibos/firma-servidor'
 import { ErrorEstampa, estamparFirma } from '@/modules/recibos/firma-pdf'
 import { confirmarIdentidad } from '@/modules/recibos/identidad'
 import {
-  firmaGuardada, guardarFirma, marcarFirmado, reciboParaFirmar,
+  firmaGuardada, marcarFirmado, reciboParaFirmar,
 } from '@/modules/recibos/servidor'
 
 /**
@@ -90,27 +91,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
   // ------------------------------------------------------------
   // La firma: la que acaba de dibujar, o la que ya tenía guardada
   // ------------------------------------------------------------
-  const rutaFirma = `firmas/${empleadoId}.png`
   let png: Uint8Array
 
   if (cuerpo?.firma !== undefined && cuerpo?.firma !== null) {
-    const leida = leerFirmaPng(cuerpo.firma)
-    if ('error' in leida) return NextResponse.json({ error: leida.error }, { status: 400 })
-    png = leida.bytes
-    const medidas = medidasPng(png)
-    try {
-      // Antes de estampar: si se guarda la firma y después falla el estampado,
-      // la persona no tiene que volver a dibujarla con el dedo.
-      await uploadToR2(rutaFirma, png, 'image/png')
-      await guardarFirma(admin, empleadoId, {
-        path: rutaFirma,
-        ancho: medidas?.ancho ?? null,
-        alto: medidas?.alto ?? null,
-      })
-    } catch (e) {
-      console.error('[firma] guardar firma:', e)
-      return noDisponible()
-    }
+    // Se guarda ANTES de estampar: si el estampado falla, la persona no tiene
+    // que volver a dibujarla con el dedo.
+    const r = await guardarFirmaDibujada(admin, empleadoId, cuerpo.firma)
+    if ('error' in r) return NextResponse.json({ error: r.error }, { status: r.status })
+    png = r.bytes
   } else {
     let guardada
     try {

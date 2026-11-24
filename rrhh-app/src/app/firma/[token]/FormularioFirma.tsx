@@ -44,6 +44,46 @@ export default function FormularioFirma({ token }: { token: string }) {
   const [errorFirma, setErrorFirma] = useState<string | null>(null)
   const pad = useRef<PadFirmaHandle>(null)
 
+  // El onboarding: dejar la firma cargada cuando todavía no hay ningún recibo.
+  // Lienzo propio y no el de la hoja de firmar, que es otro momento y no
+  // conviven en pantalla.
+  const padSolo = useRef<PadFirmaHandle>(null)
+  const [hayTrazoSolo, setHayTrazoSolo] = useState(false)
+  const [guardandoFirma, setGuardandoFirma] = useState(false)
+  const [errorFirmaSola, setErrorFirmaSola] = useState<string | null>(null)
+  const [rehaciendo, setRehaciendo] = useState(false)
+
+  async function guardarSoloFirma() {
+    if (guardandoFirma) return
+    const firma = padSolo.current?.exportar() ?? null
+    if (!firma) {
+      setErrorFirmaSola('Hacé tu firma un poco más grande para que se vea en el recibo.')
+      return
+    }
+    setGuardandoFirma(true)
+    setErrorFirmaSola(null)
+    try {
+      const res = await fetch(`/api/firma/${encodeURIComponent(token)}/firma`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cuil4, firma }),
+      })
+      const payload = await res.json().catch(() => null)
+      if (!res.ok) {
+        setErrorFirmaSola(payload?.error ?? 'No se pudo guardar. Probá de nuevo.')
+        return
+      }
+      // Se guarda el dibujo que acaba de hacer y no la URL que vuelve: es la
+      // misma imagen y se ve al instante, sin esperar a que baje de nuevo.
+      setDatos((d) => (d ? { ...d, firmaUrl: firma } : d))
+      setRehaciendo(false)
+    } catch {
+      setErrorFirmaSola('No hay conexión. Fijate la señal y probá de nuevo.')
+    } finally {
+      setGuardandoFirma(false)
+    }
+  }
+
   async function confirmar(e: React.FormEvent) {
     e.preventDefault()
     if (cuil4.length !== 4 || cargando) return
@@ -187,10 +227,76 @@ export default function FormularioFirma({ token }: { token: string }) {
         <h2 className="text-[22px] font-semibold leading-tight tracking-[-0.02em]">{datos.nombre}</h2>
       </div>
 
+      {/* ──────────────────────────────────────────────────────────────── */}
+      {/* Sin recibos = el link del onboarding: se manda ANTES de que haya  */}
+      {/* nada cargado, para que cada uno deje su firma lista. Antes esto   */}
+      {/* decía "no tenés recibos" y no se podía hacer nada.                */}
+      {/* ──────────────────────────────────────────────────────────────── */}
       {datos.recibos.length === 0 && (
-        <div className="rounded-2xl border border-border bg-card p-5 text-center shadow-tarjeta">
-          <p className="text-sm font-medium">No tenés recibos para firmar</p>
-          <p className="mt-1 text-sm text-muted-foreground">Cuando haya uno nuevo te llega un mail.</p>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
+          {datos.firmaUrl && !rehaciendo ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Check className="size-5 shrink-0 text-success" strokeWidth={2} />
+                <p className="text-sm font-medium">Tu firma quedó guardada</p>
+              </div>
+              <div className="mt-3 rounded-[10px] border border-input bg-white p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={datos.firmaUrl} alt="Tu firma" className="mx-auto h-24 object-contain" />
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Cuando haya un recibo nuevo te va a llegar un mail para firmarlo.
+              </p>
+              <button
+                type="button"
+                onClick={() => { setRehaciendo(true); setHayTrazoSolo(false); setErrorFirmaSola(null) }}
+                className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-[10px] border border-border-strong bg-card px-4 text-sm font-medium hover:bg-muted"
+              >
+                Hacer otra firma
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium">Tu firma para los recibos de sueldo</p>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Desde ahora los recibos se firman acá, de forma electrónica. Dejá tu firma
+                guardada una vez y después cada recibo lo firmás con un toque.
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Cuando firmes, te llega un mail con la confirmación y queda una copia en el
+                sistema, a la que también accede la empresa.
+              </p>
+
+              <div className="mt-4">
+                <PadFirma ref={padSolo} onCambio={setHayTrazoSolo} />
+              </div>
+
+              {errorFirmaSola && <p className="mt-3 text-sm text-danger-text">{errorFirmaSola}</p>}
+
+              <button
+                type="button"
+                onClick={guardarSoloFirma}
+                disabled={!hayTrazoSolo || guardandoFirma}
+                className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-primary px-4 font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.97] disabled:opacity-50"
+              >
+                {guardandoFirma && <Loader2 className="size-4 animate-spin" />}
+                {guardandoFirma ? 'Guardando...' : 'Guardar mi firma'}
+              </button>
+
+              {/* Sin esto, tocar "Hacer otra firma" sin querer dejaba a alguien
+                  que YA tenía su firma obligado a dibujar una nueva para salir. */}
+              {datos.firmaUrl && rehaciendo && (
+                <button
+                  type="button"
+                  onClick={() => { setRehaciendo(false); setErrorFirmaSola(null) }}
+                  disabled={guardandoFirma}
+                  className="mt-2 inline-flex min-h-10 w-full items-center justify-center rounded-[10px] border border-border-strong bg-card px-4 text-sm font-medium hover:bg-muted disabled:opacity-50"
+                >
+                  Dejar la que ya tenía
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
 
@@ -313,7 +419,9 @@ export default function FormularioFirma({ token }: { token: string }) {
               className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-primary px-4 font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover active:scale-[0.97] disabled:opacity-50"
             >
               {guardando && <Loader2 className="size-4 animate-spin" />}
-              {guardando ? 'Firmando...' : `Firmar ${firmando.periodo}`}
+              {/* Con la firma ya cargada el botón no pide dibujar nada: dice
+                  lo que va a hacer, que es usar la que dejó en el onboarding. */}
+              {guardando ? 'Firmando...' : dibujando ? `Firmar ${firmando.periodo}` : 'Usar mi firma guardada'}
             </button>
 
             {!dibujando && (
