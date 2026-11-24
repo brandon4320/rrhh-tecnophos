@@ -145,11 +145,17 @@ export async function POST(request: Request) {
       html: armado.html,
     })
     if (!envio.ok) {
-      // La fila pasa a 'error' (y con eso libera el índice único, así que se
-      // puede reintentar hoy mismo) y el link queda revocado: no se deja una
-      // puerta abierta por un mail que nunca llegó.
+      // La fila pasa a 'error', y con eso libera el índice único: se puede
+      // reintentar hoy mismo.
+      //
+      // ★ El token NO se revoca, aunque la tentación sea limpiarlo. Un error
+      // de SMTP no prueba que el mail no haya llegado: si la conexión se corta
+      // después de que el servidor aceptó el mensaje, se reporta como fallo
+      // igual. Revocarlo sería dejar a esa persona con un mail en la mano y un
+      // link que le dice "no sirve". Y dejarlo vivo no expone nada: el token
+      // en claro no existe en ningún otro lado que ese mail, así que si de
+      // verdad no salió, no lo tiene nadie y se vence solo.
       await marcarMailError(admin, reserva.id, envio.error)
-      await revocarToken(admin, token.id)
       resultados.push({ id, estado: 'error', motivo: envio.error })
       continue
     }

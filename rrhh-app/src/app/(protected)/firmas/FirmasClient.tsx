@@ -86,12 +86,22 @@ export default function FirmasClient({ candidatos, canal }: { candidatos: Candid
     [candidatos, filtro, busqueda]
   )
 
-  // Solo se puede elegir a quien de verdad se le puede mandar. Lo que está
-  // elegido y dejó de ser elegible (otro mandó el mail desde otra pestaña) se
-  // cae solo acá y no llega al servidor.
+  // Lo que la casilla de arriba tilda y destilda: solo lo que se ve ahora.
   const elegibles = useMemo(() => visibles.filter(puedeRecibir), [visibles])
-  const aEnviar = useMemo(() => elegibles.filter((c) => elegidos.has(c.id)), [elegibles, elegidos])
-  const todosElegidos = elegibles.length > 0 && aEnviar.length === elegibles.length
+  const todosElegidos = elegibles.length > 0 && elegibles.every((c) => elegidos.has(c.id))
+
+  // ★ Lo que se MANDA sale de la lista entera, no de lo que se ve. Si se
+  // calculara sobre `visibles`, tildar a los 94 y después escribir un apellido
+  // en el buscador dejaría la barra en "1 elegida" y mandaría un solo mail,
+  // tirando los otros 93 sin decir nada.
+  // De paso se filtra por `puedeRecibir`: lo elegido que dejó de ser elegible
+  // —porque otro mandó el mail desde otra pestaña— se cae acá y no llega al
+  // servidor.
+  const aEnviar = useMemo(
+    () => candidatos.filter((c) => elegidos.has(c.id) && puedeRecibir(c)),
+    [candidatos, elegidos]
+  )
+  const ocultos = aEnviar.length - aEnviar.filter((c) => visibles.includes(c)).length
 
   function alternarTodos() {
     setElegidos((p) => {
@@ -322,6 +332,13 @@ export default function FirmasClient({ candidatos, canal }: { candidatos: Candid
                 <p className="flex items-center gap-2 text-sm text-texto-2">
                   <CheckCircle className="size-[18px] text-primary" weight="fill" />
                   {aEnviar.length} {aEnviar.length === 1 ? 'elegida' : 'elegidas'}
+                  {/* Avisa que hay elegidos que el filtro o la búsqueda no
+                      están mostrando: el número de arriba los incluye. */}
+                  {ocultos > 0 && (
+                    <span className="text-muted-foreground">
+                      ({ocultos} fuera de lo que estás viendo)
+                    </span>
+                  )}
                 </p>
                 <div className="flex gap-2">
                   <button
