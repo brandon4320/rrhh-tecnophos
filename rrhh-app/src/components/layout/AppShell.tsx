@@ -28,6 +28,7 @@ import {
   Moon,
   Package,
   Pulse,
+  Signature,
   ShippingContainer,
   SignOut,
   Sparkle,
@@ -57,7 +58,7 @@ interface Props {
   /** Muestra la entrada virtual "Tecnophos - ARCOR" (ver modules/arcor/acceso.ts). */
   arcor?: boolean
   /** superAdmin: admin sin empresa asignada (ve el Historial; misma regla que la RLS de `auditoria`). */
-  sesion: { nombre: string | null; email: string | null; rol: string; superAdmin?: boolean }
+  sesion: { nombre: string | null; email: string | null; rol: string; superAdmin?: boolean; veRecibos?: boolean }
   children: React.ReactNode
 }
 
@@ -68,7 +69,7 @@ const STORAGE_KEY = 'empresa_activa'
  * Pantallas generales: sin `?empresa=` muestran a TODAS las empresas y con `?empresa=a,b` a las
  * tildadas. En ellas la ausencia del filtro significa "todas", no "lo último que elegiste".
  */
-const RUTAS_GLOBALES = ['/dashboard', '/empleados', '/vencimientos', '/flota']
+const RUTAS_GLOBALES = ['/dashboard', '/empleados', '/vencimientos', '/flota', '/firmas']
 
 /** Pantallas que existen por empresa con `?empresa=slug`: cambiar de empresa te deja en la misma. */
 const RUTAS_POR_EMPRESA = ['/empleados', '/vencimientos', '/flota', '/stock', '/documentos', '/carpeta', '/palas']
@@ -236,6 +237,8 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           { key: 'resumen', label: 'Inicio', href: conVistas('/dashboard'), icon: House, active: pathname.startsWith('/dashboard') },
           { key: 'empleados', label: 'Empleados', href: conVistas('/empleados'), icon: IdentificationBadge, active: pathname.startsWith('/empleados'), cuenta: empleadosVistos },
           { key: 'vencimientos', label: 'Vencimientos', href: conVistas('/vencimientos'), icon: ClockCountdown, active: pathname.startsWith('/vencimientos'), cuenta: vencidosVistos, ojo: true },
+          // Firmas de recibos: lo ve solo quien tiene `ve_recibos`, igual que la RLS de la migración 31.
+          ...(sesion.veRecibos ? [{ key: 'firmas', label: 'Firmas', href: conVistas('/firmas'), icon: Signature, active: pathname.startsWith('/firmas') }] : []),
         ],
       },
       {
@@ -254,6 +257,8 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           { key: 'resumen', label: 'Resumen', href: `/empresa/${activa.slug}`, icon: House, active: enEmpresa && !enDocumentacion },
           { key: 'empleados', label: 'Empleados', href: `/empleados?empresa=${activa.slug}`, icon: IdentificationBadge, active: pathname.startsWith('/empleados'), cuenta: empleadosVistos },
           { key: 'vencimientos', label: 'Vencimientos', href: `/vencimientos?empresa=${activa.slug}`, icon: ClockCountdown, active: pathname.startsWith('/vencimientos'), cuenta: vencidosVistos, ojo: true },
+          // Firmas de recibos: lo ve solo quien tiene `ve_recibos`, igual que la RLS de la migración 31.
+          ...(sesion.veRecibos ? [{ key: 'firmas', label: 'Firmas', href: `/firmas?empresa=${activa.slug}`, icon: Signature, active: pathname.startsWith('/firmas') }] : []),
         ],
       },
       {
@@ -654,6 +659,7 @@ function tituloDe(pathname: string, documentacion: boolean, arcor: boolean): str
     ['/legajo', 'Legajo'],
     ['/documentos', 'Documentación mensual'],
     ['/carpeta', 'Armar carpeta'],
+    ['/firmas', 'Firmas de recibos'],
     ['/flota', 'Flota'],
     ['/palas', 'Palas cargadoras'],
     ['/stock', 'Stock'],
