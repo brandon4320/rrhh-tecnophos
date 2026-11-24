@@ -282,6 +282,19 @@ export default function FormularioFirma({ token }: { token: string }) {
                 {guardandoFirma && <Loader2 className="size-4 animate-spin" />}
                 {guardandoFirma ? 'Guardando...' : 'Guardar mi firma'}
               </button>
+
+              {/* Sin esto, tocar "Hacer otra firma" sin querer dejaba a alguien
+                  que YA tenía su firma obligado a dibujar una nueva para salir. */}
+              {datos.firmaUrl && rehaciendo && (
+                <button
+                  type="button"
+                  onClick={() => { setRehaciendo(false); setErrorFirmaSola(null) }}
+                  disabled={guardandoFirma}
+                  className="mt-2 inline-flex min-h-10 w-full items-center justify-center rounded-[10px] border border-border-strong bg-card px-4 text-sm font-medium hover:bg-muted disabled:opacity-50"
+                >
+                  Dejar la que ya tenía
+                </button>
+              )}
             </>
           )}
         </div>
