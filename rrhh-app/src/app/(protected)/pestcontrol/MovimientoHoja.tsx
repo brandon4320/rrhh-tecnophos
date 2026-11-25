@@ -42,16 +42,27 @@ export default function MovimientoHoja({ empresaId, insumos, movimiento, onCerra
     lugar: movimiento?.lugar ?? '',
     notas: movimiento?.notas ?? '',
   })
+  // Insumos que se cuentan en cajas (fosfuro): se carga EN CAJAS por defecto (es como piensa la
+  // gente de Pestcontrol) y se guarda en tarros. Al editar, en cajas solo si las cantidades
+  // son cajas enteras; si no (55 tarros), en tarros para no mostrar 3,93 cajas.
+  const [enCajas, setEnCajas] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      insumos.filter((it) => it.por_caja).map((it) => {
+        const l = movimiento?.lineas.find((x) => x.insumo_id === it.id)
+        const enteras = !l || (l.entrada % it.por_caja! === 0 && l.salida % it.por_caja! === 0)
+        return [it.id, enteras]
+      })
+    )
+  )
   const [cant, setCant] = useState<Record<string, Cant>>(() =>
     Object.fromEntries(
       insumos.map((it) => {
         const l = movimiento?.lineas.find((x) => x.insumo_id === it.id)
-        return [it.id, { entrada: aTexto(l?.entrada ?? 0), salida: aTexto(l?.salida ?? 0) }]
+        const div = enCajas[it.id] && it.por_caja ? it.por_caja : 1
+        return [it.id, { entrada: aTexto((l?.entrada ?? 0) / div), salida: aTexto((l?.salida ?? 0) / div) }]
       })
     )
   )
-  // Insumos que se cuentan en cajas (fosfuro): se puede cargar en cajas y se guarda en tarros.
-  const [enCajas, setEnCajas] = useState<Record<string, boolean>>({})
   const [archivos, setArchivos] = useState<File[]>([])
 
   const factor = (it: PestInsumo) => (enCajas[it.id] && it.por_caja ? it.por_caja : 1)
@@ -157,7 +168,7 @@ export default function MovimientoHoja({ empresaId, insumos, movimiento, onCerra
                       <p className="text-foreground">{it.nombre}</p>
                       {it.por_caja ? (
                         <div className="mt-1 flex flex-wrap items-center gap-1 text-xs" role="group" aria-label={`Unidad de ${it.nombre}`}>
-                          {[false, true].map((cajas) => (
+                          {[true, false].map((cajas) => (
                             <button
                               key={String(cajas)}
                               type="button"
