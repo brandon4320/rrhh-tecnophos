@@ -74,9 +74,10 @@ describe('adjuntos', () => {
 })
 
 describe('llevaPestcontrol', () => {
-  it('solo Bahía Blanca', () => {
-    expect(llevaPestcontrol('tecnophos-bahia-blanca')).toBe(true)
-    expect(llevaPestcontrol('adc')).toBe(false)
+  it('solo Bahía Blanca, por nombre (con o sin acento)', () => {
+    expect(llevaPestcontrol({ nombre: 'Tecnophos Bahía Blanca' })).toBe(true)
+    expect(llevaPestcontrol({ nombre: 'TECNOPHOS  BAHIA BLANCA' })).toBe(true)
+    expect(llevaPestcontrol({ nombre: 'ADC S.R.L.' })).toBe(false)
     expect(llevaPestcontrol(null)).toBe(false)
   })
 })

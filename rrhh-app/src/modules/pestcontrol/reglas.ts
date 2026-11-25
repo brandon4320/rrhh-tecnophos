@@ -7,11 +7,16 @@
 
 import { sanitizarNombreArchivo } from '@/modules/documentos/reglas'
 
-/** Empresas que llevan Pestcontrol. Hoy solo Bahía Blanca (la fumigación de barcos sale de ahí). */
-export const EMPRESAS_PESTCONTROL = ['tecnophos-bahia-blanca'] as const
+/**
+ * Empresas que llevan Pestcontrol, por NOMBRE normalizado (sin acentos ni mayúsculas): hoy solo
+ * Tecnophos Bahía Blanca (la fumigación de barcos sale de ahí). Por nombre y no por slug porque
+ * el slug de prod no es el que se deduce del nombre (la migración 37 lo supuso y no cargó nada).
+ */
+export const EMPRESAS_PESTCONTROL = ['tecnophos bahia blanca'] as const
 
-export function llevaPestcontrol(slug: string | null | undefined): boolean {
-  return !!slug && (EMPRESAS_PESTCONTROL as readonly string[]).includes(slug)
+export function llevaPestcontrol(empresa: { nombre: string | null } | null | undefined): boolean {
+  const n = (empresa?.nombre ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+  return (EMPRESAS_PESTCONTROL as readonly string[]).includes(n)
 }
 
 export const SIN_PERMISO_PESTCONTROL = 'No tenés acceso a Pestcontrol.'

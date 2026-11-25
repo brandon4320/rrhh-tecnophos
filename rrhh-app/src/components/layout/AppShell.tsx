@@ -285,7 +285,7 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           { key: 'stock', label: 'Stock', href: `/stock?empresa=${activa.slug}`, icon: Package, active: pathname.startsWith('/stock') },
           // Stock de fumigación de barcos: solo en las empresas que lo llevan y para quien tiene
           // `ve_pestcontrol`, igual que la RLS de la migración 37.
-          ...(sesion.vePestcontrol && llevaPestcontrol(activa.slug)
+          ...(sesion.vePestcontrol && llevaPestcontrol(activa)
             ? [{ key: 'pestcontrol', label: 'Pestcontrol', href: `/pestcontrol?empresa=${activa.slug}`, icon: Boat, active: pathname.startsWith('/pestcontrol') }]
             : []),
         ],

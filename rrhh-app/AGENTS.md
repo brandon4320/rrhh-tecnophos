@@ -252,7 +252,7 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   transacción con `rpc('pest_guardar_movimiento')` (security invoker: decide la RLS). Un saldo que no
   coincide con lo físico se corrige con un movimiento de ajuste, nunca tocando filas viejas.
   **Acceso por persona**, como los recibos: `perfiles.ve_pestcontrol` (+ RRHH + ver la empresa) y solo en
-  las empresas de `EMPRESAS_PESTCONTROL`. Al 25/11/2026 lo tienen Brandon y Nicole (el estado real:
+  las empresas de `EMPRESAS_PESTCONTROL` (por nombre normalizado, no por slug). Al 25/11/2026 lo tienen Brandon y Nicole (el estado real:
   `select nombre, ve_pestcontrol from perfiles`). `getSesion().vePestcontrol` espeja la RLS en el menú
   (Recursos → Pestcontrol). Las tablas no están en `database.ts`: `modules/pestcontrol/db.ts::pdb()` castea.
 - **Documentación mensual** (migración 17): `documentos_mensuales` colgada de `empresas`

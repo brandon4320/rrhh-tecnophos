@@ -23,11 +23,11 @@ export default async function PestcontrolPage({ searchParams }: { searchParams: 
   const { empresa } = await searchParams
   const sesion = await requireSesion()
   if (!sesion.vePestcontrol) redirect('/')
-  if (!llevaPestcontrol(empresa)) notFound()
+  if (!empresa) notFound()
 
   const supabase = await createClient()
-  const { data: emp } = await supabase.from('empresas').select('id, nombre, slug').eq('slug', empresa!).maybeSingle()
-  if (!emp) notFound()
+  const { data: emp } = await supabase.from('empresas').select('id, nombre, slug').eq('slug', empresa).maybeSingle()
+  if (!emp || !llevaPestcontrol(emp)) notFound()
 
   const db = pdb(supabase)
   const [insumosRes, movsRes] = await Promise.all([

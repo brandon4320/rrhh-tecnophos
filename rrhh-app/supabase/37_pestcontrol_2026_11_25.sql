@@ -189,7 +189,8 @@ cross join (values
   ('7688324b-0cf4-44f1-a3eb-1a25f887556e', 'mot',  'Motores AD3',          'motores', null, 6),
   ('8927a35e-70e4-40f6-bc76-6e95aac3d81d', 'pvc',  'Caños PVC',            'caños',   null, 7)
 ) as v(id, codigo, nombre, unidad, por_caja, orden)
-where e.slug = 'tecnophos-bahia-blanca'
+-- Por nombre: el slug de prod no es 'tecnophos-bahia-blanca' (así escrito no cargaba nada).
+where e.nombre ilike 'tecnophos bah_a blanca'
 on conflict (empresa_id, codigo) do nothing;
 
 -- Acceso: Brandon (super admin) y Nicole. Quién lo tiene vive en la tabla:
