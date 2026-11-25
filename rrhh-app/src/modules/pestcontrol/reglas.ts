@@ -97,6 +97,18 @@ export function enCajas(insumo: Pick<PestInsumo, 'por_caja'>, cantidad: number):
   return `${txt} ${Math.abs(c) === 1 ? 'caja' : 'cajas'}`
 }
 
+/**
+ * Cajas como las muestra la columna "Cajas" del Excel: tarros / por_caja, sin decimales
+ * (formato '0' de Excel: redondea alejándose de cero). 1426 tarros → 102 cajas.
+ * Es lo que mira la gente de Pestcontrol; los tarros quedan como detalle.
+ */
+export function cajasEnteras(insumo: Pick<PestInsumo, 'por_caja'>, cantidad: number): number | null {
+  if (!insumo.por_caja) return null
+  const c = cantidad / insumo.por_caja
+  const r = Math.round(Math.abs(c))
+  return r === 0 ? 0 : c < 0 ? -r : r
+}
+
 /** Cantidad tipeada ("12,5", "12.5", "1.200,5") → número ≥ 0. Lo que no es un número válido cuenta como 0. */
 export function parseCantidad(s: string): number {
   const t = s.trim()

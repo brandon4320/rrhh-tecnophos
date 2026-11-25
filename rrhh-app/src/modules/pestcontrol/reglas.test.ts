@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  armarLibro, saldosActuales, ultimoMovimiento, enCajas, parseCantidad, validarAdjunto, pathAdjunto, prefijoAdjuntos,
+  armarLibro, cajasEnteras, saldosActuales, ultimoMovimiento, enCajas, parseCantidad, validarAdjunto, pathAdjunto, prefijoAdjuntos,
   llevaPestcontrol, type PestInsumo, type PestMovimiento,
 } from './reglas'
 
@@ -43,6 +43,17 @@ describe('enCajas', () => {
     expect(enCajas(fos, 14)).toBe('1 caja')
     expect(enCajas(fos, 1426)).toBe('≈ 101,9 cajas')
     expect(enCajas(man, 10)).toBeNull()
+  })
+})
+
+describe('cajasEnteras', () => {
+  it('redondea como la columna Cajas del Excel', () => {
+    expect(cajasEnteras(fos, 1426)).toBe(102)
+    expect(cajasEnteras(fos, 1323)).toBe(95) // 94,5
+    expect(cajasEnteras(fos, -77)).toBe(-6) // -5,5: Excel se aleja del cero
+    expect(cajasEnteras(fos, 3)).toBe(0)
+    expect(cajasEnteras(fos, -3)).toBe(0)
+    expect(cajasEnteras(man, 10)).toBeNull()
   })
 })
 

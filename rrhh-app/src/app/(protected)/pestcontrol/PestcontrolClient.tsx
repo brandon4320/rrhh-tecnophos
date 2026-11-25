@@ -11,7 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { pdb } from '@/modules/pestcontrol/db'
 import {
-  enCajas, fmtCantidad, fmtFecha, saldosActuales, textoBuscable, ultimoMovimiento,
+  cajasEnteras, fmtCantidad, fmtFecha, saldosActuales, textoBuscable, ultimoMovimiento,
   type PestInsumo, type PestRenglon,
 } from '@/modules/pestcontrol/reglas'
 import { inputCls, segBtn } from '../stock/estilos'
@@ -104,7 +104,8 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
       <section aria-label="Saldo actual" className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {insumos.map((it) => {
           const s = saldos[it.id] ?? 0
-          const cajas = enCajas(it, s)
+          // Fosfuro: lo que importa son las cajas (columna "Cajas" del Excel); los tarros van abajo.
+          const cajas = cajasEnteras(it, s)
           const falta = s < 0
           return (
             <div key={it.id} className="flex min-w-0 flex-col gap-1.5 rounded-2xl border border-border bg-card p-4 shadow-tarjeta">
@@ -112,14 +113,16 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
                 {it.nombre}
               </p>
               <p className={cn('text-[26px] leading-none font-semibold tracking-[-0.02em] tabular-nums', falta ? 'text-danger' : 'text-foreground')}>
-                {fmtCantidad(s)}
-                {it.unidad && <span className="ml-1.5 text-sm font-normal tracking-normal text-muted-foreground">{it.unidad}</span>}
+                {fmtCantidad(cajas ?? s)}
+                {(cajas != null || it.unidad) && (
+                  <span className="ml-1.5 text-sm font-normal tracking-normal text-muted-foreground">{cajas != null ? (Math.abs(cajas) === 1 ? 'caja' : 'cajas') : it.unidad}</span>
+                )}
               </p>
               <p className={cn('flex items-center gap-1 text-xs', falta ? 'font-medium text-danger-text' : 'text-muted-foreground')}>
                 {falta && <WarningCircle size={14} weight="fill" aria-hidden className="shrink-0" />}
                 <span className="min-w-0">
                   {falta && <b className="font-semibold">Faltante · </b>}
-                  {cajas ? `${cajas} · ` : null}
+                  {cajas != null ? `${fmtCantidad(s)} ${it.unidad ?? ''} · ` : null}
                   {ultimo[it.id] ? `últ. mov. ${fmtFecha(ultimo[it.id])}` : 'sin movimientos'}
                 </span>
               </p>
@@ -160,11 +163,16 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
               <th className="sticky left-0 z-10 bg-muted px-3 py-2.5 font-semibold">Fecha</th>
               <th className="px-3 py-2.5 font-semibold">Barco / detalle</th>
               <th className="px-3 py-2.5 font-semibold">Comprobante</th>
-              {insumos.map((it) => (
+              {insumos.flatMap((it) => [
                 <th key={it.id} className="px-3 py-2.5 text-right font-semibold" title={it.unidad ? `En ${it.unidad}` : undefined}>
                   {it.nombre}
-                </th>
-              ))}
+                  {it.por_caja ? <span className="block font-normal text-muted-foreground">{it.unidad}</span> : null}
+                </th>,
+                // Columna "Cajas" al lado, como en el Excel.
+                ...(it.por_caja
+                  ? [<th key={`${it.id}-cajas`} className="border-l border-divisor px-3 py-2.5 text-right font-semibold">Cajas<span className="block font-normal text-muted-foreground">×{it.por_caja}</span></th>]
+                  : []),
+              ])}
               <th className="px-2 py-2.5"><span className="sr-only">Acciones</span></th>
             </tr>
           </thead>
@@ -182,23 +190,29 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
                   <td className="px-3 py-2 align-top text-xs whitespace-nowrap text-muted-foreground">
                     {[r.comprobante, r.lugar].filter(Boolean).join(' · ') || '—'}
                   </td>
-                  {insumos.map((it) => {
+                  {insumos.flatMap((it) => {
                     const l = porInsumo.get(it.id)
                     const neto = l ? l.entrada - l.salida : 0
                     const saldo = r.saldos[it.id] ?? 0
-                    return (
-                      <td key={it.id} className="px-3 py-2 text-right align-top whitespace-nowrap tabular-nums">
+                    const celda = (key: string, mov: number, sal: number, extra?: string) => (
+                      <td key={key} className={cn('px-3 py-2 text-right align-top whitespace-nowrap tabular-nums', extra)}>
                         {l ? (
                           <p className="font-medium text-foreground">
-                            {neto > 0 ? '+' : neto < 0 ? '−' : ''}
-                            {fmtCantidad(Math.abs(neto))}
+                            {mov > 0 ? '+' : mov < 0 ? '−' : ''}
+                            {fmtCantidad(Math.abs(mov))}
                           </p>
                         ) : null}
-                        <p className={cn('text-xs', saldo < 0 ? 'font-medium text-danger' : 'text-muted-foreground', !l && 'opacity-60')}>
-                          {fmtCantidad(saldo)}
+                        <p className={cn('text-xs', sal < 0 ? 'font-medium text-danger' : 'text-muted-foreground', !l && 'opacity-60')}>
+                          {fmtCantidad(sal)}
                         </p>
                       </td>
                     )
+                    const cajas = cajasEnteras(it, saldo)
+                    return [
+                      celda(it.id, neto, saldo),
+                      // En cajas: el movimiento con un decimal (55 tarros = 3,9) y el saldo entero, como el Excel.
+                      ...(cajas != null && it.por_caja ? [celda(`${it.id}-cajas`, Math.round((neto / it.por_caja) * 10) / 10, cajas, 'border-l border-divisor')] : []),
+                    ]
                   })}
                   <td className="px-2 py-1.5 align-top whitespace-nowrap">
                     {confirmarBorrar === r.id ? (
@@ -237,7 +251,7 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
             })}
             {filas.length === 0 && (
               <tr>
-                <td colSpan={insumos.length + 4} className="px-3 py-10 text-center text-muted-foreground">
+                <td colSpan={insumos.length + insumos.filter((i) => i.por_caja).length + 4} className="px-3 py-10 text-center text-muted-foreground">
                   {libro.length === 0 ? 'Todavía no hay movimientos cargados.' : 'Ningún movimiento coincide con la búsqueda.'}
                 </td>
               </tr>
