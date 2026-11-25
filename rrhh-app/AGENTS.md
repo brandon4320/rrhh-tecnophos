@@ -241,6 +241,20 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   El estado `sin_fecha` se rotula **"En cero"**, no "Sin alerta": solo ocurre con stock ≤ 0 y sin
   mínimo, o sea que la fila está vacía aunque nadie pidió que avise (y no entra en "hay que
   comprar", por eso se cuenta aparte en el KPI "Sin stock").
+- **Pestcontrol** (migración 37, 25/11/2026): stock de insumos de fumigación de barcos de **Tecnophos
+  Bahía Blanca** (fosfuro en tarros —14 por caja—, latas de 14 kg, equipos de seguridad chicos/grandes,
+  mangas, motores AD3, caños PVC). Reemplaza la planilla Excel "PESTCONTROL - MOV. BARCOS Y FOSFURO"; el
+  historial (273 movimientos 06/2019–11/2026) se cargó aparte por SQL (no está en el repo: es público).
+  Tablas `pest_insumos` / `pest_movimientos` / `pest_lineas` (entrada y salida por insumo) / `pest_adjuntos`
+  (remitos y facturas en R2, prefijo `pestcontrol/<movimiento>/`, que /api/archivo resuelve contra
+  `pest_adjuntos`; por eso `pestcontrol` es slug reservado). **El saldo nunca se guarda**: es la suma en orden
+  de fecha + `orden` de carga (`modules/pestcontrol/reglas.ts::armarLibro`, con tests). Alta/edición en UNA
+  transacción con `rpc('pest_guardar_movimiento')` (security invoker: decide la RLS). Un saldo que no
+  coincide con lo físico se corrige con un movimiento de ajuste, nunca tocando filas viejas.
+  **Acceso por persona**, como los recibos: `perfiles.ve_pestcontrol` (+ RRHH + ver la empresa) y solo en
+  las empresas de `EMPRESAS_PESTCONTROL`. Al 25/11/2026 lo tienen Brandon y Nicole (el estado real:
+  `select nombre, ve_pestcontrol from perfiles`). `getSesion().vePestcontrol` espeja la RLS en el menú
+  (Recursos → Pestcontrol). Las tablas no están en `database.ts`: `modules/pestcontrol/db.ts::pdb()` castea.
 - **Documentación mensual** (migración 17): `documentos_mensuales` colgada de `empresas`
   (`periodo` = primer día del mes, `carpeta` texto con `''` = archivos sueltos del mes, archivo en
   R2, `origen` manual|automatico, `clave_externa` única por empresa para que un proceso automático

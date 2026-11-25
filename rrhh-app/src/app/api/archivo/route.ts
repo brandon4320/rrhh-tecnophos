@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getSignedDownloadUrl, deleteFromR2 } from '@/lib/r2/operations'
+import { pdb } from '@/modules/pestcontrol/db'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
   // sería un IDOR sobre todo el bucket. Cada tabla con archivos en R2 tiene su
   // prefijo de clave (ver /api/upload-url), así que alcanza con UNA consulta a
   // la tabla dueña; todas tienen RLS por empresa: maybeSingle vacío = sin permiso.
-  // OJO: por eso `recibos`, `documentos` y `flota` son slugs de empresa reservados.
+  // OJO: por eso `recibos`, `documentos`, `flota` y `pestcontrol` son slugs de empresa reservados.
   if (path.startsWith('flota/')) {
     // Fotos del checklist de flota: `flota/<vehiculo_id>/<mes>/<archivo>`. Las
     // sube el formulario del QR (sin sesión), así que no hay fila por archivo:
@@ -27,8 +28,10 @@ export async function GET(request: NextRequest) {
   } else {
     const tabla = path.startsWith('recibos/') ? 'recibos_sueldo'
       : path.startsWith('documentos/') ? 'documentos_mensuales'
+      : path.startsWith('pestcontrol/') ? 'pest_adjuntos'
       : 'archivos'
-    const { data: fila } = await supabase.from(tabla).select('id').eq('path', path).maybeSingle()
+    // pdb: `pest_adjuntos` no está en los tipos generados; la consulta sigue siendo de la sesión (RLS).
+    const { data: fila } = await pdb(supabase).from(tabla).select('id').eq('path', path).maybeSingle()
 
     // Un recibo tiene DOS archivos: el original (`path`) y, una vez que el
     // empleado lo firmó, la copia firmada (`firmado_path`). Sin este segundo

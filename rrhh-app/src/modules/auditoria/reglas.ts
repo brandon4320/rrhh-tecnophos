@@ -31,6 +31,7 @@ export const GRUPOS: Record<string, { etiqueta: string; tablas: string[] }> = {
   },
   equipos: { etiqueta: 'Equipos y palas', tablas: ['equipos'] },
   stock: { etiqueta: 'Stock', tablas: ['stock_items', 'stock_movimientos'] },
+  pestcontrol: { etiqueta: 'Pestcontrol', tablas: ['pest_insumos', 'pest_movimientos', 'pest_lineas', 'pest_adjuntos'] },
   documentacion: { etiqueta: 'Documentación mensual', tablas: ['documentos_mensuales'] },
   usuarios: { etiqueta: 'Usuarios', tablas: ['perfiles'] },
   otros: { etiqueta: 'Empresas y ajustes', tablas: ['empresas', 'sectores', 'activo_secciones', 'config'] },
@@ -58,6 +59,10 @@ const QUE: Record<string, string> = {
   flota_avisos: 'el aviso de flota',
   equipos: 'el equipo',
   stock_items: 'el ítem de stock',
+  pest_insumos: 'el insumo de Pestcontrol',
+  pest_movimientos: 'el movimiento de Pestcontrol',
+  pest_lineas: 'la cantidad de un movimiento de Pestcontrol',
+  pest_adjuntos: 'el comprobante de Pestcontrol',
   stock_movimientos: 'el movimiento de stock',
 }
 
@@ -186,6 +191,11 @@ export function hrefDe(f: Pick<FilaAuditoria, 'tabla' | 'accion' | 'registro_id'
       return slug ? `/stock?empresa=${slug}` : null
     case 'documentos_mensuales':
       return slug ? `/documentos?empresa=${slug}` : null
+    case 'pest_insumos':
+    case 'pest_movimientos':
+    case 'pest_lineas':
+    case 'pest_adjuntos':
+      return slug ? `/pestcontrol?empresa=${slug}` : null
     case 'equipos':
       return slug ? `/empresa/${slug}?vista=documentacion` : null
     case 'perfiles':
