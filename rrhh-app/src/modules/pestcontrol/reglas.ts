@@ -29,6 +29,8 @@ export interface PestInsumo {
   /** Unidades por caja (fosfuro: 14 tarros). null = no se cuenta en cajas. */
   por_caja: number | null
   orden: number
+  /** Se muestra dentro de la tarjeta de otro insumo (los tubos, en equipos chicos). Migración 39. */
+  dentro_de?: string | null
 }
 
 export interface PestLinea {
@@ -107,6 +109,23 @@ export function cajasEnteras(insumo: Pick<PestInsumo, 'por_caja'>, cantidad: num
   const c = cantidad / insumo.por_caja
   const r = Math.round(Math.abs(c))
   return r === 0 ? 0 : c < 0 ? -r : r
+}
+
+/** "4 equipos" / "1 equipo" / "110 mangas" (sin unidad, el nombre del insumo). */
+export function cantidadConUnidad(cantidad: number, insumo: Pick<PestInsumo, 'nombre' | 'unidad'>): string {
+  const n = Math.abs(cantidad)
+  const unidad = insumo.unidad ?? insumo.nombre.toLowerCase()
+  return `${fmtCantidad(n)} ${n === 1 && unidad.endsWith('s') ? unidad.slice(0, -1) : unidad}`
+}
+
+/**
+ * Saldo negativo = lo que les DEBEN (así lo lee Pestcontrol). Junta el insumo y los que
+ * van dentro de su tarjeta: "4 equipos y 2 tubos". null si no hay deuda.
+ */
+export function textoDeuda(partes: { saldo: number; insumo: Pick<PestInsumo, 'nombre' | 'unidad'> }[]): string | null {
+  const deudas = partes.filter((p) => p.saldo < 0).map((p) => cantidadConUnidad(p.saldo, p.insumo))
+  if (!deudas.length) return null
+  return deudas.length === 1 ? deudas[0] : `${deudas.slice(0, -1).join(', ')} y ${deudas.at(-1)}`
 }
 
 /** Cantidad tipeada ("12,5", "12.5", "1.200,5") → número ≥ 0. Lo que no es un número válido cuenta como 0. */

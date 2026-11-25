@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  armarLibro, cajasEnteras, saldosActuales, ultimoMovimiento, enCajas, parseCantidad, validarAdjunto, pathAdjunto, prefijoAdjuntos,
+  armarLibro, cajasEnteras, textoDeuda, saldosActuales, ultimoMovimiento, enCajas, parseCantidad, validarAdjunto, pathAdjunto, prefijoAdjuntos,
   llevaPestcontrol, type PestInsumo, type PestMovimiento,
 } from './reglas'
 
@@ -54,6 +54,17 @@ describe('cajasEnteras', () => {
     expect(cajasEnteras(fos, 3)).toBe(0)
     expect(cajasEnteras(fos, -3)).toBe(0)
     expect(cajasEnteras(man, 10)).toBeNull()
+  })
+})
+
+describe('textoDeuda', () => {
+  const eq = { nombre: 'Equipos seg. chicos', unidad: 'equipos' }
+  const tub = { nombre: 'Tubos', unidad: 'tubos' }
+  it('junta el insumo y lo que va dentro de su tarjeta', () => {
+    expect(textoDeuda([{ saldo: -4, insumo: eq }, { saldo: -2, insumo: tub }])).toBe('4 equipos y 2 tubos')
+    expect(textoDeuda([{ saldo: -1, insumo: eq }, { saldo: 3, insumo: tub }])).toBe('1 equipo')
+    expect(textoDeuda([{ saldo: -110, insumo: { nombre: 'Mangas', unidad: null } }])).toBe('110 mangas')
+    expect(textoDeuda([{ saldo: 0, insumo: eq }])).toBeNull()
   })
 })
 
