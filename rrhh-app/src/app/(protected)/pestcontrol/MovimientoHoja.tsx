@@ -68,6 +68,10 @@ export default function MovimientoHoja({ empresaId, insumos, movimiento, onCerra
     }))
     if (!cab.fecha) return toast.error('Poné la fecha.')
     if (!lineas.some((l) => l.entrada > 0 || l.salida > 0)) return toast.error('Cargá la cantidad de al menos un insumo.')
+    // Líneas de insumos archivados (motores, caños): no se muestran, pero el rpc reemplaza
+    // TODAS las líneas del movimiento, así que se reenvían tal cual para no perderlas.
+    const visibles = new Set(insumos.map((i) => i.id))
+    const archivadas = (movimiento?.lineas ?? []).filter((l) => !visibles.has(l.insumo_id))
 
     setGuardando(true)
     try {
@@ -80,7 +84,7 @@ export default function MovimientoHoja({ empresaId, insumos, movimiento, onCerra
         p_comprobante: cab.comprobante,
         p_lugar: cab.lugar,
         p_notas: cab.notas,
-        p_lineas: lineas,
+        p_lineas: [...lineas, ...archivadas],
       })
       if (error || !id) throw error ?? new Error('sin id')
 
