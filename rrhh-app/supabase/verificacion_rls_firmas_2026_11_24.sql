@@ -28,6 +28,9 @@
 
 begin;
 
+-- Dónde se juntan los resultados. Es TEMPORAL: vive solo en esta sesión, se
+-- destruye al terminar la transacción (`on commit drop`) y además todo el
+-- script termina en `rollback`. Adentro no hay más que conteos.
 create temp table rls_check (
   quien      text,
   rol        text,
@@ -43,6 +46,16 @@ create temp table rls_check (
 -- El rol `authenticated` tiene que poder escribir el resultado: la tabla la
 -- crea el rol de ahora (dueño) y el bloque de abajo corre como authenticated.
 grant insert on rls_check to authenticated;
+
+-- ⚠ Esto está solo para que el editor de Supabase no corte el script con
+-- "esta consulta crea una tabla sin RLS". La advertencia no aplica a una tabla
+-- temporal —no existe fuera de esta sesión y nadie se puede conectar a ella—,
+-- pero si se acepta la corrección que ofrece (prender RLS sin policy), el
+-- bloque de abajo no puede ni escribir sus propios conteos y el script falla
+-- sin explicación. Así que se prende la RLS y se deja pasar, que es lo mismo
+-- que no tenerla pero sin el cartel.
+alter table rls_check enable row level security;
+create policy rls_check_abierta on rls_check for all using (true) with check (true);
 
 do $$
 declare
