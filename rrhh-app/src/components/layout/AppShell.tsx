@@ -10,6 +10,7 @@ import { paramEmpresas, slugsDe } from '@/lib/empresas-vistas'
 import {
   ArrowSquareOut,
   Bell,
+  Boat,
   Bulldozer,
   CaretRight,
   CaretUpDown,
@@ -40,6 +41,7 @@ import {
   type Icon,
 } from '@phosphor-icons/react'
 import { ENLACES_ARCOR } from '@/modules/arcor/enlaces'
+import { llevaPestcontrol } from '@/modules/pestcontrol/reglas'
 import { IconoEmpresa, IconosEmpresas, nombreCorto } from '@/components/ui/empresa'
 import { Hoja, HojaCabecera, BotonIcono } from '@/components/ui/hoja'
 import { Paleta, type PantallaPaleta } from '@/components/layout/Paleta'
@@ -58,7 +60,7 @@ interface Props {
   /** Muestra la entrada virtual "Tecnophos - ARCOR" (ver modules/arcor/acceso.ts). */
   arcor?: boolean
   /** superAdmin: admin sin empresa asignada (ve el Historial; misma regla que la RLS de `auditoria`). */
-  sesion: { nombre: string | null; email: string | null; rol: string; superAdmin?: boolean; veRecibos?: boolean }
+  sesion: { nombre: string | null; email: string | null; rol: string; superAdmin?: boolean; veRecibos?: boolean; vePestcontrol?: boolean }
   children: React.ReactNode
 }
 
@@ -281,6 +283,11 @@ export default function AppShell({ empresas, arcor = false, sesion, children }: 
           // escrito a mano en el menú que haya que recordar si mañana compran una.
           { key: 'palas', label: 'Palas cargadoras', href: `/palas?empresa=${activa.slug}`, icon: Bulldozer, active: pathname.startsWith('/palas') },
           { key: 'stock', label: 'Stock', href: `/stock?empresa=${activa.slug}`, icon: Package, active: pathname.startsWith('/stock') },
+          // Stock de fumigación de barcos: solo en las empresas que lo llevan y para quien tiene
+          // `ve_pestcontrol`, igual que la RLS de la migración 37.
+          ...(sesion.vePestcontrol && llevaPestcontrol(activa)
+            ? [{ key: 'pestcontrol', label: 'Pestcontrol', href: `/pestcontrol?empresa=${activa.slug}`, icon: Boat, active: pathname.startsWith('/pestcontrol') }]
+            : []),
         ],
       }
     )
@@ -663,6 +670,7 @@ function tituloDe(pathname: string, documentacion: boolean, arcor: boolean): str
     ['/flota', 'Flota'],
     ['/palas', 'Palas cargadoras'],
     ['/stock', 'Stock'],
+    ['/pestcontrol', 'Pestcontrol'],
     ['/admin/empleados', 'Nuevo empleado'],
     ['/admin/usuarios', 'Usuarios'],
     ['/admin/historial', 'Historial'],

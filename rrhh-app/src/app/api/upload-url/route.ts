@@ -3,6 +3,8 @@ import { getSesion } from '@/lib/auth/session'
 import { createClient } from '@/lib/supabase/server'
 import { getSignedUploadUrl } from '@/lib/r2/operations'
 import { esPeriodoFuturo, esTipoRecibo, periodoDesdeMes, validarArchivoRecibo } from '@/lib/recibos'
+import { SIN_PERMISO_PESTCONTROL, pathAdjunto, validarAdjunto } from '@/modules/pestcontrol/reglas'
+import { pdb } from '@/modules/pestcontrol/db'
 import { SIN_PERMISO_RECIBOS, esCarpetaRecibos, normalizarCarpeta, pathDocumento, sanitizarNombreArchivo, validarArchivoDocumento } from '@/modules/documentos/reglas'
 
 /** Extensión segura para la clave en R2 (el nombre viene del cliente). */
@@ -84,6 +86,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url, path })
   }
 
+  // Pestcontrol: remito o factura de un movimiento de stock de fumigación. Solo con
+  // `ve_pestcontrol` y si el movimiento es visible por RLS (migración 37).
+  if (body?.recurso === 'pestcontrol') {
+    if (!sesion.vePestcontrol) return NextResponse.json({ error: SIN_PERMISO_PESTCONTROL }, { status: 403 })
+    const movimientoId = String(body?.movimientoId ?? '')
+    if (!movimientoId || !nombre) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+    const invalido = validarAdjunto({ name: nombre, type: mimeType, size: sizeBytes })
+    if (invalido) return NextResponse.json({ error: invalido }, { status: 400 })
+    const { data: mov } = await pdb(supabase).from('pest_movimientos').select('id').eq('id', movimientoId).maybeSingle()
+    if (!mov) return NextResponse.json({ error: 'Movimiento no encontrado o sin permiso.' }, { status: 403 })
+    const path = pathAdjunto(movimientoId, nombre)
+    const url = await getSignedUploadUrl(path, mimeType, 300)
+    return NextResponse.json({ url, path })
+  }
+
   if (!certId || !nombre) {
     return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
   }
@@ -98,10 +115,10 @@ export async function POST(request: NextRequest) {
   if (!cert) return NextResponse.json({ error: 'Certificado no encontrado o sin permiso.' }, { status: 403 })
 
   // El slug que viene del body solo se usa si es una empresa real visible por RLS
-  // (`recibos/` y `documentos/` son prefijos reservados para otras tablas; ver /api/archivo).
+  // (`recibos/`, `documentos/` y `pestcontrol/` son prefijos reservados para otras tablas; ver /api/archivo).
   const slugBody = typeof body?.empresaSlug === 'string' ? body.empresaSlug : ''
   let empresaSlug = 'docs'
-  if (/^[a-z0-9][a-z0-9-]*$/.test(slugBody) && !['recibos', 'documentos'].includes(slugBody)) {
+  if (/^[a-z0-9][a-z0-9-]*$/.test(slugBody) && !['recibos', 'documentos', 'pestcontrol'].includes(slugBody)) {
     const { data: e } = await supabase.from('empresas').select('slug').eq('slug', slugBody).maybeSingle()
     if (e?.slug) empresaSlug = e.slug
   }

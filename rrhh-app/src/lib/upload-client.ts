@@ -268,3 +268,43 @@ export async function subirDocumento(
     },
   })
 }
+
+// ============================================================
+// Pestcontrol: remito o factura de un movimiento de stock. Mismo circuito,
+// fila en pest_adjuntos (migración 37).
+// ============================================================
+export interface AdjuntoPestcontrol {
+  id: string
+  movimiento_id: string
+  path: string
+  nombre_archivo: string
+  mime_type: string | null
+  size_bytes: number | null
+  created_at: string
+}
+
+export async function subirAdjuntoPestcontrol(file: File, movimientoId: string): Promise<AdjuntoPestcontrol> {
+  return subir(file, {
+    firmar: (f) =>
+      firmar({
+        recurso: 'pestcontrol',
+        movimientoId,
+        nombre: f.name,
+        mimeType: f.type || 'application/octet-stream',
+        sizeBytes: f.size,
+      }),
+    registrar: (f, path) =>
+      postJson<AdjuntoPestcontrol>(
+        '/api/pestcontrol/adjuntos',
+        { movimientoId, path, nombre: f.name, mimeType: f.type || null, sizeBytes: f.size },
+        'adjunto',
+        `"${f.name}" se subió pero no se pudo registrar.`
+      ),
+    multipart: (f) => {
+      const fd = new FormData()
+      fd.append('file', f)
+      fd.append('movimientoId', movimientoId)
+      return postMultipart<AdjuntoPestcontrol>('/api/pestcontrol/adjuntos', fd, 'adjunto', `No se pudo subir "${f.name}".`)
+    },
+  })
+}

@@ -18,6 +18,8 @@ export interface Sesion {
   empresaAcceso: string | null
   /** Puede ver los recibos de sueldo (perfiles.ve_recibos; la RLS de la migración 23 lo exige). */
   veRecibos: boolean
+  /** Puede ver Pestcontrol (perfiles.ve_pestcontrol; la RLS de la migración 37 lo exige). */
+  vePestcontrol: boolean
 }
 
 /** Sesión actual (o null). Cacheada por request para no repetir queries. */
@@ -32,7 +34,9 @@ export const getSesion = cache(async (): Promise<Sesion | null> => {
 
   const { data: perfil } = await supabase
     .from('perfiles')
-    .select('nombre, rol, empresa_acceso, ve_recibos')
+    // `*` y no la lista de columnas: si un permiso nuevo (ve_pestcontrol) llega a producción
+    // antes que su migración, una columna inexistente dejaría a TODOS sin sesión.
+    .select('*')
     .eq('id', claims.sub)
     .single()
 
@@ -47,6 +51,7 @@ export const getSesion = cache(async (): Promise<Sesion | null> => {
     rol: perfil.rol as Rol,
     empresaAcceso: perfil.empresa_acceso ?? null,
     veRecibos: perfil.ve_recibos === true,
+    vePestcontrol: (perfil as { ve_pestcontrol?: boolean }).ve_pestcontrol === true,
   }
 })
 
