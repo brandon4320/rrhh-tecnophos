@@ -560,6 +560,22 @@ documentación de RRHH para mostrarla en su Biblioteca. Es solo lectura y máqui
   Worker. **El hash no se commitea** (repo público). DB caída o hash faltante → 503, no 401.
 - Las rutas están en `PUBLIC_PATHS` del proxy (`/api/externo`) y validan su propio token.
 
+### Portal de Trazabilidad (carnets de aplicador)
+
+El Portal de Trazabilidad de Fumigación (`trazabilidad.tecnophos.com.ar`, repo
+`trazabilidad-tecnophos`, Worker en Cloudflare) **lee** los carnets de aplicador para armar la
+cuadrilla de cada fumigación, así no se cargan dos veces. Solo lectura, máquina a máquina:
+
+- `GET /api/externo/trazabilidad/aplicadores?marca=tecnophos|adc` → aplicadores **activos** con
+  certificado "Carnet de Aplicador": nombre, sede (base), número, vencimiento e id del archivo.
+  `GET /api/externo/trazabilidad/carnet?id=` → `{ url, nombre, mime }` firmada de R2 por 5 min, solo
+  si el archivo es un carnet de aplicador del recorte (si no, 404). El portal la muestra y no la guarda.
+- **El recorte vive en `modules/integracion-trazabilidad/reglas.ts`** (con tests). Decisión de
+  Brandon (25/11/2026): solo el carnet de aplicador; nada más del legajo (ni DNI/CUIL, médicos,
+  cursos, otros carnets ni sueldos).
+- Auth: igual que el Comercial, clave `trazabilidad` en `integraciones` (migración 37). El token en
+  claro es el secret `GESTION_TOKEN` del Worker del portal. **El hash no se commitea.**
+
 ---
 
 ## 9. Fechas — Argentina (UTC-3), fuente de bugs recurrentes
