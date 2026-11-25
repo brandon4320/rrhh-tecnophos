@@ -11,7 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { pdb } from '@/modules/pestcontrol/db'
 import {
-  cajasEnteras, fmtCantidad, fmtFecha, saldosActuales, textoBuscable, ultimoMovimiento,
+  cajasEnteras, cantidadConUnidad, textoDeuda, fmtCantidad, fmtFecha, saldosActuales, textoBuscable, ultimoMovimiento,
   type PestInsumo, type PestRenglon,
 } from '@/modules/pestcontrol/reglas'
 import { inputCls, segBtn } from '../stock/estilos'
@@ -102,11 +102,16 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
 
       {/* Saldo actual de cada insumo */}
       <section aria-label="Saldo actual" className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {insumos.map((it) => {
+        {insumos.filter((it) => !it.dentro_de).map((it) => {
           const s = saldos[it.id] ?? 0
           // Fosfuro: lo que importa son las cajas (columna "Cajas" del Excel); los tarros van abajo.
           const cajas = cajasEnteras(it, s)
           const falta = s < 0
+          // Lo que va dentro de esta tarjeta (los tubos, en equipos chicos): entra en la deuda.
+          const hijos = insumos.filter((h) => h.dentro_de === it.id)
+          const deuda = textoDeuda([{ saldo: s, insumo: it }, ...hijos.map((h) => ({ saldo: saldos[h.id] ?? 0, insumo: h }))])
+          const enStock = hijos.filter((h) => (saldos[h.id] ?? 0) > 0).map((h) => cantidadConUnidad(saldos[h.id], h))
+          const fecha = [it, ...hijos].map((x) => ultimo[x.id]).filter(Boolean).sort().at(-1)
           return (
             <div key={it.id} className="flex min-w-0 flex-col gap-1.5 rounded-2xl border border-border bg-card p-4 shadow-tarjeta">
               <p className="line-clamp-2 min-h-[2.6em] text-[13px] leading-snug font-semibold text-balance text-foreground" title={it.nombre}>
@@ -118,13 +123,16 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
                   <span className="ml-1.5 text-sm font-normal tracking-normal text-muted-foreground">{cajas != null ? (Math.abs(cajas) === 1 ? 'caja' : 'cajas') : it.unidad}</span>
                 )}
               </p>
-              <p className={cn('flex items-center gap-1 text-xs', falta ? 'font-medium text-danger-text' : 'text-muted-foreground')}>
-                {falta && <WarningCircle size={14} weight="fill" aria-hidden className="shrink-0" />}
-                <span className="min-w-0">
-                  {falta && <b className="font-semibold">Faltante · </b>}
-                  {cajas != null ? `${fmtCantidad(s)} ${it.unidad ?? ''} · ` : null}
-                  {ultimo[it.id] ? `últ. mov. ${fmtFecha(ultimo[it.id])}` : 'sin movimientos'}
-                </span>
+              {deuda && (
+                <p className="flex items-start gap-1 text-xs font-medium text-danger-text">
+                  <WarningCircle size={14} weight="fill" aria-hidden className="mt-px shrink-0" />
+                  <span className="min-w-0"><b className="font-semibold">Deuda:</b> {deuda}</span>
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {cajas != null ? `${fmtCantidad(s)} ${it.unidad ?? ''} · ` : null}
+                {enStock.length ? `${enStock.join(', ')} en stock · ` : null}
+                {fecha ? `últ. mov. ${fmtFecha(fecha)}` : 'sin movimientos'}
               </p>
             </div>
           )

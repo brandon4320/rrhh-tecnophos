@@ -31,7 +31,7 @@ export default async function PestcontrolPage({ searchParams }: { searchParams: 
 
   const db = pdb(supabase)
   const [insumosRes, movsRes] = await Promise.all([
-    db.from('pest_insumos').select('id, codigo, nombre, unidad, por_caja, orden').eq('empresa_id', emp.id).eq('activo', true).order('orden'),
+    db.from('pest_insumos').select('id, codigo, nombre, unidad, por_caja, orden, dentro_de').eq('empresa_id', emp.id).eq('activo', true).order('orden'),
     traerTodo<FilaMovimiento>((desde, hasta) =>
       db
         .from('pest_movimientos')
