@@ -43,14 +43,17 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
   const anios = useMemo(() => [...new Set(libro.map((r) => r.fecha.slice(0, 4)))].sort().reverse(), [libro])
 
   // Lo más nuevo arriba. El saldo de cada renglón es el que quedó después de ese movimiento.
+  // Un movimiento que solo tocó insumos archivados quedaría como renglón vacío: no se muestra.
+  const visibles = useMemo(() => new Set(insumos.map((i) => i.id)), [insumos])
   const filas = useMemo(
     () =>
       [...libro]
         .reverse()
+        .filter((r) => r.lineas.length === 0 || r.lineas.some((l) => visibles.has(l.insumo_id)))
         .filter((r) => anio === 'todos' || r.fecha.startsWith(anio))
         .filter((r) => !soloConComprobante || r.adjuntos > 0)
         .filter((r) => !q.trim() || coincide(q, ...textoBuscable(r))),
-    [libro, q, anio, soloConComprobante]
+    [libro, visibles, q, anio, soloConComprobante]
   )
 
   function filtro<T>(set: (v: T) => void) {
@@ -98,7 +101,7 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
       </div>
 
       {/* Saldo actual de cada insumo */}
-      <section aria-label="Saldo actual" className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7">
+      <section aria-label="Saldo actual" className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {insumos.map((it) => {
           const s = saldos[it.id] ?? 0
           const cajas = enCajas(it, s)

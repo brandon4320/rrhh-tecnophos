@@ -243,7 +243,8 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   comprar", por eso se cuenta aparte en el KPI "Sin stock").
 - **Pestcontrol** (migración 37, 25/11/2026): stock de insumos de fumigación de barcos de **Tecnophos
   Bahía Blanca** (fosfuro en tarros —14 por caja—, latas de 14 kg, equipos de seguridad chicos/grandes,
-  mangas, motores AD3, caños PVC). Reemplaza la planilla Excel "PESTCONTROL - MOV. BARCOS Y FOSFURO"; el
+  mangas; motores AD3 y caños PVC quedaron archivados —`activo = false`— por la migración 38: no se
+  muestran, pero sus líneas viejas se conservan y al editar un movimiento se reenvían). Reemplaza la planilla Excel "PESTCONTROL - MOV. BARCOS Y FOSFURO"; el
   historial (273 movimientos 06/2019–11/2026) se cargó aparte por SQL (no está en el repo: es público).
   Tablas `pest_insumos` / `pest_movimientos` / `pest_lineas` (entrada y salida por insumo) / `pest_adjuntos`
   (remitos y facturas en R2, prefijo `pestcontrol/<movimiento>/`, que /api/archivo resuelve contra
@@ -252,7 +253,8 @@ propio (`responsable_id = auth.uid()`), gestión ve todo.
   transacción con `rpc('pest_guardar_movimiento')` (security invoker: decide la RLS). Un saldo que no
   coincide con lo físico se corrige con un movimiento de ajuste, nunca tocando filas viejas.
   **Acceso por persona**, como los recibos: `perfiles.ve_pestcontrol` (+ RRHH + ver la empresa) y solo en
-  las empresas de `EMPRESAS_PESTCONTROL` (por nombre normalizado, no por slug). Al 25/11/2026 lo tienen Brandon y Nicole (el estado real:
+  las empresas de `EMPRESAS_PESTCONTROL` (por nombre normalizado, no por slug). Lo tienen SOLO Brandon (Administrador) y Nicole Vallejos, por id (migración 38; la 37 se lo había dado
+  a todo admin y le tocó a Marcelo Arias). El estado real:
   `select nombre, ve_pestcontrol from perfiles`). `getSesion().vePestcontrol` espeja la RLS en el menú
   (Recursos → Pestcontrol). Las tablas no están en `database.ts`: `modules/pestcontrol/db.ts::pdb()` castea.
 - **Documentación mensual** (migración 17): `documentos_mensuales` colgada de `empresas`
