@@ -121,11 +121,11 @@ export default async function EmpresaPage({
     const programasSeguridad = (certsEmpresa ?? []).filter((c) => c.categoria === 'programa_seguridad')
 
     return (
-      <div className="mx-auto max-w-6xl px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10" id="documentacion">
-        <div className="mb-8 flex items-center gap-4">
-          <Monograma nombre={empresa.nombre} size="lg" variant="accent" />
+      <div className="px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8" id="documentacion">
+        <div className="mb-4 flex items-center gap-3">
+          <Monograma nombre={empresa.nombre} size="md" variant="accent" />
           <div>
-            <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Documentación</h1>
+            <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Documentación</h1>
           </div>
         </div>
 
@@ -309,9 +309,9 @@ export default async function EmpresaPage({
   const tab = sp.tab === 'empleados' ? 'empleados' : 'vencimientos'
 
   const contenidoVencimientos = (
-    <div className="mt-4 space-y-2">
+    <div className="mt-3 divide-y divide-divisor overflow-hidden rounded-xl border border-border">
       {atencion.length === 0 && (
-        <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+        <p className="px-4 py-6 text-center text-sm text-muted-foreground">
           Nada requiere atención. Todo al día.
         </p>
       )}
@@ -326,19 +326,20 @@ export default async function EmpresaPage({
         return (
           <div
             key={c.id}
-            className="flex items-center gap-4 rounded-xl border border-border px-4 py-3"
+            // flex-wrap: en el celular el estado y "Abrir" bajan a un segundo renglón en vez de salirse de la caja.
+            className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2"
           >
             <Monograma nombre={c.nombre} size="md" />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-[10rem] flex-1">
               <p className="truncate text-sm font-medium">{c.nombre}</p>
               <p className="truncate text-xs text-muted-foreground">{c.detalle}</p>
               <BarraVencimiento
-                className="mt-2"
+                className="mt-1.5"
                 fecha={c.fecha_vencimiento!}
                 alertaDias={c.alerta_dias}
               />
             </div>
-            <div className="shrink-0 text-right">
+            <div className="ml-auto shrink-0 text-right">
               <EstadoPill estado={dias < 0 ? 'vencido' : 'proximo'} label={label} />
               <p className="mt-0.5 text-xs text-muted-foreground">{fmtFechaCorta(c.fecha_vencimiento!)}</p>
             </div>
@@ -352,7 +353,7 @@ export default async function EmpresaPage({
         )
       })}
       {atencion.length > 0 && (
-        <p className="pt-1 text-xs text-muted-foreground">
+        <p className="px-3.5 py-1.5 text-xs text-muted-foreground">
           Se muestran los casos que requieren una acción concreta.
         </p>
       )}
@@ -360,13 +361,13 @@ export default async function EmpresaPage({
   )
 
   const contenidoEmpleados = (
-    <div className="mt-4 space-y-2">
+    <div className="mt-3 divide-y divide-divisor overflow-hidden rounded-xl border border-border">
       {(empleados ?? []).map((emp) => {
         const nombreCompleto = [emp.nombre, emp.apellido].filter(Boolean).join(' ')
         const certs = emp.certificados ?? []
         const estado = certs.length > 0 ? peorEstado(certs) : 'sin_fecha'
         return (
-          <div key={emp.id} className="flex items-center gap-4 rounded-xl border border-border px-4 py-3">
+          <div key={emp.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2">
             <Monograma nombre={nombreCompleto} size="md" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{nombreCompleto}</p>
@@ -391,10 +392,10 @@ export default async function EmpresaPage({
   const sede = slug.startsWith('tecnophos') ? empresa.nombre.replace(/^Tecnophos\s+/i, '') : null
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       {/* ── Hero ── */}
-      <section className="rounded-2xl bg-zona p-6 text-zona-foreground sm:p-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <section className="rounded-2xl bg-zona px-5 py-4 text-zona-foreground sm:px-6 sm:py-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             {logo ? (
               <div className="flex items-center gap-4">
@@ -408,9 +409,9 @@ export default async function EmpresaPage({
                 )}
               </div>
             ) : (
-              <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">{empresa.nombre}</h1>
+              <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">{empresa.nombre}</h1>
             )}
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="mt-3 flex flex-wrap items-center gap-3">
               {vencidos.length === 0 ? (
                 <EstadoBadgeSuave estado="vigente" label="Operación estable" />
               ) : (
@@ -432,10 +433,10 @@ export default async function EmpresaPage({
               <p className="text-sm text-muted-foreground">Próximo vencimiento</p>
               {proximoVenc ? (
                 <>
-                  <p className="mt-1 text-2xl font-semibold tracking-tight">
+                  <p className="text-2xl leading-tight font-semibold tracking-tight">
                     {fmtFechaLarga(proximoVenc.fecha_vencimiento!)}
                   </p>
-                  <p className="mt-1 text-sm font-medium">{proximoVenc.nombre}</p>
+                  <p className="mt-0.5 text-sm font-medium">{proximoVenc.nombre}</p>
                   <p className="text-xs text-muted-foreground">{proximoVenc.detalle}</p>
                 </>
               ) : (
@@ -457,57 +458,57 @@ export default async function EmpresaPage({
 
       {/* ── KPIs ── */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-accent text-primary">
-              <Users className="size-4" strokeWidth={1.75} />
-            </span>
-            <span className="text-sm text-muted-foreground">Empleados</span>
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-tarjeta">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent text-primary">
+            <Users className="size-4" strokeWidth={1.75} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground">Empleados</p>
+            <p className="text-2xl leading-tight font-semibold tabular-nums">{empleados?.length ?? 0}</p>
           </div>
-          <p className="mt-3 text-3xl font-semibold tabular-nums">{empleados?.length ?? 0}</p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-success-subtle text-success">
-              <FileCheck2 className="size-4" strokeWidth={1.75} />
-            </span>
-            <span className="text-sm text-muted-foreground">Certificados</span>
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-tarjeta">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-success-subtle text-success">
+            <FileCheck2 className="size-4" strokeWidth={1.75} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground">Certificados</p>
+            <p className="text-2xl leading-tight font-semibold tabular-nums">{todosLosCerts.length}</p>
+            <p className="text-xs text-success">{nuevosMes > 0 ? `+${nuevosMes} este mes` : 'sin cargas este mes'}</p>
           </div>
-          <p className="mt-3 text-3xl font-semibold tabular-nums">{todosLosCerts.length}</p>
-          <p className="mt-0.5 text-xs text-success">{nuevosMes > 0 ? `+${nuevosMes} este mes` : 'sin cargas este mes'}</p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-warning-subtle text-warning">
-              <Clock className="size-4" strokeWidth={1.75} />
-            </span>
-            <span className="text-sm text-muted-foreground">Por vencer</span>
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-tarjeta">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-warning-subtle text-warning">
+            <Clock className="size-4" strokeWidth={1.75} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground">Por vencer</p>
+            <p className="text-2xl leading-tight font-semibold tabular-nums">{proximos.length}</p>
           </div>
-          <p className="mt-3 text-3xl font-semibold tabular-nums">{proximos.length}</p>
         </div>
 
         <div
-          className={`rounded-2xl border bg-card p-5 shadow-tarjeta ${vencidos.length > 0 ? 'border-danger/30' : 'border-border'}`}
+          className={`flex items-center gap-3 rounded-2xl border bg-card px-4 py-3 shadow-tarjeta ${vencidos.length > 0 ? 'border-danger/30' : 'border-border'}`}
         >
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-danger-subtle text-danger">
-              <AlertTriangle className="size-4" strokeWidth={1.75} />
-            </span>
-            <span className="text-sm text-muted-foreground">Vencidos</span>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-danger-subtle text-danger">
+            <AlertTriangle className="size-4" strokeWidth={1.75} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground">Vencidos</p>
+            <p className="text-2xl leading-tight font-semibold tabular-nums">{vencidos.length}</p>
           </div>
-          <p className="mt-3 text-3xl font-semibold tabular-nums">{vencidos.length}</p>
         </div>
       </section>
 
       {/* ── Atención requerida + columna derecha ── */}
-      <section className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-          <h2 className="text-lg font-semibold tracking-tight">Atención requerida</h2>
+      <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="rounded-2xl border border-border bg-card px-5 py-4 shadow-tarjeta">
+          <h2 className="text-base font-semibold tracking-tight">Atención requerida</h2>
 
           <SegmentedLocal
-            className="mt-4"
+            className="mt-3"
             inicial={tab}
             tabs={[
               { key: 'vencimientos', label: 'Vencimientos', content: contenidoVencimientos },
@@ -516,11 +517,11 @@ export default async function EmpresaPage({
           />
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Cumplimiento */}
-          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-            <h2 className="text-lg font-semibold tracking-tight">Cumplimiento</h2>
-            <div className="mt-4 flex items-center gap-5">
+          <div className="rounded-2xl border border-border bg-card px-5 py-4 shadow-tarjeta">
+            <h2 className="text-base font-semibold tracking-tight">Cumplimiento</h2>
+            <div className="mt-3 flex items-center gap-5">
               <Donut pct={pctCumplimiento} />
               <div className="space-y-2">
                 <p className="text-3xl font-semibold tabular-nums leading-none">{alDia}</p>
@@ -536,11 +537,11 @@ export default async function EmpresaPage({
 
           {/* Equipos por área */}
           {sectores.length > 0 && (
-            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-              <h2 className="text-lg font-semibold tracking-tight">Equipos por área</h2>
-              <div className="mt-4 space-y-2">
+            <div className="rounded-2xl border border-border bg-card px-5 py-4 shadow-tarjeta">
+              <h2 className="text-base font-semibold tracking-tight">Equipos por área</h2>
+              <div className="mt-3 space-y-1.5">
                 {sectores.map((s) => (
-                  <div key={s.nombre} className="flex items-center gap-3 rounded-xl bg-muted/60 px-4 py-3">
+                  <div key={s.nombre} className="flex items-center gap-3 rounded-xl bg-muted/60 px-3.5 py-2">
                     <span className={`size-2 shrink-0 rounded-full ${s.pendientes > 0 ? 'bg-warning' : 'bg-success'}`} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{s.nombre}</p>

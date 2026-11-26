@@ -182,7 +182,7 @@ export function Ilustracion({ cual }: { cual: 'exito' | 'resultados' }) {
   const papel = { fill: 'var(--ilus-papel)' }
   if (cual === 'exito')
     return (
-      <svg viewBox="0 0 200 160" fill="none" aria-hidden className="mb-2 h-auto w-[168px]">
+      <svg viewBox="0 0 200 160" fill="none" aria-hidden className="mb-1 h-auto w-[112px]">
         <circle cx="100" cy="80" r="58" style={trazo} strokeWidth="1.3" strokeDasharray="2 5" opacity=".7" />
         <line x1="40" y1="128" x2="160" y2="128" style={trazo} strokeWidth="1.3" strokeLinecap="round" />
         <rect x="66" y="40" width="68" height="84" rx="8" style={{ ...papel, ...trazo }} strokeWidth="1.3" />
@@ -193,7 +193,7 @@ export function Ilustracion({ cual }: { cual: 'exito' | 'resultados' }) {
       </svg>
     )
   return (
-    <svg viewBox="0 0 200 160" fill="none" aria-hidden className="mb-2 h-auto w-[168px]">
+    <svg viewBox="0 0 200 160" fill="none" aria-hidden className="mb-1 h-auto w-[112px]">
       <defs>
         <pattern id="rayaV" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <line x1="0" y1="0" x2="0" y2="6" style={trazo} strokeWidth="1" opacity=".5" />
@@ -214,9 +214,9 @@ export function Ilustracion({ cual }: { cual: 'exito' | 'resultados' }) {
 /** Vacío de la skill: ilustración, título, una línea y (si hay) la acción que lo resuelve. */
 export function Vacio({ ilustracion = 'resultados', titulo, children, accion, className }: { ilustracion?: 'exito' | 'resultados'; titulo: string; children?: React.ReactNode; accion?: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('flex flex-col items-center gap-1 px-5 py-10 text-center', className)} style={{ background: 'radial-gradient(40% 60% at 50% 30%, color-mix(in oklch, var(--primary) 7%, transparent), transparent 70%)' }}>
+    <div className={cn('flex flex-col items-center gap-1 px-5 py-6 text-center', className)} style={{ background: 'radial-gradient(40% 60% at 50% 30%, color-mix(in oklch, var(--primary) 7%, transparent), transparent 70%)' }}>
       <Ilustracion cual={ilustracion} />
-      <h4 className="text-xl font-medium tracking-[-0.01em]">{titulo}</h4>
+      <h4 className="text-base font-medium tracking-[-0.01em]">{titulo}</h4>
       {children && <p className="max-w-[44ch] text-[13px] text-texto-2">{children}</p>}
       {accion && <div className="mt-3">{accion}</div>}
     </div>

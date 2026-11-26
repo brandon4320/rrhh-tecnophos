@@ -88,11 +88,47 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
     }
   }
 
+  // Adjuntos, editar y borrar: las mismas en la tabla (escritorio) y en la lista (celular).
+  const acciones = (r: PestRenglon) => (
+    <>
+      {confirmarBorrar === r.id ? (
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="destructive" disabled={borrando === r.id} onClick={() => eliminar(r)}>
+            {borrando === r.id ? 'Eliminando…' : 'Eliminar'}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={borrando === r.id} onClick={() => setConfirmarBorrar(null)}>
+            No
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-0.5">
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn('px-1.5 tabular-nums', r.adjuntos === 0 && 'opacity-50 group-hover:opacity-100')}
+            aria-label={r.adjuntos ? `Ver ${r.adjuntos} comprobante(s)` : 'Adjuntar comprobante'}
+            title={r.adjuntos ? 'Ver comprobantes' : 'Adjuntar remito o foto'}
+            onClick={() => setViendoAdjuntos(r)}
+          >
+            <Paperclip />
+            {r.adjuntos > 0 && r.adjuntos}
+          </Button>
+          <Button size="icon-sm" variant="ghost" aria-label="Editar" onClick={() => setEditando(r)}>
+            <PencilSimple />
+          </Button>
+          <Button size="icon-sm" variant="ghost" aria-label="Eliminar" onClick={() => setConfirmarBorrar(r.id)}>
+            <Trash />
+          </Button>
+        </div>
+      )}
+    </>
+  )
+
   return (
-    <div className="mx-auto max-w-[1400px] px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <div className="px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Pestcontrol</h1>
+          <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Pestcontrol</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">{empresa.nombre}</p>
         </div>
         <Button onClick={() => setEditando('nuevo')}>
@@ -101,7 +137,7 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
       </div>
 
       {/* Saldo actual de cada insumo */}
-      <section aria-label="Saldo actual" className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <section aria-label="Saldo actual" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {insumos.filter((it) => !it.dentro_de).map((it) => {
           const s = saldos[it.id] ?? 0
           // Fosfuro: lo que importa son las cajas (columna "Cajas" del Excel); los tarros van abajo.
@@ -113,8 +149,8 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
           const enStock = hijos.filter((h) => (saldos[h.id] ?? 0) > 0).map((h) => cantidadConUnidad(saldos[h.id], h))
           const fecha = [it, ...hijos].map((x) => ultimo[x.id]).filter(Boolean).sort().at(-1)
           return (
-            <div key={it.id} className="flex min-w-0 flex-col gap-1.5 rounded-2xl border border-border bg-card p-4 shadow-tarjeta">
-              <p className="line-clamp-2 min-h-[2.6em] text-[13px] leading-snug font-semibold text-balance text-foreground" title={it.nombre}>
+            <div key={it.id} className="flex min-w-0 flex-col gap-1 rounded-2xl border border-border bg-card px-4 py-3 shadow-tarjeta">
+              <p className="line-clamp-2 text-[13px] leading-snug font-semibold text-balance text-foreground" title={it.nombre}>
                 {it.nombre}
               </p>
               <p className={cn('text-[26px] leading-none font-semibold tracking-[-0.02em] tabular-nums', falta ? 'text-danger' : 'text-foreground')}>
@@ -140,8 +176,8 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
       </section>
 
       {/* Filtros */}
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-0 flex-1 sm:max-w-xs">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="relative w-full sm:w-auto sm:min-w-0 sm:max-w-xs sm:flex-1">
           <MagnifyingGlass size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <input
             value={q}
@@ -164,24 +200,24 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
       </div>
 
       {/* Libro: un renglón por movimiento; en cada insumo, lo que entró/salió y el saldo que quedó */}
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
-        <table className="w-full min-w-[1100px] border-collapse text-sm">
+      <div className="mt-3 overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta max-md:hidden">
+        <table className="w-full min-w-[960px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-muted text-left text-xs font-semibold text-foreground">
-              <th className="sticky left-0 z-10 bg-muted px-3 py-2.5 font-semibold">Fecha</th>
-              <th className="px-3 py-2.5 font-semibold">Barco / detalle</th>
-              <th className="px-3 py-2.5 font-semibold">Comprobante</th>
+              <th className="sticky left-0 z-10 bg-muted px-3 py-2 font-semibold">Fecha</th>
+              <th className="px-2.5 py-2 font-semibold">Barco / detalle</th>
+              <th className="px-2.5 py-2 font-semibold">Comprobante</th>
               {insumos.flatMap((it) => [
-                <th key={it.id} className="px-3 py-2.5 text-right font-semibold" title={it.unidad ? `En ${it.unidad}` : undefined}>
+                <th key={it.id} className="px-2.5 py-2 text-right leading-tight font-semibold" title={it.unidad ? `En ${it.unidad}` : undefined}>
                   {it.nombre}
                   {it.por_caja ? <span className="block font-normal text-muted-foreground">{it.unidad}</span> : null}
                 </th>,
                 // Columna "Cajas" al lado, como en el Excel.
                 ...(it.por_caja
-                  ? [<th key={`${it.id}-cajas`} className="border-l border-divisor px-3 py-2.5 text-right font-semibold">Cajas<span className="block font-normal text-muted-foreground">×{it.por_caja}</span></th>]
+                  ? [<th key={`${it.id}-cajas`} className="border-l border-divisor px-2.5 py-2 text-right leading-tight font-semibold">Cajas<span className="block font-normal text-muted-foreground">×{it.por_caja}</span></th>]
                   : []),
               ])}
-              <th className="px-2 py-2.5"><span className="sr-only">Acciones</span></th>
+              <th className="px-2 py-2"><span className="sr-only">Acciones</span></th>
             </tr>
           </thead>
           <tbody>
@@ -189,13 +225,14 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
               const porInsumo = new Map(r.lineas.map((l) => [l.insumo_id, l]))
               return (
                 <tr key={r.id} className="group border-b border-divisor last:border-0 hover:bg-hover">
-                  <td className="sticky left-0 bg-card px-3 py-2 align-top whitespace-nowrap tabular-nums group-hover:bg-hover">{fmtFecha(r.fecha)}</td>
-                  <td className="max-w-[280px] px-3 py-2 align-top">
-                    {r.barco && <p className="font-medium text-foreground">{r.barco}</p>}
-                    {r.detalle && <p className={r.barco ? 'text-xs text-muted-foreground' : 'text-foreground'}>{r.detalle}</p>}
-                    {r.notas && <p className="text-xs text-muted-foreground italic">{r.notas}</p>}
+                  <td className="sticky left-0 bg-card px-3 py-1.5 align-top whitespace-nowrap tabular-nums group-hover:bg-hover">{fmtFecha(r.fecha)}</td>
+                  {/* Barco y detalle en un renglón cada uno (no se parten en tres): el texto entero queda en el title. */}
+                  <td className="max-w-[240px] px-2.5 py-1.5 align-top">
+                    {r.barco && <p className="truncate font-medium text-foreground" title={r.barco}>{r.barco}</p>}
+                    {r.detalle && <p className={cn('truncate', r.barco ? 'text-xs text-muted-foreground' : 'text-foreground')} title={r.detalle}>{r.detalle}</p>}
+                    {r.notas && <p className="truncate text-xs text-muted-foreground italic" title={r.notas}>{r.notas}</p>}
                   </td>
-                  <td className="px-3 py-2 align-top text-xs whitespace-nowrap text-muted-foreground">
+                  <td className="px-2.5 py-1.5 align-top text-xs whitespace-nowrap text-muted-foreground">
                     {[r.comprobante, r.lugar].filter(Boolean).join(' · ') || '—'}
                   </td>
                   {insumos.flatMap((it) => {
@@ -203,7 +240,7 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
                     const neto = l ? l.entrada - l.salida : 0
                     const saldo = r.saldos[it.id] ?? 0
                     const celda = (key: string, mov: number, sal: number, extra?: string) => (
-                      <td key={key} className={cn('px-3 py-2 text-right align-top whitespace-nowrap tabular-nums', extra)}>
+                      <td key={key} className={cn('px-2.5 py-1.5 text-right align-top whitespace-nowrap tabular-nums', extra)}>
                         {l ? (
                           <p className="font-medium text-foreground">
                             {mov > 0 ? '+' : mov < 0 ? '−' : ''}
@@ -222,44 +259,15 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
                       ...(cajas != null && it.por_caja ? [celda(`${it.id}-cajas`, Math.round((neto / it.por_caja) * 10) / 10, cajas, 'border-l border-divisor')] : []),
                     ]
                   })}
-                  <td className="px-2 py-1.5 align-top whitespace-nowrap">
-                    {confirmarBorrar === r.id ? (
-                      <div className="flex items-center gap-1">
-                        <Button size="sm" variant="destructive" disabled={borrando === r.id} onClick={() => eliminar(r)}>
-                          {borrando === r.id ? 'Eliminando…' : 'Eliminar'}
-                        </Button>
-                        <Button size="sm" variant="ghost" disabled={borrando === r.id} onClick={() => setConfirmarBorrar(null)}>
-                          No
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-0.5">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className={cn('px-1.5 tabular-nums', r.adjuntos === 0 && 'opacity-50 group-hover:opacity-100')}
-                          aria-label={r.adjuntos ? `Ver ${r.adjuntos} comprobante(s)` : 'Adjuntar comprobante'}
-                          title={r.adjuntos ? 'Ver comprobantes' : 'Adjuntar remito o foto'}
-                          onClick={() => setViendoAdjuntos(r)}
-                        >
-                          <Paperclip />
-                          {r.adjuntos > 0 && r.adjuntos}
-                        </Button>
-                        <Button size="icon-sm" variant="ghost" aria-label="Editar" onClick={() => setEditando(r)}>
-                          <PencilSimple />
-                        </Button>
-                        <Button size="icon-sm" variant="ghost" aria-label="Eliminar" onClick={() => setConfirmarBorrar(r.id)}>
-                          <Trash />
-                        </Button>
-                      </div>
-                    )}
+                  <td className="px-2 py-1 align-top whitespace-nowrap">
+                    {acciones(r)}
                   </td>
                 </tr>
               )
             })}
             {filas.length === 0 && (
               <tr>
-                <td colSpan={insumos.length + insumos.filter((i) => i.por_caja).length + 4} className="px-3 py-10 text-center text-muted-foreground">
+                <td colSpan={insumos.length + insumos.filter((i) => i.por_caja).length + 4} className="px-3 py-6 text-center text-muted-foreground">
                   {libro.length === 0 ? 'Todavía no hay movimientos cargados.' : 'Ningún movimiento coincide con la búsqueda.'}
                 </td>
               </tr>
@@ -267,6 +275,72 @@ export default function PestcontrolClient({ empresa, insumos, libro }: Props) {
           </tbody>
         </table>
       </div>
+
+      {/* Celular: un movimiento por tarjeta, sin deslizar de costado. Primero lo que se movió (y el saldo que
+          quedó); abajo, en gris, el saldo de los insumos que no se tocaron. */}
+      <ul className="mt-3 divide-y divide-divisor rounded-2xl border border-border bg-card shadow-tarjeta md:hidden">
+        {filas.slice(0, cuantos).map((r) => {
+          const porInsumo = new Map(r.lineas.map((l) => [l.insumo_id, l]))
+          const signo = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${fmtCantidad(Math.abs(n))}`
+          const quietos = insumos.filter((it) => !porInsumo.has(it.id))
+          return (
+            <li key={r.id} className="group px-4 py-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-foreground">{r.barco ?? r.detalle ?? '—'}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    <span className="tabular-nums">{fmtFecha(r.fecha)}</span>
+                    {[r.barco ? r.detalle : null, r.comprobante, r.lugar].filter(Boolean).map((t) => ` · ${t}`)}
+                  </p>
+                  {r.notas && <p className="truncate text-xs text-muted-foreground italic">{r.notas}</p>}
+                </div>
+                <div className="-mr-2 shrink-0">{acciones(r)}</div>
+              </div>
+              <ul className="mt-1 space-y-0.5 text-[13px] tabular-nums">
+                {insumos.filter((it) => porInsumo.has(it.id)).map((it) => {
+                  const l = porInsumo.get(it.id)!
+                  const neto = l.entrada - l.salida
+                  const saldo = r.saldos[it.id] ?? 0
+                  const cajas = cajasEnteras(it, saldo)
+                  return (
+                    <li key={it.id} className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 truncate text-texto-2">{it.nombre}</span>
+                      <span className="shrink-0 whitespace-nowrap">
+                        <span className="font-medium text-foreground">{signo(neto)}</span>
+                        <span className={cn('ml-1.5', saldo < 0 ? 'font-medium text-danger' : 'text-muted-foreground')}>→ {fmtCantidad(saldo)}</span>
+                        {cajas != null && it.por_caja ? (
+                          <span className={cn('ml-1.5', cajas < 0 ? 'font-medium text-danger' : 'text-muted-foreground')}>
+                            · {signo(Math.round((neto / it.por_caja) * 10) / 10)} → {fmtCantidad(cajas)} cajas
+                          </span>
+                        ) : null}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+              {quietos.length > 0 && (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Sin cambios:{' '}
+                  {quietos.map((it, n) => {
+                    const saldo = r.saldos[it.id] ?? 0
+                    return (
+                      <span key={it.id} className={saldo < 0 ? 'font-medium text-danger' : undefined}>
+                        {n > 0 ? ' · ' : ''}
+                        {it.nombre} {fmtCantidad(saldo)}
+                      </span>
+                    )
+                  })}
+                </p>
+              )}
+            </li>
+          )
+        })}
+        {filas.length === 0 && (
+          <li className="px-4 py-6 text-center text-sm text-muted-foreground">
+            {libro.length === 0 ? 'Todavía no hay movimientos cargados.' : 'Ningún movimiento coincide con la búsqueda.'}
+          </li>
+        )}
+      </ul>
       <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
         <span>
           {Math.min(cuantos, filas.length)} de {filas.length} movimientos · en cada insumo, lo que entró (+) o salió (−) y abajo el saldo que quedó

@@ -303,7 +303,7 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
   const n = act.length
   const cuenta = (e: EstadoVencimiento) => act.filter((f) => f.estado === e).length
   const cVen = cuenta('vencido'), cProx = cuenta('proximo'), cOk = cuenta('vigente'), cSin = cuenta('sin_fecha')
-  const glob = resumen.curva.length > 2 ? posicionPunto(resumen.curva, 2, 84, 0) : null
+  const glob = resumen.curva.length > 2 ? posicionPunto(resumen.curva, 2, 52, 0) : null
   const filtrosActivos = [estado && `«${NOM_EST[estado]}»`, sector && `«${sector}»`, busqueda.trim() && `«${busqueda.trim()}»`].filter(Boolean)
   const vencidosVisibles = visibles.filter((f) => f.estado === 'vencido' && f.activo).length
   const filaMenu = menuFila ? filas.find((f) => f.id === menuFila.id) : null
@@ -311,16 +311,16 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
   const empresaInicial = empresaSel?.id ?? (empresas.length === 1 ? empresas[0].id : '')
 
   const kpiCls = (k: EstadoVencimiento) => cn('flex min-w-0 cursor-pointer flex-col rounded-2xl border border-border bg-bandeja p-1 text-left transition-[border-color,box-shadow]', estado === k ? 'border-primary shadow-[0_0_0_3px_color-mix(in_oklch,var(--primary)_14%,transparent)]' : 'hover:border-border-strong')
-  const pieKpi = 'flex min-h-11 items-center gap-1 px-[17px] py-2 text-xs font-medium md:min-h-9'
+  const pieKpi = 'flex min-h-11 flex-wrap items-center gap-x-1 px-[13px] py-1.5 text-xs font-medium md:min-h-8'
   const cols = 'xl:grid-cols-[minmax(190px,1.4fr)_minmax(170px,1.1fr)_minmax(110px,.8fr)_104px_minmax(150px,1fr)_120px_64px] md:max-xl:grid-cols-[minmax(180px,1.4fr)_minmax(140px,1fr)_104px_minmax(140px,1fr)_120px_64px]'
 
   return (
-    <div className="flex flex-col gap-7 px-4 pt-2 pb-20 text-sm md:px-7 md:pt-6 md:pb-10">
+    <div className="flex flex-col gap-4 px-4 pt-2 pb-20 text-sm md:px-7 md:pt-5 md:pb-8">
       {/* ── Cabecera ── */}
-      <div className="flex flex-col items-start gap-4 md:flex-row md:items-end">
+      <div className="flex flex-col items-start gap-3 md:flex-row md:items-end">
         <div className="min-w-0">
-          <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Empleados</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-texto-2" title={alcance}>
+          <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Empleados</h1>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-texto-2" title={alcance}>
             <button type="button" onClick={() => { cambiarVista(false); cambiarEstado('') }} className="cursor-pointer rounded-md hover:underline hover:underline-offset-[3px] max-md:min-h-11"><b className="font-medium text-foreground">{activos}</b> activos</button>
             <span className="text-muted-foreground">·</span>
             {cVen > 0 && (
@@ -345,28 +345,28 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
 
       {/* ── Las tarjetas de arriba son el filtro por estado ── */}
       <section aria-label="Estado de la documentación del personal">
-        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pt-0.5 pb-3 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:gap-[14px] md:overflow-visible md:p-0 xl:grid-cols-[1.25fr_repeat(3,minmax(0,1fr))] [&>*]:min-w-0 max-md:[&>*]:shrink-0 max-md:[&>*]:basis-[84%] max-md:[&>*]:snap-center">
+        {/* Celular: la protagonista a lo ancho y las bandejas de a dos, así la lista asoma antes. */}
+        <div className="grid grid-cols-2 gap-3 md:gap-[14px] xl:grid-cols-[1.25fr_repeat(3,minmax(0,1fr))] [&>*]:min-w-0">
           {/* Enlace (como en la demo): con clic filtra en el lugar; el href lleva al mismo filtro. */}
           <a
             href="?estado=proximo"
             aria-current={estado === 'proximo' ? 'true' : undefined}
             onClick={(e) => { e.preventDefault(); cambiarVista(false); cambiarEstado(estado === 'proximo' ? '' : 'proximo') }}
-            className={cn('relative flex min-h-[228px] cursor-pointer flex-col overflow-hidden rounded-2xl p-6 text-left text-white shadow-heroe', estado === 'proximo' && 'shadow-[0_0_0_3px_color-mix(in_oklch,var(--primary)_30%,transparent),var(--sombra-heroe)]')}
+            className={cn('relative col-span-2 flex min-h-[168px] cursor-pointer flex-col sm:col-span-1 overflow-hidden rounded-2xl px-5 pt-4 pb-12 text-left text-white shadow-heroe', estado === 'proximo' && 'shadow-[0_0_0_3px_color-mix(in_oklch,var(--primary)_30%,transparent),var(--sombra-heroe)]')}
             style={{ background: 'radial-gradient(120% 140% at 100% 0%, #6d63ff 0%, transparent 55%), linear-gradient(150deg, #3730a3, #4f46e5 60%, #4338ca)' }}
           >
             <span aria-hidden className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgb(255_255_255/.10)_1px,transparent_1.2px)] [background-size:14px_14px] [mask:linear-gradient(200deg,#000,transparent_60%)]" />
-            <div className="relative z-[1] flex w-full items-center justify-between">
-              <span className="grid size-10 place-items-center rounded-xl border border-white/25 bg-white/15 backdrop-blur-[6px]"><HourglassHigh size={20} aria-hidden /></span>
-              <span className="flex h-6 items-center gap-1 rounded-full border border-white/25 bg-white/15 px-2 text-xs font-medium backdrop-blur-[6px]"><CalendarBlank size={13} aria-hidden />{resumen.semana} esta semana</span>
-            </div>
-            <span className="relative mt-4 block text-[13px] font-medium text-white/90">Personas con algo por vencer</span>
-            <span className="relative mt-1 block text-[40px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={cProx} /></span>
-            <span className="relative mt-1 block text-xs text-white/90">En los próximos 30 días</span>
+            <span className="relative z-[1] flex items-center gap-1.5 text-[13px] font-medium text-white/90"><HourglassHigh size={16} className="shrink-0" aria-hidden />Personas con algo por vencer</span>
+            <span className="relative mt-1 flex w-full items-center justify-between gap-2">
+              <span className="text-[40px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={cProx} /></span>
+              <span className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-white/25 bg-white/15 px-2 text-xs font-medium backdrop-blur-[6px]"><CalendarBlank size={13} aria-hidden />{resumen.semana} esta semana</span>
+            </span>
+            <span className="relative mt-0.5 block text-xs text-white/90">En los próximos 30 días</span>
             {resumen.curva.length > 2 && (
               <span className="absolute inset-x-0 bottom-0 block">
-                <Linea valores={resumen.curva} color="#fff" rellenoBlanco alto={84} pad={0} punto={2} />
+                <Linea valores={resumen.curva} color="#fff" rellenoBlanco alto={52} pad={0} punto={2} />
                 {glob && (
-                  <span className="absolute z-[2] -translate-x-1/2 -translate-y-[calc(100%+12px)] rounded-lg bg-white px-2 py-0.5 text-xs font-medium whitespace-nowrap text-[#312e81] shadow-[0_6px_14px_-6px_rgb(23_22_31/.4)]" style={{ left: `clamp(90px, ${glob.left}%, calc(100% - 90px))`, top: glob.top }}>
+                  <span className="absolute right-3 bottom-2 z-[2] rounded-lg bg-white px-2 py-0.5 text-xs font-medium whitespace-nowrap text-[#312e81] shadow-[0_6px_14px_-6px_rgb(23_22_31/.4)]">
                     En 2 semanas · {resumen.curva[2]}
                   </span>
                 )}
@@ -375,11 +375,11 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
           </a>
 
           <button type="button" aria-pressed={estado === 'vencido'} onClick={() => { cambiarVista(false); cambiarEstado(estado === 'vencido' ? '' : 'vencido') }} className={kpiCls('vencido')}>
-            <span className="flex w-full items-center gap-2 py-2 pr-3 pl-[17px] text-[13px] font-medium text-texto-2"><WarningCircle size={16} className="text-muted-foreground" aria-hidden />Con vencidos</span>
-            <span className="block w-full flex-1 rounded-interno border border-border bg-card p-4 shadow-min">
+            <span className="flex w-full items-center gap-2 py-1.5 pr-3 pl-[13px] text-[13px] font-medium text-texto-2"><WarningCircle size={16} className="text-muted-foreground" aria-hidden />Con vencidos</span>
+            <span className="block w-full flex-1 rounded-interno border border-border bg-card px-4 pt-3 pb-3 shadow-min">
               <span className="block text-[32px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={cVen} /></span>
-              <span className="mt-1 block text-xs text-muted-foreground">{plural(resumen.certsVencidos, 'certificado vencido', 'certificados vencidos')}</span>
-              <Bloques className="mt-6" colores={Array.from({ length: 10 }, (_, i) => (i < Math.max(cVen ? 1 : 0, Math.round((cVen / Math.max(1, n)) * 10)) ? 'var(--rojo-g)' : null))} />
+              <span className="mt-0.5 block truncate text-xs text-muted-foreground max-sm:whitespace-normal">{plural(resumen.certsVencidos, 'certificado vencido', 'certificados vencidos')}</span>
+              <Bloques className="mt-3" colores={Array.from({ length: 10 }, (_, i) => (i < Math.max(cVen ? 1 : 0, Math.round((cVen / Math.max(1, n)) * 10)) ? 'var(--rojo-g)' : null))} />
             </span>
             {cVen
               ? <span className={cn(pieKpi, 'w-full text-danger')}><WarningCircle size={14} aria-hidden />Requiere atención<span className="ml-auto inline-flex items-center gap-1">Filtrar<FunnelSimple size={14} aria-hidden /></span></span>
@@ -387,21 +387,21 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
           </button>
 
           <button type="button" aria-pressed={estado === 'vigente'} onClick={() => { cambiarVista(false); cambiarEstado(estado === 'vigente' ? '' : 'vigente') }} className={kpiCls('vigente')}>
-            <span className="flex w-full items-center gap-2 py-2 pr-3 pl-[17px] text-[13px] font-medium text-texto-2"><CheckCircle size={16} className="text-muted-foreground" aria-hidden />Al día</span>
-            <span className="block w-full flex-1 rounded-interno border border-border bg-card p-4 shadow-min">
+            <span className="flex w-full items-center gap-2 py-1.5 pr-3 pl-[13px] text-[13px] font-medium text-texto-2"><CheckCircle size={16} className="text-muted-foreground" aria-hidden />Al día</span>
+            <span className="block w-full flex-1 rounded-interno border border-border bg-card px-4 pt-3 pb-3 shadow-min">
               <span className="block text-[32px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={cOk} /><small className="ml-1 text-xl font-normal tracking-[-0.01em] text-muted-foreground">de {n}</small></span>
-              <span className="mt-1 block text-xs text-muted-foreground">{Math.round((cOk / Math.max(1, n)) * 100)} % del personal sin pendientes</span>
+              <span className="mt-0.5 block truncate text-xs text-muted-foreground max-sm:whitespace-normal">{Math.round((cOk / Math.max(1, n)) * 100)} % del personal sin pendientes</span>
               <Rayitas pct={(cOk / Math.max(1, n)) * 100} color="var(--verde-g)" />
             </span>
             <span className={cn(pieKpi, 'w-full text-muted-foreground')}><UsersFour size={14} aria-hidden />{plural(n, 'persona activa', 'personas activas')}<span className="ml-auto inline-flex items-center gap-1">Filtrar<FunnelSimple size={14} aria-hidden /></span></span>
           </button>
 
-          <button type="button" aria-pressed={estado === 'sin_fecha'} onClick={() => { cambiarVista(false); cambiarEstado(estado === 'sin_fecha' ? '' : 'sin_fecha') }} className={kpiCls('sin_fecha')}>
-            <span className="flex w-full items-center gap-2 py-2 pr-3 pl-[17px] text-[13px] font-medium text-texto-2"><CircleDashed size={16} className="text-muted-foreground" aria-hidden />Sin datos</span>
-            <span className="block w-full flex-1 rounded-interno border border-border bg-card p-4 shadow-min">
+          <button type="button" aria-pressed={estado === 'sin_fecha'} onClick={() => { cambiarVista(false); cambiarEstado(estado === 'sin_fecha' ? '' : 'sin_fecha') }} className={cn(kpiCls('sin_fecha'), 'col-span-2 sm:col-span-1')}>
+            <span className="flex w-full items-center gap-2 py-1.5 pr-3 pl-[13px] text-[13px] font-medium text-texto-2"><CircleDashed size={16} className="text-muted-foreground" aria-hidden />Sin datos</span>
+            <span className="block w-full flex-1 rounded-interno border border-border bg-card px-4 pt-3 pb-3 shadow-min">
               <span className="block text-[32px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={cSin} /></span>
-              <span className="mt-1 block text-xs text-muted-foreground">Sin vencimientos cargados</span>
-              <Bloques className="mt-6" colores={Array.from({ length: 10 }, (_, i) => (i < (Math.round((cSin / Math.max(1, n)) * 10) || (cSin ? 1 : 0)) ? 'var(--decorativo)' : null))} />
+              <span className="mt-0.5 block truncate text-xs text-muted-foreground">Sin vencimientos cargados</span>
+              <Bloques className="mt-3" colores={Array.from({ length: 10 }, (_, i) => (i < (Math.round((cSin / Math.max(1, n)) * 10) || (cSin ? 1 : 0)) ? 'var(--decorativo)' : null))} />
             </span>
             <span className={cn(pieKpi, 'w-full text-muted-foreground')}><Plus size={14} aria-hidden />Cargar lo que falta<span className="ml-auto inline-flex items-center gap-1">Filtrar<FunnelSimple size={14} aria-hidden /></span></span>
           </button>
@@ -410,7 +410,7 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
 
       {/* ── Lista ── */}
       <section className="min-w-0 md:rounded-2xl md:border md:border-border md:bg-card" aria-label="Lista de empleados">
-        <div className="flex flex-wrap items-center gap-2 pb-3 md:px-4 md:pt-4">
+        <div className="flex flex-wrap items-center gap-2 pb-3 md:px-3 md:pt-3 md:pb-2">
           <div role="group" aria-label="Activos o dados de baja" className="order-1 flex w-full gap-0.5 rounded-xl bg-muted p-[3px] md:w-auto">
             {[{ si: false, t: 'Activos', k: activos }, { si: true, t: 'Dados de baja', k: bajas }].map((x) => (
               <button key={x.t} type="button" aria-pressed={verBajas === x.si} onClick={() => { cambiarVista(x.si); setSector(''); reemplazarParam('sector', null) }} className={cn('inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[9px] px-3 text-[13px] font-medium whitespace-nowrap transition-colors md:h-7 md:flex-none', verBajas === x.si ? 'bg-card text-foreground shadow-[0_1px_2px_rgb(23_22_31/.1),0_0_0_1px_var(--border)] dark:bg-foreground dark:text-card' : 'text-texto-2 hover:text-foreground')}>
@@ -512,7 +512,7 @@ export default function EmpleadosClient({ filas: filasServer, empresaSel, alcanc
                     onMouseEnter={() => setSeleccion(i)}
                     style={{ '--e': colorEmpresa(emp.empresaSlug), '--i': Math.min(i, 24) } as React.CSSProperties}
                     className={cn(
-                      'relative mb-2 grid min-h-[72px] grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 rounded-[16px] bg-card py-3 pr-4 pl-3 transition-colors [grid-template-areas:"av_nom_est""av_meta_est"] before:absolute before:top-5 before:bottom-5 before:left-0 before:w-[3px] before:rounded-[2px] before:bg-[var(--e)] md:mb-0 md:min-h-[52px] md:gap-y-0 md:rounded-none md:border-t md:border-divisor md:px-3 md:py-0 md:[grid-template-areas:none] md:first:border-t-0 md:before:top-[14px] md:before:bottom-[14px] md:before:left-[3px] md:hover:bg-hover',
+                      'relative mb-2 grid min-h-[72px] grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 rounded-[16px] bg-card py-3 pr-4 pl-3 transition-colors [grid-template-areas:"av_nom_est""av_meta_est"] before:absolute before:top-5 before:bottom-5 before:left-0 before:w-[3px] before:rounded-[2px] before:bg-[var(--e)] md:mb-0 md:min-h-[46px] md:gap-y-0 md:rounded-none md:border-t md:border-divisor md:px-3 md:py-0 md:[grid-template-areas:none] md:first:border-t-0 md:before:top-[14px] md:before:bottom-[14px] md:before:left-[3px] md:hover:bg-hover',
                       cols,
                       i === sel && 'md:bg-hover',
                       abierto === emp.id && 'bg-sel shadow-[inset_2px_0_0_var(--primary)] md:bg-sel'

@@ -6,7 +6,7 @@ import { tituloLugar } from '@/modules/arcor/reglas'
 export function ProvinciasBarras({ resumen, mesHref }: { resumen: ResumenMes; mesHref: string }) {
   const max = Math.max(1, ...resumen.porLugar.map((l) => l.total))
   return (
-    <ul className="space-y-3">
+    <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
       {resumen.porLugar.map((l) => (
         <li key={l.lugar}>
           <div className="flex items-baseline justify-between gap-3">

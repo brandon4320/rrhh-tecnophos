@@ -65,10 +65,10 @@ export default async function ArcorActividadPage({
   const ultimo = pagina.eventos[pagina.eventos.length - 1]
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Actividad</h1>
+          <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Actividad</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {total} {total === 1 ? 'evento' : 'eventos'} · {movimientos} movimientos de contenedores
             {ocultos > 0 && (
@@ -98,9 +98,9 @@ export default async function ArcorActividadPage({
         </div>
       </div>
 
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
+      <section className="rounded-2xl border border-border bg-card px-5 py-4 shadow-tarjeta">
         {antes && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-4 text-sm text-muted-foreground">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3 text-sm text-muted-foreground">
             <span>Anteriores al {fmtFechaHoraAR(antes.ts)}</span>
             <Link href={href({})} className="font-medium text-primary hover:underline">
               Volver a lo más reciente
@@ -116,7 +116,7 @@ export default async function ArcorActividadPage({
           }
         />
         {pagina.hayMas && ultimo && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-sm text-muted-foreground">
             <span>
               {antes
                 ? `${pagina.eventos.length} más · ${total} en total`

@@ -36,11 +36,11 @@ export default function AjustesPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em] mb-6">Ajustes del sistema</h1>
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
+      <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Ajustes del sistema</h1>
 
-      <div className="bg-card rounded-2xl border border-border p-6 shadow-tarjeta">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Logo de la empresa</h2>
+      <div className="max-w-2xl bg-card rounded-2xl border border-border p-5 shadow-tarjeta">
+        <h2 className="text-base font-semibold text-foreground mb-1">Logo de la empresa</h2>
         <p className="text-sm text-muted-foreground mb-4">
           Subi una imagen PNG de hasta 200KB. Se muestra en el sidebar.
         </p>

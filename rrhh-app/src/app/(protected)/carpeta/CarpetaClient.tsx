@@ -255,9 +255,9 @@ export default function CarpetaClient({
     clsx('rounded-full border px-3 py-1 text-xs font-medium transition-colors', activo ? 'border-primary bg-accent text-primary' : 'border-border bg-card text-muted-foreground hover:bg-muted')
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 pb-32 sm:p-6 sm:pb-32 lg:p-8 lg:pb-32">
+    <div className="space-y-5 px-4 pt-2 pb-32 md:px-7 md:pt-5">
       <div>
-        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Armar carpeta para planta</h1>
+        <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Armar carpeta para planta</h1>
       </div>
 
       {/* ── Personas ── */}
@@ -356,7 +356,7 @@ export default function CarpetaClient({
               const abierto = abiertos.has(id)
               return (
                 <div key={carpeta}>
-                  <div className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex items-center gap-3 px-4 py-2.5">
                     <Check marca={marca} onChange={() => alternarClaves(claves)} label={`Elegir ${carpeta}`} />
                     <button type="button" onClick={() => abrir(id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
                       <ChevronRight className={clsx('size-4 shrink-0 text-muted-foreground transition-transform', abierto && 'rotate-90')} strokeWidth={1.75} />
@@ -451,7 +451,7 @@ function ListaDuenos({
         const sinArchivo = d.certificados.length - conArchivo.length
         return (
           <div key={d.id}>
-            <div className="flex items-center gap-3 px-4 py-3">
+            <div className="flex items-center gap-3 px-4 py-2.5">
               <Check
                 marca={marca}
                 onChange={() => onAlternarDueno(d.certificados)}

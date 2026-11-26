@@ -521,7 +521,7 @@ export default function EquiposClient({
         )}
       >
         <div
-          className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-accent transition-colors"
+          className="flex items-center gap-4 px-5 py-3 cursor-pointer hover:bg-accent transition-colors"
           onClick={() => setExpandedId(isOpen ? null : eq.id)}
         >
           <span className={clsx('w-2 h-2 rounded-full shrink-0', estadoColor)} />
@@ -681,7 +681,7 @@ export default function EquiposClient({
   }
 
   return (
-    <div className="mb-8 space-y-8">
+    <div className="mb-6 space-y-6">
       {nombresSecciones.map((nombre) => {
         const items = equipos.filter((e) => (e.categoria || 'Equipos de medición') === nombre)
         const agregandoAca = creandoItemEn === nombre
@@ -702,7 +702,7 @@ export default function EquiposClient({
               )}
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {agregandoAca && canEdit && (
                 <form
                   onSubmit={(e) => { e.preventDefault(); if (editandoItem) handleGuardarItem(); else handleCrearItem() }}

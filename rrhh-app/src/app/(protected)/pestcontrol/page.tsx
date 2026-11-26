@@ -48,9 +48,9 @@ export default async function PestcontrolPage({ searchParams }: { searchParams: 
   const error = insumosRes.error ?? movsRes.error
   if (error) {
     return (
-      <div className="mx-auto max-w-6xl px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
-        <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.02em]">Pestcontrol</h1>
-        <div className="mt-6 rounded-2xl border border-danger/30 bg-danger-subtle px-5 py-4 text-sm text-danger-text">
+      <div className="px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
+        <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Pestcontrol</h1>
+        <div className="mt-4 rounded-2xl border border-danger/30 bg-danger-subtle px-5 py-4 text-sm text-danger-text">
           {mensajeError(error, 'cargar el stock de Pestcontrol')}
         </div>
       </div>

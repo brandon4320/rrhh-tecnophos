@@ -286,7 +286,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
   const [comparar, setComparar] = useState(false)
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       <div>
         <Link href={`/flota?empresa=${vehiculo.empresa.slug}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" /> Flota de {vehiculo.empresa.nombre}
@@ -304,20 +304,20 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
       </div>
 
       {resumen.motivos.length > 0 && (
-        <div className={cn('rounded-2xl border px-5 py-4', resumen.semaforo === 'rojo' ? 'border-danger/30 bg-danger-subtle' : 'border-warning/30 bg-warning-subtle')}>
+        <div className={cn('rounded-xl border px-4 py-2.5', resumen.semaforo === 'rojo' ? 'border-danger/30 bg-danger-subtle' : 'border-warning/30 bg-warning-subtle')}>
           <ul className={cn('space-y-1 text-sm', resumen.semaforo === 'rojo' ? 'text-danger' : 'text-warning')}>
             {resumen.motivos.map((m) => <li key={m}>· {m}</li>)}
           </ul>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-6">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-4">
           {/* ── Novedades ── */}
           <section className={card}>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
               <div>
-                <h2 className="text-lg font-semibold tracking-tight">Para resolver</h2>
+                <h2 className="text-base font-semibold tracking-tight">Para resolver</h2>
                 <p className="text-sm text-muted-foreground">
                   {abiertas.length === 0 ? 'Nada pendiente' : `${abiertas.length} ${abiertas.length === 1 ? 'novedad abierta' : 'novedades abiertas'}`}
                 </p>
@@ -330,7 +330,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
             </div>
 
             {nuevaNov && (
-              <div className="space-y-3 border-b border-border bg-muted/40 px-5 py-4">
+              <div className="space-y-3 border-b border-border bg-muted/40 px-5 py-3">
                 <input id="nn-titulo" value={nuevaNov.titulo} onChange={(e) => setNuevaNov({ ...nuevaNov, titulo: e.target.value })} placeholder="Qué hay que resolver" className={input} />
                 <div className="flex flex-wrap gap-2">
                   {(['baja', 'media', 'alta'] as const).map((g) => (
@@ -352,7 +352,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
               {abiertas.map((n) => {
                 const fotos = comoLista(n.fotos)
                 return (
-                  <li key={n.id} className="px-5 py-4">
+                  <li key={n.id} className="px-5 py-3">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="font-medium">{n.titulo}</p>
@@ -421,9 +421,9 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
 
           {/* ── Checklists ── */}
           <section className={card}>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
               <div>
-                <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold tracking-tight">
+                <h2 className="flex flex-wrap items-center gap-2 text-base font-semibold tracking-tight">
                   Checklists
                   {vehiculo.checklistActivo && (
                     <EstadoPill estado={CHECKLIST_PILL[resumen.checklist.estado]} label={ESTADO_CHECKLIST_LABEL[resumen.checklist.estado]} />
@@ -459,7 +459,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
                   const excepciones = secciones.flatMap((s) => s.items.filter((i) => respuestas[i.id] && respuestas[i.id] !== 'ok'))
                   return (
                     <li key={c.id}>
-                      <button type="button" onClick={() => setAbierto(isOpen ? null : c.id)} className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-muted/40">
+                      <button type="button" onClick={() => setAbierto(isOpen ? null : c.id)} className="flex w-full items-center gap-3 px-5 py-2.5 text-left hover:bg-muted/40">
                         <ClipboardCheck className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium">{fmtFechaHoraAR(c.created_at)}</p>
@@ -473,7 +473,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
                         <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform', isOpen && 'rotate-180')} />
                       </button>
                       {isOpen && (
-                        <div className="space-y-4 border-t border-border bg-muted/30 px-5 py-4">
+                        <div className="space-y-3 border-t border-border bg-muted/30 px-5 py-3">
                           {excepciones.length === 0 ? (
                             <p className="text-sm text-success">Todos los ítems bien.</p>
                           ) : (
@@ -515,11 +515,11 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
           </section>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* ── Mantenimiento ── */}
           <section className={card}>
-            <div className="border-b border-border px-5 py-4">
-              <h2 className="text-lg font-semibold tracking-tight">Mantenimiento</h2>
+            <div className="border-b border-border px-5 py-3">
+              <h2 className="text-base font-semibold tracking-tight">Mantenimiento</h2>
             </div>
             <ul className="divide-y divide-border">
               {resumen.mantenimientos.map((m) => {
@@ -557,7 +557,7 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
               })}
             </ul>
             {canEdit && (
-              <div className="space-y-3 border-t border-border px-5 py-4">
+              <div className="space-y-3 border-t border-border px-5 py-3">
                 {servForm ? (
                   <div className="space-y-2">
                     <select value={servForm.tipo} onChange={(e) => setServForm({ ...servForm, tipo: e.target.value })} className={input}>
@@ -608,10 +608,10 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
 
           {/* ── Datos ── */}
           <section className={card}>
-            <div className="border-b border-border px-5 py-4">
-              <h2 className="text-lg font-semibold tracking-tight">Datos</h2>
+            <div className="border-b border-border px-5 py-3">
+              <h2 className="text-base font-semibold tracking-tight">Datos</h2>
             </div>
-            <form onSubmit={guardarDatos} className="space-y-3 px-5 py-4">
+            <form onSubmit={guardarDatos} className="space-y-3 px-5 py-3">
               <div>
                 <label htmlFor="d-tipo" className="mb-1 block text-xs text-muted-foreground">Tipo (define qué se revisa en el checklist)</label>
                 <select id="d-tipo" value={datos.tipo} onChange={(e) => setDatos({ ...datos, tipo: e.target.value as TipoVehiculo })} disabled={!canEdit} className={input}>
@@ -655,12 +655,12 @@ export default function VehiculoClient({ vehiculo, resumen, checklists, novedade
 
           {/* ── QR ── */}
           <section className={card}>
-            <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-4">
-              <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+            <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-3">
+              <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">
                 <QrCode className="size-5 text-muted-foreground" strokeWidth={1.75} /> QR de la camioneta
               </h2>
             </div>
-            <div className="space-y-3 px-5 py-4">
+            <div className="space-y-3 px-5 py-3">
               <div className="mx-auto w-44 rounded-xl border border-border bg-white p-2 [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: qr.svg }} />
               <div className="flex flex-wrap justify-center gap-2">
                 <Link href={`/flota/qr?empresa=${vehiculo.empresa.slug}&vehiculo=${vehiculo.id}`} className={btnSecundario}>

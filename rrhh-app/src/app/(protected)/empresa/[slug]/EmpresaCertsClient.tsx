@@ -274,7 +274,7 @@ export default function EmpresaCertsClient({
   }
 
   return (
-    <div className="mb-8">
+    <div className="mb-6">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-semibold text-foreground">{titulo}</h2>
         {canEdit && !showNewForm && (
@@ -353,7 +353,7 @@ export default function EmpresaCertsClient({
       )}
 
       {certs.length === 0 && !showNewForm && (
-        <div className="rounded-xl border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed border-border px-5 py-5 text-center text-sm text-muted-foreground">
           Sin {etiqueta === 'habilitación' ? 'habilitaciones' : 'programas'} registrados.{' '}
           {canEdit && (
             <button onClick={openNew} className="text-primary hover:underline">
@@ -373,7 +373,7 @@ export default function EmpresaCertsClient({
               return (
                 <div key={cert.id}>
                   {/* Fila principal */}
-                  <div className="flex items-center gap-4 px-5 py-3.5">
+                  <div className="flex items-center gap-4 px-5 py-2.5">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-foreground">
                         {cert.tipo?.nombre ?? cert.tipo_nombre_custom}

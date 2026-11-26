@@ -76,8 +76,8 @@ export default async function HistorialPage({
   })()
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
-      <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Historial</h1>
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
+      <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Historial</h1>
 
       <FiltrosHistorial
         personas={(perfiles ?? []).filter((p) => p.nombre).map((p) => ({ id: p.id, nombre: p.nombre! }))}
@@ -85,7 +85,7 @@ export default async function HistorialPage({
       />
 
       {dias.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground shadow-tarjeta">
+        <div className="rounded-2xl border border-border bg-card px-5 py-6 text-center text-sm text-muted-foreground shadow-tarjeta">
           {filtrando ? 'Nada con esos filtros.' : 'Todavía no hay cambios registrados.'}
         </div>
       ) : (
@@ -98,7 +98,7 @@ export default async function HistorialPage({
                 const lineas = lineasCambio(f.cambios, { nombres })
                 const quien = f.usuario_nombre ?? (f.usuario_id ? nombres[f.usuario_id] ?? 'Alguien' : 'Sistema')
                 return (
-                  <li key={f.id} className={`relative flex gap-3 px-5 py-3.5 ${href ? 'transition-colors hover:bg-hover' : ''}`}>
+                  <li key={f.id} className={`relative flex gap-3 px-5 py-2 ${href ? 'transition-colors hover:bg-hover' : ''}`}>
                     {f.usuario_id ? (
                       <Monograma nombre={quien} size="sm" redondo variant="accent" className="mt-0.5" />
                     ) : (
@@ -107,7 +107,8 @@ export default async function HistorialPage({
                         <Bot className="size-4" strokeWidth={1.75} aria-hidden />
                       </span>
                     )}
-                    <div className="min-w-0 flex-1">
+                    {/* En pantallas anchas qué cambió va al lado de quién y qué: un renglón por cambio en vez de dos. */}
+                    <div className="min-w-0 flex-1 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6">
                       <p className="text-sm">
                         <span className="font-semibold">{quien}</span> <span className="text-texto-2">{verboYQue(f)}</span>{' '}
                         {href ? (
@@ -119,7 +120,7 @@ export default async function HistorialPage({
                         )}
                       </p>
                       {lineas.length > 0 && (
-                        <ul className="mt-1 space-y-0.5 text-[13px] text-texto-2">
+                        <ul className="mt-1 space-y-0.5 text-[13px] text-texto-2 lg:mt-px">
                           {lineas.slice(0, 6).map((l) => (
                             <li key={l.campo} className="break-words">
                               <span className="text-muted-foreground">{l.campo}:</span> <span className="line-through decoration-muted-foreground/60">{l.antes}</span>

@@ -16,7 +16,7 @@ interface Vehiculo {
 type Fila = { marca: string; modelo: string; anio: string; tipo: TipoVehiculo }
 
 const MARCAS = ['Toyota', 'Ford', 'Volkswagen', 'Chevrolet', 'Fiat', 'Renault', 'Peugeot', 'Citroën', 'Nissan', 'Mercedes-Benz', 'Iveco', 'RAM']
-const input = 'min-h-10 w-full rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 disabled:opacity-60 focus:border-ring'
+const input = 'min-h-10 w-full rounded-[10px] border border-input bg-card px-3 py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 disabled:opacity-60 focus:border-ring'
 
 /** Lo cargado en la descripción ("CITROEN - JUMPER") sirve de punto de partida si no hay marca ni modelo. */
 function inicial(v: Vehiculo): Fila {
@@ -76,13 +76,13 @@ export default function DatosFlotaClient({ vehiculos, volver, variasEmpresas }: 
   }
 
   return (
-    <form onSubmit={guardar} className="mx-auto max-w-4xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <form onSubmit={guardar} className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Link href={volver} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" /> Volver a Flota
           </Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Marca, modelo, año y tipo</h1>
+          <h1 className="mt-0.5 text-2xl leading-tight font-medium tracking-[-0.025em]">Marca, modelo, año y tipo</h1>
         </div>
         <button type="submit" disabled={saving || cambiadas.length === 0} className="rounded-[10px] bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[background-color,transform] hover:bg-primary-hover disabled:opacity-50 active:scale-[0.97]">
           {saving ? 'Guardando…' : cambiadas.length === 0 ? 'Sin cambios' : `Guardar ${cambiadas.length === 1 ? '1 cambio' : `${cambiadas.length} cambios`}`}
@@ -91,33 +91,37 @@ export default function DatosFlotaClient({ vehiculos, volver, variasEmpresas }: 
 
       <datalist id="marcas">{MARCAS.map((m) => <option key={m} value={m} />)}</datalist>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              <th className="px-5 py-3">Patente</th>
-              {variasEmpresas && <th className="px-3 py-3">Empresa</th>}
-              <th className="px-3 py-3">Marca</th>
-              <th className="px-3 py-3">Modelo</th>
-              <th className="w-28 px-3 py-3">Año</th>
-              <th className="w-36 px-3 py-3">Tipo</th>
+      <div className="rounded-2xl border border-border bg-card shadow-tarjeta md:overflow-x-auto">
+        <table className="w-full text-sm max-md:block md:min-w-[640px]">
+          <thead className="max-md:hidden">
+            <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
+              <th className="px-5 py-2">Patente</th>
+              {variasEmpresas && <th className="px-3 py-2">Empresa</th>}
+              <th className="px-3 py-2">Marca</th>
+              <th className="px-3 py-2">Modelo</th>
+              <th className="w-28 px-3 py-2">Año</th>
+              <th className="w-36 px-3 py-2">Tipo</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-border max-md:block">
             {vehiculos.map((v) => (
-              <tr key={v.id}>
-                <td className="whitespace-nowrap px-5 py-2.5 font-mono font-semibold tracking-wide">{v.patente}</td>
-                {variasEmpresas && <td className="px-3 py-2.5 text-muted-foreground">{v.empresa}</td>}
-                <td className="px-3 py-2.5">
+              <tr key={v.id} className="max-md:grid max-md:grid-cols-2 max-md:gap-x-3 max-md:gap-y-2 max-md:px-4 max-md:py-3 [&>td]:max-md:p-0">
+                <td className="whitespace-nowrap px-5 py-2 font-mono font-semibold tracking-wide max-md:self-center">{v.patente}</td>
+                {variasEmpresas && <td className="px-3 py-2 text-muted-foreground max-md:self-center max-md:truncate max-md:text-right max-md:text-xs">{v.empresa}</td>}
+                <td className={`px-3 py-2 ${variasEmpresas ? '' : 'max-md:col-start-1'}`}>
+                  <span className="mb-1 block text-xs text-muted-foreground md:hidden" aria-hidden>Marca</span>
                   <input aria-label={`Marca de ${v.patente}`} list="marcas" value={filas[v.id].marca} onChange={(e) => set(v.id, 'marca', e.target.value)} placeholder="Toyota" disabled={saving} className={input} />
                 </td>
-                <td className="px-3 py-2.5">
+                <td className="px-3 py-2">
+                  <span className="mb-1 block text-xs text-muted-foreground md:hidden" aria-hidden>Modelo</span>
                   <input aria-label={`Modelo de ${v.patente}`} value={filas[v.id].modelo} onChange={(e) => set(v.id, 'modelo', e.target.value)} placeholder="Hilux" disabled={saving} className={input} />
                 </td>
-                <td className="px-3 py-2.5">
+                <td className="px-3 py-2">
+                  <span className="mb-1 block text-xs text-muted-foreground md:hidden" aria-hidden>Año</span>
                   <input aria-label={`Año de ${v.patente}`} value={filas[v.id].anio} onChange={(e) => set(v.id, 'anio', e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="2020" inputMode="numeric" disabled={saving} className={`${input} tabular-nums`} />
                 </td>
-                <td className="px-3 py-2.5">
+                <td className="px-3 py-2">
+                  <span className="mb-1 block text-xs text-muted-foreground md:hidden" aria-hidden>Tipo</span>
                   <select aria-label={`Tipo de ${v.patente}`} value={filas[v.id].tipo} onChange={(e) => set(v.id, 'tipo', e.target.value)} disabled={saving} className={input}>
                     {TIPOS_VEHICULO.map((t) => <option key={t} value={t}>{TIPO_VEHICULO_LABEL[t]}</option>)}
                   </select>

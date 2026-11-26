@@ -41,7 +41,7 @@ export default async function VehiculoFlotaPage({ params }: { params: Promise<{ 
   const error = [chk, nov, plan, serv, cert].find((r) => r.error)?.error
   if (error) {
     return (
-      <div className="mx-auto max-w-6xl px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+      <div className="px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
         <h1 className="font-mono text-2xl font-semibold">{vehiculo.patente}</h1>
         <div className="mt-6 rounded-2xl border border-danger/30 bg-danger-subtle px-5 py-4 text-sm text-danger">
           No se pudo cargar la ficha. Detalle técnico: {error.message}

@@ -47,8 +47,8 @@ export default async function CarpetaPage({ searchParams }: { searchParams: Prom
 
   if (!empresaSel) {
     return (
-      <div className="mx-auto max-w-6xl px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
-        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Armar carpeta para planta</h1>
+      <div className="px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
+        <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Armar carpeta para planta</h1>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {lista.map((e) => (
             <Link key={e.id} href={`/carpeta?empresa=${e.slug}`} className="rounded-2xl border border-border bg-card px-5 py-4 text-sm font-medium transition-colors hover:bg-muted shadow-tarjeta">

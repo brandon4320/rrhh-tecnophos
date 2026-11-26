@@ -68,10 +68,10 @@ export default async function ArcorResumenPage() {
   const revisarPub = pub?.revisar?.length ?? 0
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Tecnophos - ARCOR</h1>
+          <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Tecnophos - ARCOR</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <AutoRefresh generado={ahora.toISOString()} />
@@ -81,17 +81,17 @@ export default async function ArcorResumenPage() {
       </div>
 
       {/* ── Estado del sistema ── */}
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
+      <section className="rounded-2xl border border-border bg-card px-5 py-4 shadow-tarjeta">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">Estado del sistema</h2>
+            <h2 className="text-base font-semibold tracking-tight">Estado del sistema</h2>
           </div>
           <Link href="/arcor/alertas" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
             Ver alertas <ArrowRight className="size-3.5" strokeWidth={1.75} />
           </Link>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-y-6 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-border">
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4 sm:gap-x-0 sm:gap-y-0 sm:divide-x sm:divide-border">
           <TileEstado
             className="sm:pr-6"
             label="WhatsApp"
@@ -147,12 +147,12 @@ export default async function ArcorResumenPage() {
       </section>
 
       {/* ── Contenedores del mes + Alertas abiertas ── */}
-      <section className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
+      <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="rounded-2xl border border-border bg-card px-5 py-4 shadow-tarjeta">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">Contenedores · <span className="capitalize">{mes.toLowerCase()}</span></h2>
-              <p className="text-sm text-muted-foreground">
+              <h2 className="text-base font-semibold tracking-tight">Contenedores · <span className="capitalize">{mes.toLowerCase()}</span></h2>
+              <p className="text-xs text-muted-foreground">
                 Certificados con fecha en el mes (misma regla que la pestaña del Sheets). Pendientes y dudosas: de todos los meses.
               </p>
             </div>
@@ -161,10 +161,10 @@ export default async function ArcorResumenPage() {
             </Link>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:divide-x sm:divide-border">
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4 sm:gap-x-0 sm:divide-x sm:divide-border">
             <div className="sm:pr-6">
-              <p className="text-3xl font-semibold tabular-nums">{resumen.total}</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">Total del mes</p>
+              <p className="text-2xl leading-tight font-semibold tabular-nums">{resumen.total}</p>
+              <p className="text-sm text-muted-foreground">Total del mes</p>
               <p className="text-xs text-muted-foreground">
                 {mesPrevioCompleto
                   ? `${previo.hastaDia} en todo ${nombrePrevio}`
@@ -176,19 +176,19 @@ export default async function ArcorResumenPage() {
               )}
             </div>
             <div className="sm:px-6">
-              <p className="text-3xl font-semibold tabular-nums">{resumen.encontrados}</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">Cargados</p>
+              <p className="text-2xl leading-tight font-semibold tabular-nums">{resumen.encontrados}</p>
+              <p className="text-sm text-muted-foreground">Cargados</p>
               <p className="text-xs text-muted-foreground">{resumen.publicados} publicados en Colabora</p>
             </div>
             <Link href={pendientesHref} className="group sm:px-6">
-              <p className={`text-3xl font-semibold tabular-nums ${pendientes.total > 0 ? 'text-warning' : ''}`}>{pendientes.total}</p>
-              <p className="mt-0.5 text-sm text-muted-foreground group-hover:text-foreground">Pendiente ARCOR</p>
+              <p className={`text-2xl leading-tight font-semibold tabular-nums ${pendientes.total > 0 ? 'text-warning' : ''}`}>{pendientes.total}</p>
+              <p className="text-sm text-muted-foreground group-hover:text-foreground">Pendiente ARCOR</p>
               <p className="text-xs text-muted-foreground">{arrastre(pendientes) ?? 'esperan carga en Colabora'}</p>
             </Link>
             {/* Las dudosas se resuelven en la galería del sistema ARCOR: el tile abre ese formulario. */}
             <a href={ENLACES_ARCOR.revisar} target="_blank" rel="noopener noreferrer" className="group sm:pl-6">
-              <p className={`text-3xl font-semibold tabular-nums ${dudosas.total > 0 ? 'text-danger' : ''}`}>{dudosas.total}</p>
-              <p className="mt-0.5 text-sm text-muted-foreground group-hover:text-foreground">Revisar foto</p>
+              <p className={`text-2xl leading-tight font-semibold tabular-nums ${dudosas.total > 0 ? 'text-danger' : ''}`}>{dudosas.total}</p>
+              <p className="text-sm text-muted-foreground group-hover:text-foreground">Revisar foto</p>
               {arrastre(dudosas) && <p className="text-xs text-muted-foreground">{arrastre(dudosas)}</p>}
               <p className="text-xs text-muted-foreground">
                 {dudosas.total > 0 ? 'resolver en la galería ↗' : 'requieren una persona'}
@@ -196,26 +196,26 @@ export default async function ArcorResumenPage() {
             </a>
           </div>
 
-          <div className="mt-6 border-t border-border pt-5">
-            <p className="mb-3 text-sm font-medium">Por provincia</p>
+          <div className="mt-4 border-t border-border pt-3">
+            <p className="mb-2 text-sm font-medium">Por provincia</p>
             <ProvinciasBarras resumen={resumen} mesHref={mesHref} />
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
+        <div className="rounded-2xl border border-border bg-card px-5 py-4 shadow-tarjeta">
           <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-lg font-semibold tracking-tight">Alertas abiertas</h2>
+            <h2 className="text-base font-semibold tracking-tight">Alertas abiertas</h2>
             {todasAbiertas.length > 0 && (
               <EstadoPill estado={todasAbiertas.some((a) => a.severidad === 'critical') ? 'vencido' : 'proximo'} label={`${todasAbiertas.length}`} />
             )}
           </div>
           {todasAbiertas.length === 0 ? (
-            <div className="mt-4 flex items-center gap-3 rounded-xl bg-success-subtle px-4 py-3 text-sm text-success">
+            <div className="mt-3 flex items-center gap-3 rounded-xl bg-success-subtle px-4 py-2.5 text-sm text-success">
               <CircleCheck className="size-4 shrink-0" strokeWidth={1.75} />
               Sin alertas abiertas. Todo reportando normal.
             </div>
           ) : (
-            <div className="mt-4 space-y-3">
+            <div className="mt-3 space-y-2">
               {todasAbiertas.slice(0, 4).map((a) => <AlertaCard key={a.id} e={a} compacta />)}
               {todasAbiertas.length > 4 && (
                 <Link href="/arcor/alertas" className="block text-center text-sm font-medium text-primary hover:underline">
@@ -228,16 +228,16 @@ export default async function ArcorResumenPage() {
       </section>
 
       {/* ── Actividad reciente ── */}
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
+      <section className="rounded-2xl border border-border bg-card px-5 py-4 shadow-tarjeta">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">Actividad reciente</h2>
+            <h2 className="text-base font-semibold tracking-tight">Actividad reciente</h2>
           </div>
           <Link href="/arcor/actividad" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
             Ver toda la actividad <ArrowRight className="size-3.5" strokeWidth={1.75} />
           </Link>
         </div>
-        <div className="mt-4">
+        <div className="mt-2">
           <ListaEventos eventos={recientes} vacio="Todavía no llegó ningún evento del sistema ARCOR." />
         </div>
       </section>

@@ -88,7 +88,7 @@ export default async function HubPage() {
 
       <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Hola, {nombre.split(' ')[0]}</h1>
+          <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Hola, {nombre.split(' ')[0]}</h1>
           {puedeRrhh && (
             <Link
               href="/dashboard"

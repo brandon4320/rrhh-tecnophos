@@ -34,9 +34,9 @@ export default async function NuevoEmpleadoPage({
   ].sort((a, b) => a.localeCompare(b, 'es'))
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Nuevo empleado</h1>
+    <div className="px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
+      <div className="mb-4">
+        <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Nuevo empleado</h1>
       </div>
 
       <NuevoEmpleadoForm

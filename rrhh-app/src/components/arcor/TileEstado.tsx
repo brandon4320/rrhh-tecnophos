@@ -31,11 +31,11 @@ export function TileEstado({
         <p className="text-sm text-muted-foreground">{label}</p>
         <EstadoPill estado={estado} label={pill} />
       </div>
-      <p className={cn('mt-1.5 text-2xl font-semibold tabular-nums tracking-tight', estado === 'vencido' && 'text-danger')}>
+      <p className={cn('mt-1 text-2xl leading-tight font-semibold tabular-nums tracking-tight', estado === 'vencido' && 'text-danger')}>
         {valor}
       </p>
       {sub && <p className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</p>}
-      {extra && <div className="mt-2.5">{extra}</div>}
+      {extra && <div className="mt-2">{extra}</div>}
     </div>
   )
 }

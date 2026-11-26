@@ -312,7 +312,7 @@ export default function VehiculosClient({
   }
 
   return (
-    <div className="mb-8">
+    <div className="mb-6">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-semibold text-foreground">Vehículos</h2>
         {canEdit && !showNewVeh && (
@@ -379,7 +379,7 @@ export default function VehiculosClient({
       )}
 
       {vehiculos.length === 0 && !showNewVeh && (
-        <div className="rounded-xl border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed border-border px-5 py-5 text-center text-sm text-muted-foreground">
           Sin vehículos registrados.{' '}
           {canEdit && (
             <button onClick={openNewVeh} className="text-primary hover:underline">
@@ -389,7 +389,7 @@ export default function VehiculosClient({
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {vehiculos.map((veh) => {
           const isOpen = expandedId === veh.id
           const isAddingHere = addingTo === veh.id
@@ -422,7 +422,7 @@ export default function VehiculosClient({
               )}
             >
               <div
-                className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-accent transition-colors"
+                className="flex items-center gap-4 px-5 py-3 cursor-pointer hover:bg-accent transition-colors"
                 onClick={() => setExpandedId(isOpen ? null : veh.id)}
               >
                 <span className={clsx('w-2 h-2 rounded-full shrink-0', estadoColor)} />

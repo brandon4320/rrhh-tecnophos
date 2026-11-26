@@ -55,8 +55,8 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
     flota = await cargarFlota(supabase, todas ? {} : { empresaId: empresaSel.id })
   } catch (e) {
     return (
-      <div className="mx-auto max-w-6xl px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
-        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Flota</h1>
+      <div className="px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
+        <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Flota</h1>
         <div className="mt-6 rounded-2xl border border-danger/30 bg-danger-subtle px-5 py-4 text-sm text-danger">
           No se pudo cargar la flota. Detalle técnico: {e instanceof Error ? e.message : String(e)}
         </div>
@@ -74,10 +74,10 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
   const sinDatos = filas.filter(({ v }) => !v.marca || !v.modelo || !v.anio).length
   const boton = 'inline-flex items-center gap-2 rounded-[10px] border border-border-strong bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-[background-color,transform] hover:bg-muted active:scale-[0.97]'
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Flota</h1>
+          <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Flota</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {filas.length} {filas.length === 1 ? 'vehículo' : 'vehículos'} · {todas ? alcance : empresaSel.nombre}
           </p>
@@ -109,29 +109,29 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
         </p>
       )}
 
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-        <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:divide-x sm:divide-border">
+      <section className="rounded-2xl border border-border bg-card px-5 py-3 shadow-tarjeta">
+        <div className="grid grid-cols-2 gap-y-3 sm:grid-cols-4 sm:divide-x sm:divide-border">
           <div className="sm:pr-6">
-            <p className="text-3xl font-semibold tabular-nums">{filas.length}</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">Vehículos</p>
+            <p className="text-2xl leading-tight font-semibold tabular-nums">{filas.length}</p>
+            <p className="text-sm text-muted-foreground">Vehículos</p>
           </div>
           <div className="sm:px-6">
-            <p className={`text-3xl font-semibold tabular-nums ${cuenta('rojo') > 0 ? 'text-danger' : ''}`}>{cuenta('rojo')}</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">Requieren atención</p>
+            <p className={`text-2xl leading-tight font-semibold tabular-nums ${cuenta('rojo') > 0 ? 'text-danger' : ''}`}>{cuenta('rojo')}</p>
+            <p className="text-sm text-muted-foreground">Requieren atención</p>
           </div>
           <div className="sm:px-6">
-            <p className={`text-3xl font-semibold tabular-nums ${cuenta('amarillo') > 0 ? 'text-warning' : ''}`}>{cuenta('amarillo')}</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">A revisar</p>
+            <p className={`text-2xl leading-tight font-semibold tabular-nums ${cuenta('amarillo') > 0 ? 'text-warning' : ''}`}>{cuenta('amarillo')}</p>
+            <p className="text-sm text-muted-foreground">A revisar</p>
           </div>
           <div className="sm:pl-6">
-            <p className="text-3xl font-semibold tabular-nums text-success">{cuenta('verde')}</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">En orden</p>
+            <p className="text-2xl leading-tight font-semibold tabular-nums text-success">{cuenta('verde')}</p>
+            <p className="text-sm text-muted-foreground">En orden</p>
           </div>
         </div>
       </section>
 
       {filas.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-border px-5 py-6 text-center text-sm text-muted-foreground">
           {todas ? (
             'No hay vehículos cargados en ninguna empresa.'
           ) : (
@@ -142,28 +142,28 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
+        <div className="rounded-2xl border border-border bg-card shadow-tarjeta md:overflow-x-auto">
           {/* Entra en el ancho de la pantalla: patente, marca, modelo y año van en una sola celda, y toda
               la fila abre la ficha (antes había que deslizar hasta la flecha del final). */}
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-[11px] font-medium whitespace-nowrap uppercase tracking-wider text-muted-foreground">
-                <th className="px-5 py-3">Vehículo</th>
-                {todas && <th className="px-3 py-3">Empresa</th>}
-                <th className="px-3 py-3">Estado</th>
-                <th className="px-3 py-3">Checklist</th>
-                <th className="px-3 py-3 text-right">Kilómetros</th>
-                <th className="px-3 py-3">Próximo service</th>
-                <th className="px-3 py-3">Para resolver</th>
-                <th className="px-3 py-3" />
+          <table className="w-full text-sm max-md:block">
+            <thead className="max-md:hidden">
+              <tr className="border-b border-border text-left text-xs font-medium whitespace-nowrap text-muted-foreground">
+                <th className="px-5 py-2">Vehículo</th>
+                {todas && <th className="px-3 py-2">Empresa</th>}
+                <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2">Checklist</th>
+                <th className="px-3 py-2 text-right">Kilómetros</th>
+                <th className="px-3 py-2">Próximo service</th>
+                <th className="px-3 py-2">Para resolver</th>
+                <th className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-divisor">
+            <tbody className="divide-y divide-divisor max-md:block">
               {filas.map(({ v, r, empresa: emp }) => {
                 const service = r.mantenimientos.find((m) => m.tipo === 'service') ?? r.mantenimientos[0]
                 return (
-                  <tr key={v.id} className="relative cursor-pointer transition-colors hover:bg-hover">
-                    <td className="px-5 py-3">
+                  <tr key={v.id} className="relative cursor-pointer transition-colors hover:bg-hover max-md:grid max-md:grid-cols-[minmax(0,1fr)_auto] max-md:items-center max-md:gap-x-3 max-md:gap-y-0.5 max-md:px-4 max-md:py-2.5 [&>td]:max-md:p-0">
+                    <td className="px-5 py-2 max-md:col-start-1 max-md:row-start-1">
                       {/* El enlace se estira a toda la fila (after:inset-0); los otros enlaces de la fila van encima con z-10. */}
                       <Link href={`/flota/${v.id}`} className="font-mono font-semibold tracking-wide whitespace-nowrap after:absolute after:inset-0 after:content-['']">
                         {v.patente}
@@ -173,28 +173,28 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                       </p>
                     </td>
                     {todas && (
-                      <td className="px-3 py-3">
+                      <td className="px-3 py-2 max-md:col-start-1 max-md:row-start-2 max-md:text-xs">
                         {emp ? (
                           <Link href={`/flota?empresa=${emp.slug}`} className="relative z-10 text-texto-2 hover:text-foreground">{emp.nombre}</Link>
                         ) : '—'}
                       </td>
                     )}
-                    <td className="px-3 py-3"><EstadoPill estado={SEMAFORO[r.semaforo].estado} label={SEMAFORO[r.semaforo].label} /></td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-2 max-md:col-start-2 max-md:row-start-1 max-md:justify-self-end"><EstadoPill estado={SEMAFORO[r.semaforo].estado} label={SEMAFORO[r.semaforo].label} /></td>
+                    <td className="px-3 py-2 max-md:col-span-2">
                       {v.checklist_activo ? (
-                        <>
+                        <div className="flex flex-wrap items-center gap-x-2">
                           <EstadoPill estado={CHECKLIST_PILL[r.checklist.estado]} label={ESTADO_CHECKLIST_LABEL[r.checklist.estado]} />
-                          <p className="mt-0.5 text-xs text-muted-foreground">{detalleChecklist(r.checklist)}</p>
-                        </>
+                          <p className="text-xs whitespace-nowrap text-muted-foreground">{detalleChecklist(r.checklist)}</p>
+                        </div>
                       ) : (
                         <span className="text-xs text-muted-foreground">Desactivado</span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
+                    <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums max-md:col-start-2 max-md:row-start-2">
                       {v.km_actual != null ? <span className="font-medium">{v.km_actual.toLocaleString('es-AR')}</span> : <span className="text-muted-foreground">—</span>}
                       {r.kmDia != null && <p className="text-xs text-muted-foreground">{Math.round(r.kmDia)} km/día</p>}
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-2 max-md:col-start-1">
                       {service ? (
                         <p className={service.estado === 'vencido' ? 'font-medium text-danger' : service.estado === 'proximo' ? 'font-medium text-warning' : ''}>
                           {service.estado === 'sin_dato'
@@ -203,7 +203,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                         </p>
                       ) : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="max-w-[220px] px-3 py-3">
+                    <td className="max-w-[220px] px-3 py-2 max-md:col-span-2 max-md:max-w-none">
                       {r.motivos.length === 0 ? (
                         <span className="text-xs text-muted-foreground">Nada pendiente</span>
                       ) : (
@@ -212,7 +212,7 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
                         </p>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-right">
+                    <td className="whitespace-nowrap px-3 py-2 text-right max-md:col-start-2 max-md:row-start-4">
                       {emp && (
                         <Link href={`/flota/qr?empresa=${emp.slug}&vehiculo=${v.id}&imprimir=1`} prefetch={false} title={`Imprimir el QR de ${v.patente}`} className="relative z-10 inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
                           <Printer className="size-3.5" strokeWidth={1.75} />
@@ -231,12 +231,12 @@ export default async function FlotaPage({ searchParams }: { searchParams: Promis
 
       {/* Avisos por WhatsApp: el backend está armado e inactivo (lib/whatsapp.ts,
           /api/cron/flota, EncargadosClient). Se habilita cuando se decida el número. */}
-      <section className="flex flex-wrap items-start gap-3 rounded-2xl border border-dashed border-border bg-card px-5 py-4 sm:px-6">
+      <section className="flex flex-wrap items-start gap-3 rounded-2xl border border-dashed border-border bg-card px-5 py-3">
         <MessageCircle className="mt-0.5 size-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2 font-medium">
             Avisos por WhatsApp
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">En desarrollo</span>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">En desarrollo</span>
           </p>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Más adelante, un resumen cada mañana de lo vencido y un aviso al instante cuando una camioneta quede no apta. Por ahora, todo se ve en esta pantalla.

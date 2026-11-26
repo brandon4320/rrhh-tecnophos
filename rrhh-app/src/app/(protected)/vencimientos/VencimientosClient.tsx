@@ -175,9 +175,9 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
   const sinFiltros = empresa ? `${pathname}?empresa=${empresa}` : pathname
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       <div>
-        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Vencimientos</h1>
+        <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Vencimientos</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           {visibles.length} {visibles.length === 1 ? 'registro' : 'registros'}
         </p>
@@ -251,7 +251,7 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-tarjeta">
         {visibles.length === 0 ? (
-          <div className="py-12 text-center text-sm text-muted-foreground">
+          <div className="py-6 text-center text-sm text-muted-foreground">
             {busqueda.trim()
               ? `Nada coincide con “${busqueda.trim()}” en esta vista.`
               : vista === 'pendientes'
@@ -259,37 +259,39 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
                 : 'No se encontraron registros con los filtros aplicados.'}
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
+          // En el celular cada vencimiento es una tarjeta de dos renglones (antes las últimas columnas
+          // quedaban cortadas) y los encabezados para ordenar pasan a una fila de botones.
+          <table className="w-full text-sm max-md:block">
+            <thead className="max-md:block">
+              <tr className="border-b border-border max-md:flex max-md:flex-wrap max-md:gap-x-1 max-md:px-2.5 max-md:py-1 [&>th]:max-md:px-1.5 [&>th]:max-md:py-0">
                 <EncabezadoOrdenable campo="titular" etiqueta="Titular" orden={orden} onAlternar={alternar} className="px-5" />
-                <EncabezadoOrdenable campo="empresa" etiqueta="Empresa" orden={orden} onAlternar={alternar} className="hidden px-4 sm:table-cell" />
+                <EncabezadoOrdenable campo="empresa" etiqueta="Empresa" orden={orden} onAlternar={alternar} className="px-4 sm:table-cell" />
                 <EncabezadoOrdenable campo="certificado" etiqueta="Certificado" orden={orden} onAlternar={alternar} className="px-4" />
                 <EncabezadoOrdenable campo="vencimiento" etiqueta="Vencimiento" orden={orden} onAlternar={alternar} className="px-4" />
                 <EncabezadoOrdenable campo="estado" etiqueta="Estado" orden={orden} onAlternar={alternar} className="px-4" />
-                <th className="px-4 py-3" />
+                <th className="px-4 py-3 max-md:hidden" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-border max-md:block">
               {visibles.map((f) => (
                 // relative + link estirado: toda la fila lleva al certificado exacto.
-                <tr key={f.id} className={cn('transition-colors', f.href && 'relative hover:bg-muted/40')}>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <Monograma nombre={f.titular} size="sm" />
+                <tr key={f.id} className={cn('transition-colors max-md:grid max-md:grid-cols-[auto_minmax(0,1fr)_auto] max-md:items-center max-md:gap-x-3 max-md:gap-y-0.5 max-md:px-4 max-md:py-2 [&>td]:max-md:p-0', f.href && 'relative hover:bg-muted/40')}>
+                  <td className="px-5 py-2 max-md:contents">
+                    <div className="flex items-center gap-3 max-md:contents">
+                      <span className="inline-flex shrink-0 max-md:row-span-2"><Monograma nombre={f.titular} size="sm" /></span>
                       {f.href ? (
-                        <Link href={f.href} className="font-medium after:absolute after:inset-0 focus:outline-none focus-visible:underline">
+                        <Link href={f.href} className="font-medium after:absolute after:inset-0 focus:outline-none focus-visible:underline max-md:col-start-2 max-md:row-start-1 max-md:truncate">
                           {f.titular}
                         </Link>
                       ) : (
-                        <span className="font-medium">{f.titular}</span>
+                        <span className="font-medium max-md:col-start-2 max-md:row-start-1 max-md:truncate">{f.titular}</span>
                       )}
                     </div>
                   </td>
-                  <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{f.empresaNombre ?? '—'}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
-                      {f.tipoNombre}
+                  <td className="px-4 py-2 text-muted-foreground max-md:hidden">{f.empresaNombre ?? '—'}</td>
+                  <td className="px-4 py-2 text-muted-foreground max-md:col-start-2 max-md:row-start-2 max-md:min-w-0 max-md:text-xs">
+                    <span className="inline-flex items-center gap-1.5 max-md:flex max-md:min-w-0">
+                      <span className="max-md:truncate">{f.tipoNombre}<span className="md:hidden">{f.empresaNombre ? ` · ${f.empresaNombre}` : ''}</span></span>
                       {f.sinArchivo && (
                         <span title="Sin archivo adjunto" className="inline-flex">
                           <FileX className="size-3.5 shrink-0 text-muted-foreground/70" strokeWidth={1.75} aria-label="Sin archivo adjunto" />
@@ -297,14 +299,13 @@ export default function VencimientosClient({ filas, vista: vistaInicial, incluye
                       )}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <p className="tabular-nums">{fmtFecha(f.fecha)}</p>
-                    <p className="text-xs text-muted-foreground">{relativo(f.dias)}</p>
+                  <td className="px-4 py-2 max-md:col-start-3 max-md:row-start-2 max-md:justify-self-end max-md:text-xs">
+                    <p className="flex flex-wrap items-baseline gap-x-2 tabular-nums max-md:justify-end"><span className="whitespace-nowrap">{fmtFecha(f.fecha)}</span><span className="text-xs whitespace-nowrap text-muted-foreground">{relativo(f.dias)}</span></p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2 max-md:col-start-3 max-md:row-start-1 max-md:justify-self-end">
                     <EstadoPill estado={f.estado} />
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-2 text-right max-md:hidden">
                     {f.href && <ChevronRight className="ml-auto size-4 text-muted-foreground/50" strokeWidth={1.75} />}
                   </td>
                 </tr>

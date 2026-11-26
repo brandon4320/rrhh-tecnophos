@@ -56,21 +56,21 @@ const NOM_TIPO: Record<TipoTitular, [string, string]> = {
 }
 
 /** Contenedor de cada KPI: bandeja con rótulo arriba, tarjeta adentro y pie con acción (skill §1b.9). */
-function Bandeja({ icono, rotulo, children, pie }: { icono: React.ReactNode; rotulo: string; children: React.ReactNode; pie: React.ReactNode }) {
+function Bandeja({ icono, rotulo, children, pie, className }: { icono: React.ReactNode; rotulo: string; children: React.ReactNode; pie: React.ReactNode; className?: string }) {
   return (
-    <div className="flex min-w-0 flex-col rounded-2xl border border-border bg-bandeja p-1">
-      <div className="flex items-center gap-2 py-2 pr-3 pl-[17px] text-[13px] font-medium text-texto-2">
+    <div className={cn('flex min-w-0 flex-col rounded-2xl border border-border bg-bandeja p-1', className)}>
+      <div className="flex items-center gap-2 py-1.5 pr-3 pl-[13px] text-[13px] font-medium text-texto-2">
         {icono}
         {rotulo}
       </div>
-      <div className="min-w-0 flex-1 rounded-interno border border-border bg-card p-4 shadow-min">{children}</div>
+      <div className="min-w-0 flex-1 rounded-interno border border-border bg-card px-4 pt-3 pb-2.5 shadow-min">{children}</div>
       {pie}
     </div>
   )
 }
 function Pie({ href, icono, texto, accion, tono }: { href: string; icono: React.ReactNode; texto: string; accion: string; tono?: 'rojo' }) {
   return (
-    <Link href={href} className={cn('flex min-h-11 items-center gap-1 px-[17px] py-2 text-xs font-medium transition-colors md:min-h-9', tono === 'rojo' ? 'text-danger' : 'text-muted-foreground hover:text-foreground')}>
+    <Link href={href} className={cn('flex min-h-11 flex-wrap items-center gap-x-1 px-[13px] py-1.5 text-xs font-medium transition-colors md:min-h-8', tono === 'rojo' ? 'text-danger' : 'text-muted-foreground hover:text-foreground')}>
       {icono}
       {texto}
       <span className="ml-auto inline-flex items-center gap-1">{accion}<ArrowUpRight size={14} aria-hidden /></span>
@@ -101,37 +101,37 @@ function TarjetaRecurso({ r }: { r: RecursoInicio }) {
   const Ico = ICONO_RECURSO[r.icono]
   return (
     <article className="group relative flex min-w-0 flex-col rounded-2xl border border-border bg-card transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:shadow-hover">
-      <div className="px-5 pt-5 pb-4">
+      <div className="px-4 pt-4 pb-3">
         <div className="flex min-h-6 items-center gap-1.5">
           {r.chip && <Chip tono={r.chip.tono}>{r.chip.texto}</Chip>}
           <span className="ml-auto flex gap-1">
             {r.tags.map((t) => <span key={t} className="inline-flex h-6 items-center rounded-lg border border-border px-2 text-xs font-medium whitespace-nowrap text-texto-2">{t}</span>)}
           </span>
         </div>
-        <h3 className="mt-4 flex items-center gap-2 text-base leading-tight font-medium tracking-[-0.01em]">
+        <h3 className="mt-3 flex items-center gap-2 text-base leading-tight font-medium tracking-[-0.01em]">
           <Cuadro color={r.color} tamano={24} entidad><Ico size={13} weight="fill" /></Cuadro>
           <Link href={r.href} className="min-w-0 flex-1 truncate after:absolute after:inset-0 after:rounded-2xl max-md:-my-[13px] max-md:py-[13px]">{r.titulo}</Link>
           <ArrowUpRight size={16} className="text-muted-foreground transition-[transform,color] duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground" aria-hidden />
         </h3>
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-3 flex items-center gap-3">
           <Bloques className="flex-1" colores={r.segs.map((s) => (s ? COLOR_SEG[s] : null))} />
           <b className="text-[13px] font-medium whitespace-nowrap">{r.resumen}</b>
         </div>
         <div className="mt-2 truncate text-xs text-muted-foreground">{r.meta}</div>
       </div>
       {r.serie && (
-        <div className="border-y border-divisor bg-bandeja px-5 pt-3 pb-2">
-          <Linea valores={r.serie.valores} color={r.color} punto={r.serie.valores.length - 1} />
+        <div className="border-y border-divisor bg-bandeja px-4 pt-2 pb-1.5">
+          <Linea valores={r.serie.valores} color={r.color} alto={40} punto={r.serie.valores.length - 1} />
           <div className="mt-1 flex justify-between text-xs text-muted-foreground"><span>{r.serie.rotulo}</span><span>{r.serie.ultimo}</span></div>
         </div>
       )}
-      <div className={cn('relative z-[1] px-5 py-3', !r.serie && 'border-t border-divisor')}>
+      <div className={cn('relative z-[1] px-4 py-2', !r.serie && 'border-t border-divisor')}>
         <div className="mb-1 flex justify-between text-xs font-medium text-muted-foreground"><span>{r.pasosTitulo}</span><span>{r.pasosCuenta}</span></div>
-        {r.pasos.length === 0 && <p className="flex h-9 items-center gap-2 text-[13px] text-texto-2"><CheckCircle size={15} className="text-muted-foreground" aria-hidden />Nada para resolver</p>}
+        {r.pasos.length === 0 && <p className="flex h-8 items-center gap-2 text-[13px] text-texto-2"><CheckCircle size={15} className="text-muted-foreground" aria-hidden />Nada para resolver</p>}
         {r.pasos.map((p, i) => {
           const PI = ICONO_PASO[p.icono]
           return (
-            <Link key={i} href={p.href} className="flex h-11 items-center gap-2 border-b border-divisor text-[13px] last:border-b-0 md:h-9">
+            <Link key={i} href={p.href} className="flex h-11 items-center gap-2 border-b border-divisor text-[13px] last:border-b-0 md:h-8">
               <PI size={15} className="shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1 truncate">{p.texto}</span>
               <span className={cn('text-xs whitespace-nowrap text-muted-foreground', p.tono === 'v' && 'font-medium text-danger', p.tono === 'am' && 'font-medium text-warning', p.tono === 'ok' && 'font-medium text-success')}>{p.detalle}</span>
@@ -167,21 +167,21 @@ export default function InicioVista({ d }: { d: DatosInicio }) {
   const hrefVerTodas = tab === 'todos' ? d.hrefs.vencimientos : tab === 'vencidos' ? d.hrefs.vencidos : d.hrefs.proximos
   const conFecha = Math.max(1, d.alDia.conFecha)
   const pctAlDia = Math.round((d.alDia.total / conFecha) * 1000) / 10
-  const glob = d.proximos.curva.length > 1 ? posicionPunto(d.proximos.curva, 1, 84, 0) : null
-  const topEmpresas = [...d.empleados.porEmpresa].sort((a, b) => b.n - a.n).slice(0, 3)
+  const glob = d.proximos.curva.length > 1 ? posicionPunto(d.proximos.curva, 1, 52, 0) : null
+  const topEmpresas = [...d.empleados.porEmpresa].sort((a, b) => b.n - a.n).slice(0, 2)
   const sinEmpresas = d.empresas.length === 0
 
   return (
-    <div className="flex flex-col gap-9 px-4 pt-2 pb-20 text-sm md:gap-10 md:px-7 md:pt-6 md:pb-10">
+    <div className="flex flex-col gap-5 px-4 pt-2 pb-20 text-sm md:gap-6 md:px-7 md:pt-5 md:pb-8">
       {/* ── Cabecera ── */}
-      <div className="flex flex-col items-start gap-4 md:flex-row md:items-end">
+      <div className="flex flex-col items-start gap-3 md:flex-row md:items-end">
         <div className="min-w-0">
           <span className="text-[13px] font-medium text-muted-foreground">{d.fecha}</span>
-          <h1 className="mt-1 text-[32px] leading-[1.15] font-medium tracking-[-0.035em] md:text-[40px]">
+          <h1 className="mt-0.5 text-2xl leading-tight font-medium tracking-[-0.03em] md:text-[32px]">
             {d.saludo}, <b className="font-semibold">{d.nombre}</b>
           </h1>
           {!sinEmpresas && (
-            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-texto-2">
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-texto-2">
               {d.vencidos.total > 0 && (
                 <>
                   <Link href={d.hrefs.vencidos} className="inline-flex items-center gap-1 rounded-md text-danger hover:underline hover:underline-offset-[3px] max-md:min-h-11"><b className="font-medium">{d.vencidos.total}</b> {d.vencidos.total === 1 ? 'vencido' : 'vencidos'}</Link>
@@ -212,27 +212,27 @@ export default function InicioVista({ d }: { d: DatosInicio }) {
           {/* ── KPIs: un protagonista y tres bandejas ── */}
           <section aria-labelledby="tResumen">
             <h2 id="tResumen" className="sr-only">Resumen de la documentación</h2>
-            <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pt-0.5 pb-3 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-2 md:gap-[14px] md:overflow-visible md:p-0 xl:grid-cols-[1.25fr_repeat(3,minmax(0,1fr))] [&>*]:min-w-0 max-md:[&>*]:shrink-0 max-md:[&>*]:basis-[84%] max-md:[&>*]:snap-center">
+            {/* Celular: la protagonista a lo ancho y las bandejas de a dos (antes de a una: la lista quedaba dos pantallas más abajo). */}
+            <div className="grid grid-cols-2 gap-3 md:gap-[14px] xl:grid-cols-[1.25fr_repeat(3,minmax(0,1fr))] [&>*]:min-w-0">
               <Link
                 href={d.hrefs.proximos}
-                className="relative flex min-h-[228px] flex-col overflow-hidden rounded-2xl p-6 text-left text-white shadow-heroe"
+                className="relative col-span-2 flex min-h-[176px] sm:col-span-1 flex-col overflow-hidden rounded-2xl px-5 pt-4 pb-12 text-left text-white shadow-heroe"
                 style={{ background: 'radial-gradient(120% 140% at 100% 0%, #6d63ff 0%, transparent 55%), linear-gradient(150deg, #3730a3, #4f46e5 60%, #4338ca)' }}
               >
                 <span aria-hidden className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgb(255_255_255/.10)_1px,transparent_1.2px)] [background-size:14px_14px] [mask:linear-gradient(200deg,#000,transparent_60%)]" />
-                <div className="relative z-[1] flex items-center justify-between">
-                  <span className="grid size-10 place-items-center rounded-xl border border-white/25 bg-white/15 backdrop-blur-[6px]"><ClockCountdown size={20} aria-hidden /></span>
-                  <span className="flex h-6 items-center gap-1 rounded-full border border-white/25 bg-white/15 px-2 text-xs font-medium backdrop-blur-[6px]"><CalendarBlank size={13} aria-hidden />{d.proximos.semana} esta semana</span>
+                <span className="relative z-[1] flex items-center gap-1.5 text-[13px] font-medium text-white/90"><ClockCountdown size={16} className="shrink-0" aria-hidden />Por vencer en 30 días</span>
+                <div className="relative mt-1 flex items-center justify-between gap-2">
+                  <span className="text-[40px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={d.proximos.total} /></span>
+                  <span className="flex h-6 shrink-0 items-center gap-1 rounded-full border border-white/25 bg-white/15 px-2 text-xs font-medium backdrop-blur-[6px]"><CalendarBlank size={13} aria-hidden />{d.proximos.semana} esta semana</span>
                 </div>
-                <span className="relative mt-4 block text-[13px] font-medium text-white/90">Por vencer en 30 días</span>
-                <div className="relative mt-1 text-[40px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={d.proximos.total} /></div>
-                <div className="relative mt-1 text-xs text-white/90">
+                <div className="relative mt-1 line-clamp-2 text-xs text-white/90">
                   {d.proximos.porTipo.length ? d.proximos.porTipo.map((t) => `${t.n} ${NOM_TIPO[t.tipo][t.n === 1 ? 0 : 1]}`).join(' · ') : 'Nada vence en los próximos 30 días'}
                 </div>
                 {d.proximos.curva.length > 1 && (
                   <div className="absolute inset-x-0 bottom-0">
-                    <Linea valores={d.proximos.curva} color="#fff" rellenoBlanco alto={84} pad={0} punto={1} />
+                    <Linea valores={d.proximos.curva} color="#fff" rellenoBlanco alto={52} pad={0} punto={1} />
                     {glob && (
-                      <span className="absolute z-[2] -translate-x-1/2 -translate-y-[calc(100%+12px)] rounded-lg bg-white px-2 py-0.5 text-xs font-medium whitespace-nowrap text-[#312e81] shadow-[0_6px_14px_-6px_rgb(23_22_31/.4)]" style={{ left: `clamp(90px, ${glob.left}%, calc(100% - 90px))`, top: glob.top }}>
+                      <span className="absolute right-3 bottom-2 z-[2] rounded-lg bg-white px-2 py-0.5 text-xs font-medium whitespace-nowrap text-[#312e81] shadow-[0_6px_14px_-6px_rgb(23_22_31/.4)]">
                         Semana que viene · {d.proximos.curva[1]}
                       </span>
                     )}
@@ -248,8 +248,8 @@ export default function InicioVista({ d }: { d: DatosInicio }) {
                   : <Pie href={d.hrefs.vencimientos} icono={<CheckCircle size={14} aria-hidden />} texto="Nada vencido" accion="Ver" />}
               >
                 <div className="text-[32px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={d.vencidos.total} /></div>
-                <div className="mt-1 text-xs text-muted-foreground">{d.vencidos.total ? `El más antiguo, hace ${plural(d.vencidos.masAntiguo, 'día', 'días')}` : 'Nada vencido'}</div>
-                <Reparto partes={[{ n: d.vencidos.hasta7, color: 'var(--ambar-g)', t: 'Hasta 7 días' }, { n: d.vencidos.mas7, color: 'var(--rojo-g)', t: 'Más de 7 días' }]} />
+                <div className="mt-0.5 text-xs text-muted-foreground">{d.vencidos.total ? `El más antiguo, hace ${plural(d.vencidos.masAntiguo, 'día', 'días')}` : 'Nada vencido'}</div>
+                <Reparto className="mt-2" partes={[{ n: d.vencidos.hasta7, color: 'var(--ambar-g)', t: 'Hasta 7 días' }, { n: d.vencidos.mas7, color: 'var(--rojo-g)', t: 'Más de 7 días' }]} />
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   <Ley color="var(--ambar-g)">Hasta 7 días <b className="font-medium text-foreground">{d.vencidos.hasta7}</b></Ley>
                   <Ley color="var(--rojo-g)">Más de 7 <b className="font-medium text-foreground">{d.vencidos.mas7}</b></Ley>
@@ -264,28 +264,28 @@ export default function InicioVista({ d }: { d: DatosInicio }) {
                 <div className="text-[32px] leading-[1.05] font-semibold tracking-[-0.035em]">
                   <Contar valor={d.alDia.total} /><small className="ml-1 text-xl font-normal tracking-[-0.01em] text-muted-foreground">de {d.alDia.conFecha.toLocaleString('es-AR')}</small>
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">{pctAlDia.toLocaleString('es-AR')} % de la documentación con fecha</div>
-                <Reparto partes={[{ n: d.alDia.total, color: 'var(--verde-g)', t: 'Al día' }, { n: d.proximos.total, color: 'var(--ambar-g)', t: 'Por vencer' }, { n: d.vencidos.total, color: 'var(--rojo-g)', t: 'Vencidos' }]} />
+                <div className="mt-0.5 text-xs text-muted-foreground">{pctAlDia.toLocaleString('es-AR')} % de la documentación</div>
+                <Reparto className="mt-2" partes={[{ n: d.alDia.total, color: 'var(--verde-g)', t: 'Al día' }, { n: d.proximos.total, color: 'var(--ambar-g)', t: 'Por vencer' }, { n: d.vencidos.total, color: 'var(--rojo-g)', t: 'Vencidos' }]} />
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <Ley color="var(--verde-g)">Al día</Ley>
                   <Ley color="var(--ambar-g)">Por vencer <b className="font-medium text-foreground">{d.proximos.total}</b></Ley>
                   <Ley color="var(--rojo-g)">Vencidos <b className="font-medium text-foreground">{d.vencidos.total}</b></Ley>
                 </div>
               </Bandeja>
 
               <Bandeja
+                className="col-span-2 xl:col-span-1"
                 icono={<IdentificationBadge size={16} className="text-muted-foreground" aria-hidden />}
                 rotulo="Empleados activos"
                 pie={<Pie href={d.hrefs.empleados} icono={<UsersFour size={14} aria-hidden />} texto="Por empresa" accion="Ver empleados" />}
               >
                 <div className="text-[32px] leading-[1.05] font-semibold tracking-[-0.035em]"><Contar valor={d.empleados.total} /></div>
-                <div className="mt-1 text-xs text-muted-foreground">
+                <div className="mt-0.5 text-xs text-muted-foreground">
                   {plural(d.empleados.porEmpresa.length, 'empresa', 'empresas')}{d.empleados.bajas ? ` · ${plural(d.empleados.bajas, 'dado de baja', 'dados de baja')}` : ''}
                 </div>
-                <Reparto partes={d.empleados.porEmpresa.map((e) => ({ n: e.n, color: colorEmpresa(e.slug), t: e.nombre }))} />
+                <Reparto className="mt-2" partes={d.empleados.porEmpresa.map((e) => ({ n: e.n, color: colorEmpresa(e.slug), t: e.nombre }))} />
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                   {topEmpresas.map((e) => <Ley key={e.slug} color={colorEmpresa(e.slug)}>{nombreCorto(e.nombre).replace(' S.R.L.', '')} <b className="font-medium text-foreground">{e.n}</b></Ley>)}
-                  {d.empleados.porEmpresa.length > 3 && <span>+{d.empleados.porEmpresa.length - 3}</span>}
+                  {d.empleados.porEmpresa.length > 2 && <span>+{d.empleados.porEmpresa.length - 2}</span>}
                 </div>
               </Bandeja>
             </div>
@@ -294,13 +294,13 @@ export default function InicioVista({ d }: { d: DatosInicio }) {
           {/* ── Cuerpo: vencimientos a la izquierda, empresas a la derecha ── */}
           <div className="grid items-start gap-[14px] xl:grid-cols-[minmax(0,1fr)_360px]">
             <section className="min-w-0 rounded-2xl border border-border bg-card" aria-labelledby="tVenc">
-              <div className="flex flex-wrap items-center gap-3 px-4 pt-4 pb-3 md:flex-nowrap md:px-5 md:pt-5">
-                <h3 id="tVenc" className="text-xl leading-tight font-medium tracking-[-0.025em]">Vencimientos</h3>
+              <div className="flex flex-wrap items-center gap-3 px-4 py-3 md:flex-nowrap md:px-5">
+                <h3 id="tVenc" className="text-base leading-tight font-medium tracking-[-0.02em]">Vencimientos</h3>
                 <div className="w-full md:ml-auto md:w-auto">
-                  <div role="group" aria-label="Qué vencimientos ver" className="flex max-w-full gap-0.5 overflow-x-auto rounded-xl bg-muted p-[3px] [scrollbar-width:none] md:inline-flex">
+                  <div role="group" aria-label="Qué vencimientos ver" className="grid grid-cols-3 gap-0.5 rounded-xl bg-muted p-[3px] md:inline-flex">
                     {([['todos', 'Todos', d.alertas.todos.length, null], ['vencidos', 'Vencidos', d.alertas.vencidos.length, 'var(--danger)'], ['proximos', 'Por vencer', d.alertas.proximos.length, 'var(--warning)']] as const).map(([k, t, n, c]) => (
-                      <button key={k} type="button" aria-pressed={tab === k} onClick={() => cambiarTab(k)} className={cn('inline-flex h-11 flex-1 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-[9px] px-3 text-[13px] font-medium whitespace-nowrap transition-colors md:h-7 md:flex-none', tab === k ? 'bg-card text-foreground shadow-[0_1px_2px_rgb(23_22_31/.1),0_0_0_1px_var(--border)] dark:bg-foreground dark:text-card dark:shadow-none' : 'text-texto-2 hover:text-foreground')}>
-                        {c && <span aria-hidden className="size-1.5 rounded-full" style={{ background: c }} />}
+                      <button key={k} type="button" aria-pressed={tab === k} onClick={() => cambiarTab(k)} className={cn('inline-flex h-11 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-[9px] px-1 text-[13px] font-medium whitespace-nowrap transition-colors md:h-7 md:px-3', tab === k ? 'bg-card text-foreground shadow-[0_1px_2px_rgb(23_22_31/.1),0_0_0_1px_var(--border)] dark:bg-foreground dark:text-card dark:shadow-none' : 'text-texto-2 hover:text-foreground')}>
+                        {c && <span aria-hidden className="size-1.5 rounded-full max-sm:hidden" style={{ background: c }} />}
                         {t} <span className={cn('font-medium', tab === k ? 'text-muted-foreground dark:text-card/70' : 'text-muted-foreground')}>{n}</span>
                       </button>
                     ))}
@@ -314,7 +314,7 @@ export default function InicioVista({ d }: { d: DatosInicio }) {
               ) : (
                 <ul>
                   {visibles.map((a, i) => (
-                    <li key={a.id} style={{ '--i': i } as React.CSSProperties} className="entra relative grid min-h-16 grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t border-divisor px-4 py-3 transition-colors [grid-template-areas:'ic_q_acc''ic_est_acc'] hover:bg-hover md:grid-cols-[36px_minmax(0,1fr)_auto_76px_96px] md:px-5 md:py-2 md:[grid-template-areas:'ic_q_est_f_acc']">
+                    <li key={a.id} style={{ '--i': i } as React.CSSProperties} className="entra relative grid min-h-16 grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t border-divisor px-4 py-3 transition-colors [grid-template-areas:'ic_q_acc''ic_est_acc'] hover:bg-hover md:min-h-[52px] md:grid-cols-[36px_minmax(0,1fr)_auto_76px_96px] md:px-5 md:py-1.5 md:[grid-template-areas:'ic_q_est_f_acc']">
                       <span className="self-start [grid-area:ic] md:self-center"><TileTitular a={a} /></span>
                       <div className="min-w-0 [grid-area:q]">
                         <Link href={a.href} className="block truncate font-medium after:absolute after:inset-0 max-md:-my-[13px] max-md:py-[13px]">{a.titular}</Link>
@@ -334,7 +334,7 @@ export default function InicioVista({ d }: { d: DatosInicio }) {
                 </ul>
               )}
               {lista.length > 0 && (
-                <div className="flex min-h-[52px] items-center gap-2 border-t border-divisor px-4 py-3 text-[13px] text-muted-foreground md:px-5">
+                <div className="flex min-h-11 items-center gap-2 border-t border-divisor px-4 py-2 text-[13px] text-muted-foreground md:px-5">
                   <span><b className="font-medium text-foreground">{visibles.length}</b> de {plural(lista.length, 'alerta', 'alertas')}</span>
                   <Link href={hrefVerTodas} className="ml-auto inline-flex h-11 items-center gap-1 rounded-lg border border-border bg-card px-3 text-[13px] font-medium text-foreground shadow-min transition-colors hover:bg-hover md:h-7">
                     Ver {lista.length > visibles.length ? 'todas' : 'en Vencimientos'}<ArrowUpRight size={14} className="text-texto-2" aria-hidden />
@@ -344,15 +344,15 @@ export default function InicioVista({ d }: { d: DatosInicio }) {
             </section>
 
             <section className="min-w-0 rounded-2xl border border-border bg-card" aria-labelledby="tEmp">
-              <div className="flex items-center gap-3 px-4 pt-4 pb-3 md:px-5 md:pt-5">
-                <h3 id="tEmp" className="text-xl leading-tight font-medium tracking-[-0.025em]">Empresas <span className="font-normal text-muted-foreground">{d.empresas.length}</span></h3>
+              <div className="flex items-center gap-3 px-4 py-3 md:px-5">
+                <h3 id="tEmp" className="text-base leading-tight font-medium tracking-[-0.02em]">Empresas <span className="font-normal text-muted-foreground">{d.empresas.length}</span></h3>
                 <span className="ml-auto inline-flex h-6 items-center gap-1 rounded-lg border border-border px-2 text-xs font-medium whitespace-nowrap text-texto-2"><FolderSimple size={14} aria-hidden />Mensual de {d.mes}</span>
               </div>
               <div aria-hidden className="grid grid-cols-[28px_minmax(0,1fr)_60px_64px] gap-x-2 px-4 pb-2 text-xs font-medium whitespace-nowrap text-muted-foreground md:px-5">
                 <span /><span>Empleados y mensual</span><span className="text-right">Vencidos</span><span className="text-right">Por vencer</span>
               </div>
               {d.empresas.map((e) => (
-                <div key={e.id} className="relative grid min-h-[60px] grid-cols-[28px_minmax(0,1fr)_60px_64px] items-center gap-x-2 border-t border-divisor px-4 py-1.5 hover:bg-hover md:px-5">
+                <div key={e.id} className="relative grid min-h-[52px] grid-cols-[28px_minmax(0,1fr)_60px_64px] items-center gap-x-2 border-t border-divisor px-4 py-1.5 hover:bg-hover md:px-5">
                   <IconoEmpresa slug={e.slug} nombre={e.nombre} tamano={28} />
                   <div className="min-w-0">
                     <Link href={`/empresa/${e.slug}`} className="block truncate font-medium after:absolute after:inset-0 max-md:-my-[13px] max-md:py-[13px]">{e.nombre}</Link>
@@ -374,9 +374,9 @@ export default function InicioVista({ d }: { d: DatosInicio }) {
           {/* ── Recursos ── */}
           {(d.recursos.length > 0 || d.fallas.length > 0) && (
             <section aria-labelledby="tRec">
-              <div className="mb-3 flex min-h-7 flex-wrap items-center gap-2">
-                <h2 id="tRec" className="text-xl leading-tight font-medium tracking-[-0.025em]">Recursos</h2>
-                <span className="text-xl text-muted-foreground">{d.recursos.length}</span>
+              <div className="mb-2 flex min-h-7 flex-wrap items-center gap-2">
+                <h2 id="tRec" className="text-base leading-tight font-medium tracking-[-0.02em]">Recursos</h2>
+                <span className="text-base text-muted-foreground">{d.recursos.length}</span>
                 {d.fallas.length > 0 && <span className="ml-auto inline-flex items-center gap-1 text-[13px] text-danger"><WarningCircle size={14} aria-hidden />No se pudo leer: {d.fallas.join(', ')}</span>}
               </div>
               <div className="grid gap-3 md:grid-cols-2 md:gap-[14px] xl:[grid-template-columns:repeat(var(--n),minmax(0,1fr))]" style={{ '--n': Math.max(d.recursos.length, 2) } as React.CSSProperties}>
@@ -388,15 +388,15 @@ export default function InicioVista({ d }: { d: DatosInicio }) {
           {/* ── Otros sistemas ── */}
           {d.sistemas.length > 0 && (
             <section aria-labelledby="tSis">
-              <div className="mb-3 flex min-h-7 items-center gap-2">
-                <h2 id="tSis" className="text-xl leading-tight font-medium tracking-[-0.025em]">Otros sistemas</h2>
-                <span className="text-xl text-muted-foreground">{d.sistemas.length}</span>
+              <div className="mb-2 flex min-h-7 items-center gap-2">
+                <h2 id="tSis" className="text-base leading-tight font-medium tracking-[-0.02em]">Otros sistemas</h2>
+                <span className="text-base text-muted-foreground">{d.sistemas.length}</span>
               </div>
-              <div className="grid gap-[14px] md:[grid-template-columns:repeat(var(--n),minmax(0,1fr))]" style={{ '--n': Math.max(d.sistemas.length, 2) } as React.CSSProperties}>
+              <div className="grid grid-cols-1 items-start gap-3 md:gap-[14px] md:[grid-template-columns:repeat(var(--n),minmax(0,1fr))]" style={{ '--n': Math.max(d.sistemas.length, 2) } as React.CSSProperties}>
                 {d.sistemas.map((m) => (
-                  <div key={m.key} className="min-w-0 rounded-2xl border border-border bg-card pb-2">
-                    <div className="flex items-center gap-3 px-4 pt-4 pb-2 md:px-5 md:pt-5">
-                      <span className="grid size-10 place-items-center overflow-hidden rounded-xl border border-border bg-white">
+                  <div key={m.key} className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card">
+                    <div className="flex items-center gap-3 px-4 py-2.5">
+                      <span className="grid size-8 place-items-center overflow-hidden rounded-[10px] border border-border bg-white">
                         {/* eslint-disable-next-line @next/next/no-img-element -- ícono chico */}
                         <img src={m.icono} alt="" width={32} height={32} className="size-[82%] object-contain" />
                       </span>
@@ -411,7 +411,7 @@ export default function InicioVista({ d }: { d: DatosInicio }) {
                           {l.externo ? <ArrowSquareOut size={14} className="text-muted-foreground" aria-hidden /> : <ArrowUpRight size={14} className="text-muted-foreground" aria-hidden />}
                         </>
                       )
-                      const cls = 'flex min-h-12 items-center gap-3 border-t border-divisor px-4 text-[13px] font-medium hover:bg-hover md:min-h-11 md:px-5'
+                      const cls = 'flex min-h-12 items-center gap-3 border-t border-divisor px-4 text-[13px] font-medium hover:bg-hover md:min-h-9'
                       return l.externo
                         ? <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" className={cls}>{cuerpo}</a>
                         : <Link key={l.label} href={l.href} className={cls}>{cuerpo}</Link>

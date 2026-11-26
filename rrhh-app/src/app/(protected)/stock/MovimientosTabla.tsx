@@ -140,13 +140,14 @@ export function MovimientosTabla({
       </p>
 
       {visibles.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-border px-5 py-6 text-center text-sm text-muted-foreground">
           {movimientos.length === 0 ? 'Todavía no hay movimientos.' : 'Ningún movimiento coincide con los filtros.'}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
-          <table className="w-full min-w-[820px] table-fixed text-sm">
-            <thead>
+        <div className="rounded-2xl border border-border bg-card shadow-tarjeta md:overflow-x-auto">
+          {/* En el celular cada movimiento es una tarjeta de dos o tres renglones: nada se desliza de costado. */}
+          <table className="w-full text-sm max-md:block md:min-w-[820px] md:table-fixed">
+            <thead className="max-md:hidden">
               <tr className="border-b border-border">
                 <th className={clsx(thCls, 'w-[72px] pl-4 text-left')}>Fecha</th>
                 <th className={clsx(thCls, 'w-[84px] text-left')}>Tipo</th>
@@ -158,7 +159,7 @@ export function MovimientosTabla({
                 {canEdit && <th className={clsx(thCls, 'w-[44px]')} />}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-border max-md:block">
               {mostrados.map((m, i) => {
                 const it = itemsPorId.get(m.item_id)
                 const delta = deltaDe(m)
@@ -166,29 +167,29 @@ export function MovimientosTabla({
                 // Una entrega de un kit son muchas filas del mismo día: la fecha va solo en la primera.
                 const mismaFecha = i > 0 && mostrados[i - 1].fecha === m.fecha
                 return (
-                  <tr key={m.id} className="hover:bg-accent/50">
-                    <td className="py-2 pl-4 pr-3 text-xs tabular-nums text-muted-foreground">{mismaFecha ? '' : fmtFechaAR(m.fecha)}</td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">{TIPO_MOVIMIENTO_LABEL[m.tipo as TipoMovimiento] ?? m.tipo}</td>
-                    <td className="px-3 py-2">
+                  <tr key={m.id} className="hover:bg-accent/50 max-md:grid max-md:grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] max-md:items-center max-md:gap-x-2 max-md:px-4 max-md:py-2 [&>td]:max-md:p-0">
+                    <td className="py-2 pl-4 pr-3 text-xs tabular-nums text-muted-foreground max-md:col-start-1 max-md:row-start-2"><span className={mismaFecha ? 'md:hidden' : undefined}>{fmtFechaAR(m.fecha)}</span></td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground max-md:col-start-2 max-md:row-start-2">{TIPO_MOVIMIENTO_LABEL[m.tipo as TipoMovimiento] ?? m.tipo}</td>
+                    <td className="px-3 py-2 max-md:col-span-3 max-md:col-start-1 max-md:row-start-1 max-md:min-w-0">
                       <span className="block truncate" title={it?.nombre}>
                         <span className={clsx('font-medium', it?.activo === false && 'text-muted-foreground')}>{it?.nombre ?? 'Ítem eliminado'}</span>
-                        {it?.activo === false && <span className="ml-2 text-[10px] text-muted-foreground">archivado</span>}
+                        {it?.activo === false && <span className="ml-2 text-xs text-muted-foreground">archivado</span>}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
+                    <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums max-md:col-start-4 max-md:row-start-1">
                       <span className="font-medium">{delta > 0 ? '+' : ''}{fmtCantidad(delta)}</span>
-                      {it?.unidad && <span className="ml-1 text-[10px] text-muted-foreground">{it.unidad}</span>}
+                      {it?.unidad && <span className="ml-1 text-xs text-muted-foreground">{it.unidad}</span>}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 max-md:col-span-3 max-md:col-start-3 max-md:row-start-2 max-md:min-w-0 max-md:text-xs">
                       <span className="block truncate" title={[c.principal, c.detalle].filter(Boolean).join(' · ')}>
                         {c.principal || <span className="text-muted-foreground">—</span>}
                         {c.detalle && <span className="ml-1.5 text-xs text-muted-foreground">{c.detalle}</span>}
                       </span>
                     </td>
-                    <td className="truncate px-3 py-2 text-xs text-muted-foreground" title={m.comprobante ?? undefined}>{m.comprobante ?? ''}</td>
-                    <td className="truncate px-3 py-2 text-xs text-muted-foreground">{(m.created_by && autores[m.created_by]) || ''}</td>
+                    <td className="truncate px-3 py-2 text-xs text-muted-foreground max-md:col-span-3 max-md:col-start-1 max-md:row-start-3 max-md:empty:hidden" title={m.comprobante ?? undefined}>{m.comprobante ?? ''}</td>
+                    <td className="truncate px-3 py-2 text-xs text-muted-foreground max-md:col-span-2 max-md:col-start-4 max-md:row-start-3 max-md:text-right max-md:empty:hidden">{(m.created_by && autores[m.created_by]) || ''}</td>
                     {canEdit && (
-                      <td className="px-2 py-2 text-right">
+                      <td className="px-2 py-2 text-right max-md:col-start-5 max-md:row-start-1">
                         <button
                           type="button"
                           onClick={() => onEliminar(m)}

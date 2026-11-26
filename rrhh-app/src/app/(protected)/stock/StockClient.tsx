@@ -339,11 +339,11 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
   const filtrando = !!busqueda.trim() || vista !== 'todo'
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       {/* ── Header ── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Stock</h1>
+          <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Stock</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {activos.length} {activos.length === 1 ? 'ítem' : 'ítems'} · {empresa.nombre}
           </p>
@@ -368,28 +368,28 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
       </div>
 
       {/* ── KPIs ── */}
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-        <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4 sm:divide-x sm:divide-border">
+      <section className="rounded-2xl border border-border bg-card px-5 py-3 shadow-tarjeta">
+        <div className="grid grid-cols-2 gap-y-3 sm:grid-cols-4 sm:divide-x sm:divide-border">
           <div className="sm:pr-6">
-            <p className="text-3xl font-semibold tabular-nums">{activos.length}</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">Ítems activos</p>
+            <p className="text-2xl leading-tight font-semibold tabular-nums">{activos.length}</p>
+            <p className="text-sm text-muted-foreground">Ítems activos</p>
             <p className="text-xs text-muted-foreground">{items.length - activos.length} archivados</p>
           </div>
           <button onClick={() => { cambiarPestana('inventario'); setVista('sin_stock') }} className="text-left sm:px-6">
-            <p className={clsx('text-3xl font-semibold tabular-nums', kpis.sinStock > 0 && 'text-danger')}>{kpis.sinStock}</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">Sin stock</p>
+            <p className={clsx('text-2xl leading-tight font-semibold tabular-nums', kpis.sinStock > 0 && 'text-danger')}>{kpis.sinStock}</p>
+            <p className="text-sm text-muted-foreground">Sin stock</p>
             <p className="text-xs text-muted-foreground">
               {kpis.enCeroSinMinimo > 0 ? `+${kpis.enCeroSinMinimo} en cero sin mínimo` : 'hay que comprar'}
             </p>
           </button>
           <button onClick={() => { cambiarPestana('inventario'); setVista('bajo_minimo') }} className="text-left sm:px-6">
-            <p className={clsx('text-3xl font-semibold tabular-nums', kpis.bajoMinimo > 0 && 'text-warning')}>{kpis.bajoMinimo}</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">Bajo mínimo</p>
+            <p className={clsx('text-2xl leading-tight font-semibold tabular-nums', kpis.bajoMinimo > 0 && 'text-warning')}>{kpis.bajoMinimo}</p>
+            <p className="text-sm text-muted-foreground">Bajo mínimo</p>
             <p className="text-xs text-muted-foreground">conviene reponer</p>
           </button>
           <button onClick={() => verMovimientos('consumo')} className="text-left sm:pl-6">
-            <p className="text-3xl font-semibold tabular-nums">{entregasMes}</p>
-            <p className="mt-0.5 text-sm text-muted-foreground">Entregas este mes</p>
+            <p className="text-2xl leading-tight font-semibold tabular-nums">{entregasMes}</p>
+            <p className="text-sm text-muted-foreground">Entregas este mes</p>
             <p className="text-xs text-muted-foreground">
               {compras.compras} {compras.compras === 1 ? 'ingreso' : 'ingresos'}
               {compras.total > 0 && ` · ${fmtMoneda(compras.total)}`}
@@ -449,10 +449,10 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
         <>
           {/* ── Hay que comprar: lo accionable, antes del inventario ── */}
           {vista === 'todo' && !busqueda && porComprar.length > 0 && (
-            <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-              <div className="flex flex-wrap items-end justify-between gap-3">
+            <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-tarjeta">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 md:px-5">
                 <div>
-                  <h2 className="text-lg font-semibold tracking-tight">Hay que comprar</h2>
+                  <h2 className="text-base font-semibold tracking-tight">Hay que comprar <span className="font-normal text-muted-foreground">{porComprar.length}</span></h2>
                 </div>
                 {porComprar.length > 6 && (
                   <button onClick={() => setVista('reponer')} className="text-xs font-medium text-primary hover:underline">
@@ -460,13 +460,13 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
                   </button>
                 )}
               </div>
-              <div className="mt-4 space-y-2">
+              <div className="grid grid-cols-1 xl:grid-cols-2 xl:gap-x-px xl:bg-divisor">
                 {porComprar.slice(0, 6).map((it) => {
                   const s = stock.get(it.id)
                   const estado = estadoDe(it)
                   const ultimo = ultimoPorItem.get(it.id)
                   return (
-                    <div key={it.id} className="flex items-center gap-4 rounded-xl border border-border px-4 py-2.5">
+                    <div key={it.id} className="flex items-center gap-3 border-t border-divisor bg-card px-4 py-2 md:px-5">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{it.nombre}</p>
                         <p className="truncate text-xs text-muted-foreground">
@@ -477,8 +477,8 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
                           ].filter(Boolean).join(' · ')}
                         </p>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <p className={clsx('text-sm font-semibold tabular-nums', estado === 'vencido' ? 'text-danger' : 'text-warning')}>
+                      <div className="flex shrink-0 flex-col items-end gap-x-2 sm:flex-row sm:items-center">
+                        <p className={clsx('text-sm font-semibold whitespace-nowrap tabular-nums', estado === 'vencido' ? 'text-danger' : 'text-warning')}>
                           {fmtCantidad(s?.stock ?? 0, it.unidad)}
                         </p>
                         <EstadoPill estado={estado} label={ESTADO_STOCK_LABEL[estado]} />
@@ -559,7 +559,7 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
 
           {/* ── Inventario: ropa por talle (matriz) + el resto (tabla plana) ── */}
           {!hayVisibles ? (
-            <div className="rounded-2xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-dashed border-border px-5 py-6 text-center text-sm text-muted-foreground">
               {items.length === 0 ? (
                 <>
                   <Boxes className="mx-auto mb-3 size-8 text-muted-foreground/50" strokeWidth={1.5} />
@@ -569,7 +569,7 @@ export default function StockClient({ empresa, items: initItems, movimientos: in
               ) : vista === 'archivados' && itemsDeVista.length === 0 ? 'No hay ítems archivados.' : 'Ningún ítem coincide con los filtros.'}
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {matrices.length > 0 && (
                 <section className="space-y-2">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">

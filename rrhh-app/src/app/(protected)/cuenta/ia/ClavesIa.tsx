@@ -66,7 +66,7 @@ export function ClavesIa({ claves }: { claves: Clave[] }) {
 
   return (
     <>
-      <section className="space-y-3 rounded-2xl border border-border bg-card p-5 shadow-tarjeta sm:p-6">
+      <section className="space-y-3 rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
         <h2 className="text-base font-semibold tracking-tight">Dirección del servidor MCP</h2>
         <div className={caja}>
           <code className="min-w-0 flex-1 truncate font-mono text-sm">{URL_MCP}</code>
@@ -74,7 +74,7 @@ export function ClavesIa({ claves }: { claves: Clave[] }) {
         </div>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-tarjeta sm:p-6">
+      <section className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-tarjeta">
         <h2 className="text-base font-semibold tracking-tight">Claves</h2>
 
         {nueva && (

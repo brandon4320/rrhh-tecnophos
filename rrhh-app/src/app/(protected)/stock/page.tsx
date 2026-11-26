@@ -30,8 +30,8 @@ export default async function StockPage({
 
   if (!empresaSel) {
     return (
-      <div className="mx-auto max-w-6xl px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
-        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Stock</h1>
+      <div className="px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
+        <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Stock</h1>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {lista.map((e) => (
             <Link
@@ -79,8 +79,8 @@ export default async function StockPage({
   const errorCarga = itemsRes.error ?? movsRes.error
   if (errorCarga) {
     return (
-      <div className="mx-auto max-w-6xl px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
-        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Stock</h1>
+      <div className="px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
+        <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Stock</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">{empresaSel.nombre}</p>
         <div className="mt-6 rounded-2xl border border-danger/30 bg-danger-subtle px-5 py-4 text-sm text-danger">
           {mensajeError(errorCarga, 'cargar el stock')}

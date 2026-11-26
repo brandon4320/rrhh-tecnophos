@@ -80,7 +80,7 @@ export default async function LoginPage({
       <BandaLogin />
       <div className="flex min-h-[calc(100dvh-min(280px,32dvh))] flex-col px-5 lg:min-h-0 lg:px-10">
         <div className="mx-auto flex w-full max-w-[400px] flex-1 flex-col justify-start pt-8 pb-10 lg:justify-center lg:py-10">
-          <h2 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Entrar</h2>
+          <h2 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Entrar</h2>
 
           <form action={loginAction} className="mt-7 grid gap-4">
             {next && <input type="hidden" name="next" value={next} />}

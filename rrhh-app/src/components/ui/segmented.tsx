@@ -15,13 +15,14 @@ export function Segmented({
   className?: string
 }) {
   return (
-    <div className={cn('inline-flex items-center gap-1 rounded-[12px] bg-muted p-1', className)}>
+    // Si no entran en una línea (celular) bajan a la siguiente: nunca se cortan ni se deslizan de costado.
+    <div className={cn('inline-flex max-w-full flex-wrap items-center gap-1 rounded-[12px] bg-muted p-1', className)}>
       {tabs.map((t) => (
         <Link
           key={t.key}
           href={t.href}
           className={cn(
-            'inline-flex h-8 items-center rounded-[9px] px-3.5 text-sm font-medium transition-colors',
+            'inline-flex h-8 items-center rounded-[9px] px-3.5 text-sm font-medium whitespace-nowrap transition-colors',
             t.key === active
               ? 'bg-card text-foreground shadow-[0_1px_2px_rgba(23,22,31,0.08),0_1px_1px_rgba(23,22,31,0.04)]'
               : 'text-texto-2 hover:text-foreground'

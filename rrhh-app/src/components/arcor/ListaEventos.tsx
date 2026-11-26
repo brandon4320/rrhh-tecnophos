@@ -63,7 +63,7 @@ export function ListaEventos({
 }) {
   if (eventos.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
+      <div className="rounded-xl border border-dashed border-border px-5 py-6 text-center text-sm text-muted-foreground">
         {vacio}
       </div>
     )
@@ -81,13 +81,13 @@ export function ListaEventos({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {[...grupos.entries()].map(([dia, lista]) => (
         <section key={dia}>
           <div className="mb-1 flex items-center gap-3 px-1">
             <p className="text-xs font-medium capitalize text-muted-foreground">{etiquetaDiaAR(dia)}</p>
             <span className="h-px flex-1 bg-border" />
-            <span className="text-[11px] tabular-nums text-muted-foreground">{lista.length}</span>
+            <span className="text-xs tabular-nums text-muted-foreground">{lista.length}</span>
           </div>
           <ul className="divide-y divide-border">{lista.map((e) => <Fila key={e.id} e={e} />)}</ul>
         </section>

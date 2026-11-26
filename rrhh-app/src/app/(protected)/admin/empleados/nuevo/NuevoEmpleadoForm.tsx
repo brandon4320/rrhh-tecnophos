@@ -24,7 +24,7 @@ export default function NuevoEmpleadoForm({ empresas, empresaInicial, sectores, 
   const v = estado.valores
 
   return (
-    <div className={onCancelar ? 'flex min-h-0 flex-1 flex-col' : 'rounded-2xl border border-border bg-card p-6'}>
+    <div className={onCancelar ? 'flex min-h-0 flex-1 flex-col' : 'max-w-3xl rounded-2xl border border-border bg-card p-5'}>
       <div className={onCancelar ? 'flex-1 overflow-y-auto overscroll-contain p-4 md:p-5' : ''}>
       {estado.error && (
         <div role="alert" className="mb-5 rounded-[16px] border border-[color-mix(in_oklch,var(--danger)_22%,transparent)] bg-danger-subtle px-4 py-3 text-[13px] text-danger">

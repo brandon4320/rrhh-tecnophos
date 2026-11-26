@@ -299,12 +299,13 @@ export default async function AdminUsuariosPage({
           : null
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8">
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       <div>
-        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Usuarios</h1>
+        <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Usuarios</h1>
       </div>
 
-      <div className="bg-card rounded-2xl border border-border p-6 shadow-tarjeta">
+      <div className="grid items-start gap-3 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <div className="min-w-0 bg-card rounded-2xl border border-border p-5 shadow-tarjeta">
         {!process.env.SUPABASE_SERVICE_ROLE_KEY && (
           <div className="mb-5 rounded-xl border border-warning/20 bg-warning-subtle px-4 py-3 text-sm text-warning-text">
             Para crear y gestionar usuarios desde esta pantalla necesitás definir <strong>SUPABASE_SERVICE_ROLE_KEY</strong> en las variables de entorno del proyecto.
@@ -323,8 +324,8 @@ export default async function AdminUsuariosPage({
           </div>
         )}
 
-        <form action={crearUsuario} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <form action={crearUsuario} className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1">
             <QuienEs
               empleados={(empleados ?? []).map((e) => {
                 // El join puede venir como objeto o como lista según cómo lo tipe Supabase.
@@ -353,28 +354,27 @@ export default async function AdminUsuariosPage({
 
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex items-center justify-end gap-3">
             <SubmitButton />
           </div>
         </form>
       </div>
 
-      <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-tarjeta">
-        <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-medium text-foreground">Usuarios creados</h2>
+      <div className="min-w-0 bg-card rounded-2xl border border-border overflow-hidden shadow-tarjeta">
+        <div className="px-5 py-3 border-b border-border">
+          <h2 className="text-base font-medium text-foreground">Usuarios creados <span className="font-normal text-muted-foreground">{managedUsers.length}</span></h2>
         </div>
 
         {managedUsers.length === 0 ? (
-          <div className="px-6 py-10 text-sm text-muted-foreground">No hay usuarios para mostrar, o falta configuración de administrador.</div>
+          <div className="px-5 py-6 text-sm text-muted-foreground">No hay usuarios para mostrar, o falta configuración de administrador.</div>
         ) : (
           <div className="divide-y divide-border">
             {managedUsers.map((managedUser) => (
-              <div key={managedUser.id} className="px-6 py-5 space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
+              <div key={managedUser.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-3">
+                <div className="flex min-w-[220px] flex-1 items-start justify-between gap-4">
+                  <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground">{managedUser.username}</p>
-                    <p className="text-sm text-muted-foreground">{managedUser.nombre}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Rol: {managedUser.rol}</p>
+                    <p className="truncate text-xs text-muted-foreground">{managedUser.nombre} · Rol: {managedUser.rol}</p>
                   </div>
                   <div className="text-right text-xs text-muted-foreground">
                     <p>Creado: {managedUser.createdAt ? new Date(managedUser.createdAt).toLocaleDateString('es-AR') : '—'}</p>
@@ -384,14 +384,14 @@ export default async function AdminUsuariosPage({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-end gap-3">
-                  <form action={cambiarPassword} className="flex flex-wrap items-end gap-3">
+                <div className="flex flex-wrap items-end gap-2">
+                  <form action={cambiarPassword} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="user_id" value={managedUser.id} />
                     <div>
-                      <label className="block text-xs font-medium text-muted-foreground mb-1">Nueva contraseña</label>
-                      <input type="text" name="new_password" minLength={6} required className="min-h-10 px-3 py-2 rounded-[10px] border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring" />
+                      <label className="block text-xs font-medium text-muted-foreground mb-1" htmlFor={`pw-${managedUser.id}`}>Nueva contraseña</label>
+                      <input id={`pw-${managedUser.id}`} type="text" name="new_password" minLength={6} required className="min-h-9 w-44 max-w-full px-3 py-1.5 rounded-[10px] border border-input text-sm focus:outline-none focus:ring-2 focus:ring-ring/15 focus:border-ring" />
                     </div>
-                    <button type="submit" className="px-3 py-2 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent">
+                    <button type="submit" className="min-h-9 px-3 py-1.5 rounded-lg border border-input text-sm font-medium text-foreground hover:bg-accent">
                       Actualizar contraseña
                     </button>
                   </form>
@@ -401,7 +401,7 @@ export default async function AdminUsuariosPage({
                     <button
                       type="submit"
                       disabled={managedUser.id === user.id}
-                      className="px-3 py-2 rounded-lg border border-danger/30 text-sm font-medium text-danger hover:bg-danger-subtle disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="min-h-9 px-3 py-1.5 rounded-lg border border-danger/30 text-sm font-medium text-danger hover:bg-danger-subtle disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Eliminar usuario
                     </button>
@@ -411,6 +411,7 @@ export default async function AdminUsuariosPage({
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   )

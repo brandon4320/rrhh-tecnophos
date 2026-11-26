@@ -33,30 +33,33 @@ export default async function ArcorAlertasPage() {
   const paraRevisar = pub?.revisar ?? []
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Alertas</h1>
+          <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Alertas</h1>
         </div>
         <AutoRefresh generado={ahora.toISOString()} />
       </div>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold tracking-tight">Abiertas ahora</h2>
+      <section className="space-y-2">
+        <h2 className="text-base font-semibold tracking-tight">Abiertas ahora</h2>
         {todasAbiertas.length === 0 ? (
           <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-sm shadow-tarjeta">
             <CircleCheck className="size-4 shrink-0 text-success" strokeWidth={1.75} />
             <span>Sin alertas abiertas. Las guardias de n8n reportan cada 2 horas; si algo se cae, aparece acá.</span>
           </div>
         ) : (
-          todasAbiertas.map((a) => <AlertaCard key={a.id} e={a} />)
+          // Dos columnas en escritorio: cada alerta es una fila corta y a lo ancho dejaba la mitad vacía.
+          <div className="grid items-start gap-2 lg:grid-cols-2">
+            {todasAbiertas.map((a) => <AlertaCard key={a.id} e={a} />)}
+          </div>
         )}
       </section>
 
       {(vencidas.length > 0 || paraRevisar.length > 0) && (
-        <section id="publicaciones" className="scroll-mt-6 rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-          <h2 className="text-lg font-semibold tracking-tight">Publicaciones en Colabora</h2>
-          <p className="mb-4 text-sm text-muted-foreground">
+        <section id="publicaciones" className="scroll-mt-6 rounded-2xl border border-border bg-card px-5 py-4 shadow-tarjeta">
+          <h2 className="text-base font-semibold tracking-tight">Publicaciones en Colabora</h2>
+          <p className="mb-3 text-sm text-muted-foreground">
             Lo que la cola de publicación no pudo cerrar
             {estados.publicaciones?.updated_at && ` · reportado ${fmtFechaHoraAR(estados.publicaciones.updated_at)}`}
           </p>
@@ -120,22 +123,24 @@ export default async function ArcorAlertasPage() {
         </section>
       )}
 
-      <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-tarjeta">
-        <h2 className="text-lg font-semibold tracking-tight">Incidentes de los últimos 7 días</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
+      <section className="rounded-2xl border border-border bg-card px-5 py-4 shadow-tarjeta">
+        <h2 className="text-base font-semibold tracking-tight">Incidentes de los últimos 7 días</h2>
+        <p className="mb-3 text-sm text-muted-foreground">
           Fallos puntuales sin estado (un workflow que falló, una conciliación que recuperó fotos, una lectura dudosa)
         </p>
         <ListaEventos eventos={incidentes} vacio="Sin incidentes en la última semana." />
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold tracking-tight">Historial de alertas resueltas</h2>
+      <section className="space-y-2">
+        <h2 className="text-base font-semibold tracking-tight">Historial de alertas resueltas</h2>
         {resueltas.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-xl border border-dashed border-border px-5 py-6 text-center text-sm text-muted-foreground">
             Todavía no hay alertas resueltas registradas.
           </div>
         ) : (
-          resueltas.map((a) => <AlertaCard key={a.id} e={a} />)
+          <div className="grid items-start gap-2 lg:grid-cols-2">
+            {resueltas.map((a) => <AlertaCard key={a.id} e={a} />)}
+          </div>
         )}
       </section>
     </div>

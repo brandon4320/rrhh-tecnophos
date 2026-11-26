@@ -261,11 +261,11 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
   const opcionesCarpeta = [...new Set<string>([...fijas, ...rutasDelAnio])]
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <div className="space-y-4 px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       {/* ── Header ── */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Documentación mensual</h1>
+          <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Documentación mensual</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {empresa.nombre}
             {transcurridos.length > 0 && ` · ${completos} de ${transcurridos.length} ${transcurridos.length === 1 ? 'mes completo' : 'meses completos'}`}
@@ -419,10 +419,10 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
       )}
 
       {/* ── Mes seleccionado ── */}
-      <section className="space-y-4">
+      <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-lg font-semibold tracking-tight">{labelPeriodo(actual.periodo)}</h2>
+            <h2 className="text-base font-semibold tracking-tight">{labelPeriodo(actual.periodo)}</h2>
             <EstadoPill estado={actual.estado} label={ESTADO_MES_LABEL[actual.estado]} />
             {actual.completitud.faltantes.length > 0 && actual.completitud.faltantes.length < fijas.length && (
               <span className="text-xs text-muted-foreground">Faltan: {actual.completitud.faltantes.join(', ')}</span>
@@ -434,7 +434,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-3 min-[1680px]:grid-cols-4">
           {[...carpetas, CARPETA_RAIZ].map((c) => {
             const esRaiz = c === CARPETA_RAIZ
             // Una fija sin archivos no está en el árbol: se muestra igual, vacía.
@@ -452,7 +452,7 @@ export default function DocumentosClient({ empresa, anio, documentos, recibosPor
                 suelta={esRaiz}
                 dragOver={dragOver}
                 borrando={borrando}
-                className={esRaiz ? 'sm:col-span-2 xl:col-span-3' : undefined}
+                className={esRaiz ? 'sm:col-span-2 xl:col-span-3 min-[1680px]:col-span-4' : undefined}
                 onAgregar={abrirCarga}
                 onVer={ver}
                 onEliminar={eliminar}
@@ -523,13 +523,13 @@ function CarpetaCard({
         className
       )}
     >
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex items-center gap-3 px-4 py-2.5">
         <span className={clsx('inline-flex size-8 shrink-0 items-center justify-center rounded-lg', cubierta ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>
           <Icono className="size-4" strokeWidth={1.75} />
         </span>
         <div className="min-w-0 flex-1">
           <p className={clsx('truncate text-sm font-medium', suelta ? 'text-muted-foreground' : 'text-foreground')}>{nombre}</p>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {nodo.total === 0 ? 'Vacía' : `${nodo.total} ${nodo.total === 1 ? 'archivo' : 'archivos'}`}
             {nodo.hijas.length > 0 && ` · ${nodo.hijas.length} ${nodo.hijas.length === 1 ? 'subcarpeta' : 'subcarpetas'}`}
           </p>
@@ -542,7 +542,7 @@ function CarpetaCard({
         )}
       </div>
 
-      {extra && <div className="px-4 pb-3">{extra}</div>}
+      {extra && <div className="px-4 pb-2.5">{extra}</div>}
 
       {(nodo.docs.length > 0 || nodo.hijas.length > 0) && (
         <div className="border-t border-border">
@@ -635,7 +635,7 @@ function ListaArchivos({
   return (
     <ul className="divide-y divide-border">
       {docs.map((d) => (
-        <li key={d.id} className="flex items-center gap-3 py-2.5 pr-4" style={{ paddingLeft: `${1 + sangria * 0.85}rem` }}>
+        <li key={d.id} className="flex items-center gap-3 py-2 pr-4" style={{ paddingLeft: `${1 + sangria * 0.85}rem` }}>
           <FileText className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm text-foreground" title={d.nombre_archivo}>{d.nombre_archivo}</p>

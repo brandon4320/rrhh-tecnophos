@@ -719,7 +719,7 @@ export default function LegajoClient({
           </div>
         </div>
       </div>
-      <div role="tablist" aria-label="Partes del legajo" className="flex max-w-full gap-0.5 self-start overflow-x-auto rounded-xl bg-muted p-[3px] [scrollbar-width:none]">
+      <div role="tablist" aria-label="Partes del legajo" className="flex max-w-full flex-wrap gap-0.5 self-start rounded-xl bg-muted p-[3px]">
         {tabs.map((t) => (
           <button key={t.k} type="button" role="tab" aria-selected={pestana === t.k} onClick={() => { setPestana(t.k); setEditingEmpleado(false) }} className={clsx('inline-flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-[9px] px-3 text-[13px] font-medium whitespace-nowrap transition-colors md:h-7', pestana === t.k ? 'bg-card text-foreground shadow-[0_1px_2px_rgb(23_22_31/.1),0_0_0_1px_var(--border)] dark:bg-foreground dark:text-card' : 'text-texto-2 hover:text-foreground')}>
             {t.t}{t.n != null && <span className={pestana === t.k ? 'text-muted-foreground dark:text-card/70' : 'text-muted-foreground'}>{t.n}</span>}
@@ -773,7 +773,7 @@ export default function LegajoClient({
 
   // /legajo/[id]: la misma ficha, en una tarjeta en el panel (los links de siempre siguen llegando acá).
   return (
-    <div className="px-4 pt-2 pb-24 text-sm md:px-7 md:pt-6 md:pb-10">
+    <div className="px-4 pt-2 pb-24 text-sm md:px-7 md:pt-5 md:pb-8">
       <div className="mb-4 flex items-center gap-2 text-[13px] text-muted-foreground">
         <Link href={`/empresa/${slug}`} className="transition-colors hover:text-foreground">{empleado.empresa?.nombre}</Link>
         <span>/</span>

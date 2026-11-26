@@ -49,8 +49,8 @@ export default async function PalasPage({ searchParams }: { searchParams: Promis
   // sin esto, un error de permisos diría "sin palas cargadas" y nadie se entera.
   if (error) {
     return (
-      <div className="mx-auto max-w-5xl px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
-        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Palas cargadoras</h1>
+      <div className="px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
+        <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Palas cargadoras</h1>
         <div className="mt-6 rounded-2xl border border-danger/30 bg-danger-subtle px-5 py-4 text-sm text-danger">
           No se pudieron cargar las palas. Detalle técnico: {error.message}
         </div>
@@ -59,9 +59,9 @@ export default async function PalasPage({ searchParams }: { searchParams: Promis
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-2 pb-8 md:px-7 md:pt-6 md:pb-10">
+    <div className="px-4 pt-2 pb-8 md:px-7 md:pt-5 md:pb-8">
       <div className="mb-6">
-        <h1 className="text-[32px] leading-[1.15] font-medium tracking-[-0.03em]">Palas cargadoras</h1>
+        <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Palas cargadoras</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           {empresaSel.nombre} · {palas?.length ?? 0}{' '}
           {(palas?.length ?? 0) === 1 ? 'unidad' : 'unidades'}

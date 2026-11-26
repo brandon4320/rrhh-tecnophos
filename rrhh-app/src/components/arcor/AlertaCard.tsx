@@ -25,7 +25,7 @@ export function AlertaCard({ e, compacta = false }: { e: EventoRow; compacta?: b
   return (
     <div
       className={cn(
-        'rounded-xl border border-border bg-card p-4',
+        'rounded-xl border border-border bg-card px-3.5 py-3',
         abierta && e.severidad === 'critical' && 'border-danger/30',
         abierta && e.severidad === 'warning' && 'border-warning/30'
       )}
@@ -33,7 +33,7 @@ export function AlertaCard({ e, compacta = false }: { e: EventoRow; compacta?: b
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            'inline-flex size-9 shrink-0 items-center justify-center rounded-lg',
+            'inline-flex size-8 shrink-0 items-center justify-center rounded-lg',
             !abierta ? 'bg-muted text-muted-foreground'
             : e.severidad === 'critical' ? 'bg-danger-subtle text-danger'
             : 'bg-warning-subtle text-warning'

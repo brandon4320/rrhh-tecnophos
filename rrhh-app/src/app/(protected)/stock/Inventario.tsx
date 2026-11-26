@@ -50,33 +50,34 @@ export function MatrizTalles({
 }) {
   const columnas = talles.length + 1
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border">
-            <th className={clsx(thCls, 'pl-4 text-left')}>{sistema === 'letras' ? 'Prenda · talle' : 'Prenda · número'}</th>
+    <div className="rounded-2xl border border-border bg-card shadow-tarjeta md:overflow-x-auto" style={{ '--n': talles.length } as React.CSSProperties}>
+      {/* En el celular cada prenda ocupa dos renglones (nombre arriba, talles abajo) para que nada se deslice de costado. */}
+      <table className="w-full text-sm max-md:block">
+        <thead className="max-md:block">
+          <tr className="border-b border-border max-md:grid max-md:[grid-template-columns:repeat(var(--n),minmax(0,1fr))] max-md:px-3">
+            <th className={clsx(thCls, 'pl-4 text-left max-md:hidden')}>{sistema === 'letras' ? 'Prenda · talle' : 'Prenda · número'}</th>
             {talles.map((t) => (
-              <th key={t} className={clsx(thCls, 'w-14 px-1 text-center')}>{t}</th>
+              <th key={t} className={clsx(thCls, 'w-14 px-1 text-center max-md:block max-md:w-auto')}>{t}</th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
+        <tbody className="divide-y divide-border max-md:block">
           {prendas.map((p) => {
             const porTalle = new Map(p.talles.map((t) => [t.talle, t.item]))
             const abiertoAca = p.talles.find((t) => t.item.id === d.abierto)?.item
             return (
               <Fragment key={p.clave}>
-                <tr>
-                  <td className="py-1.5 pl-4 pr-3 font-medium text-foreground">{p.base}</td>
+                <tr className="max-md:grid max-md:[grid-template-columns:repeat(var(--n),minmax(0,1fr))] max-md:px-3 max-md:pb-1">
+                  <td className="py-1.5 pl-4 pr-3 font-medium text-foreground max-md:col-span-full max-md:block max-md:px-1 max-md:pt-2 max-md:pb-0.5">{p.base}</td>
                   {talles.map((t) => {
                     const item = porTalle.get(t)
-                    if (!item) return <td key={t} className="px-1 text-center text-muted-foreground/30" aria-hidden>·</td>
+                    if (!item) return <td key={t} className="px-1 text-center text-muted-foreground/30 max-md:block max-md:py-1.5" aria-hidden>·</td>
                     const s = d.stock.get(item.id)?.stock ?? 0
                     const estado = d.estados.get(item.id)
                     const min = textoMinimo(item.stock_minimo, item.unidad)
                     const esAbierto = d.abierto === item.id
                     return (
-                      <td key={t} className="p-1 text-center">
+                      <td key={t} className="p-1 text-center max-md:block max-md:p-0.5">
                         <button
                           type="button"
                           onClick={() => d.onAbrir(esAbierto ? null : item.id)}
@@ -97,8 +98,8 @@ export function MatrizTalles({
                   })}
                 </tr>
                 {abiertoAca && (
-                  <tr>
-                    <td colSpan={columnas} className="bg-muted px-4 py-3">
+                  <tr className="max-md:block">
+                    <td colSpan={columnas} className="bg-muted px-4 py-3 max-md:block">
                       <FichaItem item={abiertoAca} {...d} />
                     </td>
                   </tr>
@@ -119,9 +120,9 @@ export function MatrizTalles({
  */
 export function TablaItems({ items, ultimoPorItem, ...d }: Datos & { items: StockItem[]; ultimoPorItem: Map<string, StockMovimiento> }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
-      <table className="w-full min-w-[640px] table-fixed text-sm">
-        <thead>
+    <div className="rounded-2xl border border-border bg-card shadow-tarjeta md:overflow-x-auto">
+      <table className="w-full text-sm max-md:block md:min-w-[640px] md:table-fixed">
+        <thead className="max-md:hidden">
           <tr className="border-b border-border">
             <th className={clsx(thCls, 'w-[40%] pl-4 text-left')}>Ítem</th>
             <th className={clsx(thCls, 'w-[170px] text-right')}>Stock</th>
@@ -129,7 +130,7 @@ export function TablaItems({ items, ultimoPorItem, ...d }: Datos & { items: Stoc
             <th className={clsx(thCls, 'w-[56px]')} />
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
+        <tbody className="divide-y divide-border max-md:block">
           {items.map((it) => {
             const s = d.stock.get(it.id)?.stock ?? 0
             const estado = d.estados.get(it.id)
@@ -141,9 +142,9 @@ export function TablaItems({ items, ultimoPorItem, ...d }: Datos & { items: Stoc
               <Fragment key={it.id}>
                 <tr
                   onClick={() => d.onAbrir(isOpen ? null : it.id)}
-                  className={clsx('cursor-pointer transition-colors hover:bg-accent', it.activo === false && 'opacity-60')}
+                  className={clsx('cursor-pointer transition-colors hover:bg-accent max-md:grid max-md:grid-cols-[minmax(0,1fr)_auto_auto] max-md:items-center max-md:py-1', it.activo === false && 'opacity-60')}
                 >
-                  <td className="py-2 pl-4 pr-3">
+                  <td className="py-2 pl-4 pr-3 max-md:min-w-0 max-md:pb-0">
                     <div className="flex min-w-0 items-center gap-2">
                       <ChevronRight
                         className={clsx('size-3.5 shrink-0 text-muted-foreground/60 transition-transform', isOpen && 'rotate-90')}
@@ -151,19 +152,19 @@ export function TablaItems({ items, ultimoPorItem, ...d }: Datos & { items: Stoc
                       />
                       <span className="truncate font-medium text-foreground" title={it.notas ?? it.nombre}>{it.nombre}</span>
                       {it.activo === false && (
-                        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">archivado</span>
+                        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">archivado</span>
                       )}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
+                  <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums max-md:pb-0">
                     <span className={clsx('text-sm font-semibold', colorStock(estado))}>{fmtCantidad(s)}</span>
-                    {it.unidad && <span className="ml-1 text-[10px] text-muted-foreground">{it.unidad}</span>}
-                    {min && <span className="ml-2 text-[11px] text-muted-foreground">{min}</span>}
+                    {it.unidad && <span className="ml-1 text-xs text-muted-foreground">{it.unidad}</span>}
+                    {min && <span className="ml-2 text-xs text-muted-foreground">{min}</span>}
                   </td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground">
+                  <td className="px-3 py-2 text-xs text-muted-foreground max-md:col-span-3 max-md:row-start-2 max-md:min-w-0 max-md:pt-0 max-md:pl-[38px]">
                     <span className="block truncate" title={ultimoTexto}>{ultimoTexto}</span>
                   </td>
-                  <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-2 text-right max-md:col-start-3 max-md:row-start-1 max-md:pb-0" onClick={(e) => e.stopPropagation()}>
                     {d.canEdit && it.activo !== false && (
                       <button
                         type="button"
@@ -178,8 +179,8 @@ export function TablaItems({ items, ultimoPorItem, ...d }: Datos & { items: Stoc
                   </td>
                 </tr>
                 {isOpen && (
-                  <tr>
-                    <td colSpan={4} className="bg-muted px-4 py-3">
+                  <tr className="max-md:block">
+                    <td colSpan={4} className="bg-muted px-4 py-3 max-md:block">
                       <FichaItem item={it} {...d} />
                     </td>
                   </tr>

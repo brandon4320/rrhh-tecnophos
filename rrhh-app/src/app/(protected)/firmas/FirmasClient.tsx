@@ -170,11 +170,11 @@ export default function FirmasClient({ candidatos, canal }: { candidatos: Candid
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 pt-2 pb-28 md:px-7 md:pt-6">
-      <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em]">Firmas de recibos</h1>
+    <div className="space-y-4 px-4 pt-2 pb-28 md:px-7 md:pt-5">
+      <h1 className="text-2xl leading-tight font-medium tracking-[-0.025em]">Firmas de recibos</h1>
 
       {!canal && (
-        <div className="flex items-start gap-3 rounded-2xl border border-warning-subtle bg-warning-subtle px-4 py-3 text-sm text-warning-text">
+        <div className="flex items-start gap-2.5 rounded-xl border border-warning-subtle bg-warning-subtle px-4 py-2.5 text-sm text-warning-text">
           <Warning className="mt-0.5 size-[18px] shrink-0" weight="bold" />
           <p>
             Falta configurar el envío de mails en el servidor (la casilla y la dirección pública del
@@ -183,16 +183,16 @@ export default function FirmasClient({ candidatos, canal }: { candidatos: Candid
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-y-3 rounded-2xl border border-border bg-card px-5 py-3 shadow-tarjeta sm:grid-cols-4 sm:divide-x sm:divide-border">
         {[
           { n: nums.firmaron, t: 'Firma cargada', c: 'text-success' },
           { n: nums.enviados, t: 'Mail enviado', c: 'text-foreground' },
           { n: nums.listos, t: 'Sin mandar', c: 'text-foreground' },
           { n: nums.sinDatos, t: 'Faltan datos', c: nums.sinDatos ? 'text-warning' : 'text-foreground' },
         ].map((k) => (
-          <div key={k.t} className="rounded-2xl border border-border bg-card p-4 shadow-tarjeta">
-            <p className={cn('text-2xl font-semibold tabular-nums tracking-tight', k.c)}>{k.n}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{k.t}</p>
+          <div key={k.t} className="sm:px-5 sm:first:pl-0 sm:last:pr-0">
+            <p className={cn('text-2xl leading-tight font-semibold tabular-nums tracking-tight', k.c)}>{k.n}</p>
+            <p className="text-sm text-muted-foreground">{k.t}</p>
           </div>
         ))}
       </div>
@@ -222,11 +222,12 @@ export default function FirmasClient({ candidatos, canal }: { candidatos: Candid
         />
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-tarjeta">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              <th className="w-10 px-4 py-3">
+      <div className="rounded-2xl border border-border bg-card shadow-tarjeta md:overflow-x-auto">
+        {/* En el celular cada persona es una tarjeta de dos renglones: nada se desliza de costado. */}
+        <table className="w-full text-sm max-md:block md:min-w-[640px]">
+          <thead className="max-md:block max-md:border-b max-md:border-border">
+            <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground max-md:flex max-md:items-center max-md:border-0">
+              <th className="w-10 px-4 py-2">
                 <input
                   type="checkbox"
                   checked={todosElegidos}
@@ -236,19 +237,19 @@ export default function FirmasClient({ candidatos, canal }: { candidatos: Candid
                   className="size-4 accent-[var(--primary)]"
                 />
               </th>
-              <th className="px-2 py-3">Persona</th>
-              <th className="px-3 py-3">Empresa</th>
-              <th className="px-3 py-3">Mail</th>
-              <th className="px-3 py-3">Estado</th>
+              <th className="px-2 py-2 max-md:font-normal">Persona<span className="md:hidden"> · elegir a todos</span></th>
+              <th className="px-3 py-2 max-md:hidden">Empresa</th>
+              <th className="px-3 py-2 max-md:hidden">Mail</th>
+              <th className="px-3 py-2 max-md:hidden">Estado</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-border max-md:block">
             {visibles.map((c) => {
               const estado = estadoDe(c)
               const elegible = puedeRecibir(c)
               return (
-                <tr key={c.id} className={cn(elegidos.has(c.id) && 'bg-accent/40')}>
-                  <td className="px-4 py-2.5">
+                <tr key={c.id} className={cn('max-md:grid max-md:grid-cols-[auto_minmax(0,1fr)_auto] max-md:items-center max-md:gap-x-2 max-md:gap-y-0.5 max-md:py-2 max-md:pr-4 [&>td]:max-md:py-0', elegidos.has(c.id) && 'bg-accent/40')}>
+                  <td className="px-4 py-2 max-md:row-span-2">
                     <input
                       type="checkbox"
                       checked={elegidos.has(c.id)}
@@ -258,18 +259,19 @@ export default function FirmasClient({ candidatos, canal }: { candidatos: Candid
                       className="size-4 accent-[var(--primary)] disabled:opacity-30"
                     />
                   </td>
-                  <td className="px-2 py-2.5">
-                    <div className="flex items-center gap-2.5">
+                  <td className="px-2 py-2 max-md:col-start-2 max-md:row-start-1 max-md:min-w-0 max-md:px-0">
+                    <div className="flex min-w-0 items-center gap-2.5">
                       <Monograma nombre={nombreCompleto(c)} size="sm" redondo />
-                      <span className="font-medium">{nombreCompleto(c)}</span>
+                      <span className="truncate font-medium">{nombreCompleto(c)}</span>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-muted-foreground">{c.empresa}</td>
-                  <td className="px-3 py-2.5 text-muted-foreground">
+                  <td className="whitespace-nowrap px-3 py-2 text-muted-foreground max-md:hidden">{c.empresa}</td>
+                  <td className="px-3 py-2 text-muted-foreground max-md:col-start-2 max-md:row-start-2 max-md:truncate max-md:px-0 max-md:text-xs">
+                    <span className="md:hidden">{c.empresa} · </span>
                     {c.email ?? <span className="text-warning-text">—</span>}
                     {!c.tieneCuil && <span className="ml-2 text-xs text-warning-text">sin CUIL</span>}
                   </td>
-                  <td className="px-3 py-2.5">
+                  <td className="px-3 py-2 max-md:col-start-3 max-md:row-start-1 max-md:justify-self-end max-md:px-0">
                     <Pastilla estado={estado} />
                     {estado === 'error' && <p className="mt-1 text-xs text-muted-foreground">{c.error}</p>}
                   </td>
@@ -278,7 +280,7 @@ export default function FirmasClient({ candidatos, canal }: { candidatos: Candid
             })}
             {visibles.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={5} className="px-4 py-6 text-center text-sm text-muted-foreground max-md:block">
                   No hay nadie con ese filtro.
                 </td>
               </tr>
