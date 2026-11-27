@@ -7,7 +7,7 @@
 import 'server-only'
 import type { createAdminClient } from '@/lib/supabase/admin'
 import { getEstadoVencimiento, diasHastaVencimiento, ESTADO_LABELS, type EstadoVencimiento } from '@/types'
-import { ALERTA_DIAS_MAX, VENTANA_ALERTA_HABITUAL, empresaDeCertificado, fechaMasDias, titularCertificado, unirPorId, type CertConDueno } from '@/lib/vencimientos'
+import { ALERTA_DIAS_MAX, VENTANA_ALERTA_HABITUAL, duenoDeBaja, empresaDeCertificado, fechaMasDias, titularCertificado, unirPorId, type CertConDueno } from '@/lib/vencimientos'
 import { traerTodo } from '@/lib/paginar'
 import { coincide } from '@/lib/texto'
 import { cargarFlota } from '@/modules/flota/queries'
@@ -78,7 +78,7 @@ const CERT_COLUMNAS = `
   id, fecha_vencimiento, alerta_dias, tipo_nombre_custom,
   tipo:tipos_certificado(nombre),
   empleado:empleados(id, nombre, apellido, activo, empresa_id, empresa:empresas(nombre, slug)),
-  vehiculo:vehiculos(id, patente, empresa_id, empresa:empresas(nombre, slug)),
+  vehiculo:vehiculos(id, patente, activo, empresa_id, empresa:empresas(nombre, slug)),
   equipo:equipos(id, nombre, categoria, empresa_id, empresa:empresas(nombre, slug)),
   empresa:empresas(nombre, slug),
   archivos(count)
@@ -94,7 +94,8 @@ async function certificadosPorVencer(ctx: CtxGestion, slugs: Set<string>, hastaD
   ])
   if (a.error || b.error) throw new Error((a.error ?? b.error)!.message)
   return unirPorId((a.data ?? []) as unknown as CertFila[], (b.data ?? []) as unknown as CertFila[])
-    .filter((c) => !(c.empleado && c.empleado.activo === false))
+    // Lo de un dueño dado de baja no se reporta: persona, camioneta o ítem.
+    .filter((c) => !duenoDeBaja(c))
     .filter((c) => slugs.has(empresaDeCertificado(c).slug ?? ''))
     .map((c) => ({ ...c, estado: getEstadoVencimiento(c.fecha_vencimiento, c.alerta_dias), dias: diasHastaVencimiento(c.fecha_vencimiento!) }))
     .sort((x, y) => (x.fecha_vencimiento ?? '').localeCompare(y.fecha_vencimiento ?? ''))

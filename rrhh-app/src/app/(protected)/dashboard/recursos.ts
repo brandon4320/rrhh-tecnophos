@@ -11,7 +11,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 import { traerTodo } from '@/lib/paginar'
 import { diaClaveAR } from '@/lib/fechas-ar'
-import { fechaMasDias } from '@/lib/vencimientos'
+import { duenoDeBaja, fechaMasDias } from '@/lib/vencimientos'
 import { getEstadoVencimiento, diasHastaVencimiento } from '@/types'
 import { cargarFlota } from '@/modules/flota/queries'
 import { resumirVehiculo, compararPorUrgencia, type Semaforo } from '@/modules/flota/resumen'
@@ -59,7 +59,7 @@ export async function curvaVencimientos(db: Db, enFiltro: (empresaId: string | n
   const res = await traerTodo((d, h) =>
     db
       .from('certificados')
-      .select('id, empresa_id, fecha_vencimiento, empleado:empleados(activo, empresa_id), vehiculo:vehiculos(empresa_id), equipo:equipos(empresa_id)')
+      .select('id, empresa_id, fecha_vencimiento, empleado:empleados(activo, empresa_id), vehiculo:vehiculos(activo, empresa_id), equipo:equipos(activo, empresa_id)')
       .gte('fecha_vencimiento', fechaMasDias(0))
       .lte('fecha_vencimiento', fechaMasDias(63))
       .order('id')
@@ -71,7 +71,8 @@ export async function curvaVencimientos(db: Db, enFiltro: (empresaId: string | n
     const empleado = Array.isArray(c.empleado) ? c.empleado[0] : c.empleado
     const vehiculo = Array.isArray(c.vehiculo) ? c.vehiculo[0] : c.vehiculo
     const equipo = Array.isArray(c.equipo) ? c.equipo[0] : c.equipo
-    if (empleado && empleado.activo === false) continue
+    // Lo de un dueño dado de baja no cuenta: persona, camioneta o ítem.
+    if (duenoDeBaja({ empleado, vehiculo, equipo })) continue
     if (!enFiltro(empleado?.empresa_id ?? vehiculo?.empresa_id ?? equipo?.empresa_id ?? c.empresa_id)) continue
     if (c.fecha_vencimiento) dias.push(diasHastaVencimiento(c.fecha_vencimiento))
   }

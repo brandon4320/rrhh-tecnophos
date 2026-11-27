@@ -5,7 +5,7 @@ import { tieneRol, RRHH_ROLES } from '@/lib/auth/roles'
 import AppShell, { type EmpresaNav } from '@/components/layout/AppShell'
 import { puedeVerArcor } from '@/modules/arcor/acceso'
 import { traerTodo } from '@/lib/paginar'
-import { fechaMasDias } from '@/lib/vencimientos'
+import { duenoDeBaja, fechaMasDias } from '@/lib/vencimientos'
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -23,7 +23,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     traerTodo((d, h) =>
       supabase
         .from('certificados')
-        .select('id, empresa_id, empleado:empleados(activo, empresa_id), vehiculo:vehiculos(empresa_id), equipo:equipos(empresa_id)')
+        .select('id, empresa_id, empleado:empleados(activo, empresa_id), vehiculo:vehiculos(activo, empresa_id), equipo:equipos(activo, empresa_id)')
         .lt('fecha_vencimiento', fechaMasDias(0))
         .order('id')
         .range(d, h)
@@ -43,7 +43,8 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     const empleado = Array.isArray(c.empleado) ? c.empleado[0] : c.empleado
     const vehiculo = Array.isArray(c.vehiculo) ? c.vehiculo[0] : c.vehiculo
     const equipo = Array.isArray(c.equipo) ? c.equipo[0] : c.equipo
-    if (empleado && empleado.activo === false) continue
+    // Lo de un dueño dado de baja no cuenta: persona, camioneta o ítem.
+    if (duenoDeBaja({ empleado, vehiculo, equipo })) continue
     const empresaId = empleado?.empresa_id ?? vehiculo?.empresa_id ?? equipo?.empresa_id ?? c.empresa_id
     if (empresaId) vencidosPorEmpresa.set(empresaId, (vencidosPorEmpresa.get(empresaId) ?? 0) + 1)
   }

@@ -36,10 +36,38 @@ type EmpresaRef = { slug?: string | null; nombre?: string | null } | null | unde
 /** Forma mínima de un certificado con su dueño (excluyente: uno solo viene). */
 export interface CertConDueno {
   id: string
-  empleado?: { id: string; nombre?: string | null; apellido?: string | null; empresa?: EmpresaRef } | null
-  vehiculo?: { id: string; patente?: string | null; empresa?: EmpresaRef } | null
-  equipo?: { id: string; nombre?: string | null; categoria?: string | null; empresa?: EmpresaRef } | null
+  empleado?: { id: string; nombre?: string | null; apellido?: string | null; activo?: boolean | null; empresa?: EmpresaRef } | null
+  vehiculo?: { id: string; patente?: string | null; activo?: boolean | null; empresa?: EmpresaRef } | null
+  equipo?: { id: string; nombre?: string | null; categoria?: string | null; activo?: boolean | null; empresa?: EmpresaRef } | null
   empresa?: EmpresaRef
+}
+
+/**
+ * El dueño del certificado está dado de baja, así que el certificado no se
+ * cuenta ni se lista.
+ *
+ * ★ Vale para los TRES dueños, no solo para las personas. Durante un tiempo
+ * cada pantalla filtraba a mano `empleado.activo === false` y se olvidaba de
+ * vehículos e ítems: una camioneta sacada de la flota seguía reclamando su VTV
+ * en /vencimientos, en el dashboard y en el contador de la sidebar, sin forma
+ * de resolverlo desde ninguna pantalla (la camioneta ya no se ve). Por eso la
+ * regla vive acá y la usan los cinco lugares que leen certificados.
+ *
+ * `activo` null cuenta como activo: es como está cargado lo viejo.
+ *
+ * ⚠ Hay que pedir la columna `activo` en el select de cada dueño. Si no viene,
+ * esto devuelve false y el filtro no hace nada — silenciosamente.
+ */
+export function duenoDeBaja(c: {
+  empleado?: { activo?: boolean | null } | null
+  vehiculo?: { activo?: boolean | null } | null
+  equipo?: { activo?: boolean | null } | null
+}): boolean {
+  return (
+    c.empleado?.activo === false ||
+    c.vehiculo?.activo === false ||
+    c.equipo?.activo === false
+  )
 }
 
 /**

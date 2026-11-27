@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { empresaDeCertificado, fechaMasDias, hrefCertificado, titularCertificado, unirPorId } from './vencimientos'
+import { duenoDeBaja, empresaDeCertificado, fechaMasDias, hrefCertificado, titularCertificado, unirPorId } from './vencimientos'
 
 describe('fechaMasDias', () => {
   it('suma días al "hoy" de Argentina, no al de UTC', () => {
@@ -49,5 +49,40 @@ describe('titularCertificado / empresaDeCertificado', () => {
     expect(empresaDeCertificado({ id: '1', vehiculo: { id: 'v', empresa: { nombre: 'ADC', slug: 'adc' } } }))
       .toEqual({ nombre: 'ADC', slug: 'adc' })
     expect(empresaDeCertificado({ id: '2' })).toEqual({ nombre: null, slug: null })
+  })
+})
+
+describe('duenoDeBaja', () => {
+  it('un empleado dado de baja, sí', () => {
+    expect(duenoDeBaja({ empleado: { id: 'e', activo: false } })).toBe(true)
+  })
+
+  it('una camioneta sacada de la flota, también', () => {
+    // Era el agujero: la VTV de una camioneta dada de baja seguía apareciendo
+    // en /vencimientos y en el dashboard, y no había forma de resolverla
+    // porque la camioneta ya no se ve en ninguna pantalla.
+    expect(duenoDeBaja({ vehiculo: { id: 'v', activo: false } })).toBe(true)
+  })
+
+  it('un ítem archivado, también', () => {
+    expect(duenoDeBaja({ equipo: { id: 'q', activo: false } })).toBe(true)
+  })
+
+  it('con el dueño activo, no', () => {
+    expect(duenoDeBaja({ vehiculo: { id: 'v', activo: true } })).toBe(false)
+  })
+
+  it('activo en null cuenta como activo: así está cargado lo viejo', () => {
+    expect(duenoDeBaja({ vehiculo: { id: 'v', activo: null } })).toBe(false)
+  })
+
+  it('sin la columna `activo` en el select, no filtra nada', () => {
+    // Documenta la trampa: si el select se olvida de pedir `activo`, esto
+    // devuelve false y el filtro deja de hacer efecto en silencio.
+    expect(duenoDeBaja({ vehiculo: { id: 'v' } })).toBe(false)
+  })
+
+  it('un certificado de la empresa (sin dueño) nunca está de baja', () => {
+    expect(duenoDeBaja({ empresa: { slug: 'adc', nombre: 'ADC' } })).toBe(false)
   })
 })
