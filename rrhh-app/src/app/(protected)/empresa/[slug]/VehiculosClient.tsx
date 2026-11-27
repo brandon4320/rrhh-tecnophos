@@ -10,6 +10,7 @@ import { EstadoPill } from '@/components/ui/estado-pill'
 import type { Vehiculo, TipoCertificado } from '@/types'
 import { mensajeError } from '@/lib/errores'
 import { abrirArchivo, borrarArchivo, subirArchivosACertificado } from '@/lib/archivos-client'
+import { avisoPatenteDuplicada, normalizarPatente, type DuplicadoPatente } from '@/lib/vehiculos'
 import {
   ALERTA_DIAS_DEFECTO, ALERTA_DIAS_MAX, AVISO_SIN_VENCIMIENTO, alertaComoTexto, llevarALaVista, useEnfocarAlAbrir,
   validarAlertaDias,
@@ -86,6 +87,8 @@ export default function VehiculosClient({
   const [saving, setSaving] = useState(false)
   const [uploadingCert, setUploadingCert] = useState<string | null>(null)
   const [showNewVeh, setShowNewVeh] = useState(false)
+  /** Aviso de patente repetida en otra empresa: se muestra y se puede seguir igual. */
+  const [avisoPatente, setAvisoPatente] = useState<string | null>(null)
   const [vehForm, setVehForm] = useState(VEH_EMPTY)
   const [savingVeh, setSavingVeh] = useState(false)
   // Cada apertura del formulario de certificado lo trae a la vista con el foco puesto.
@@ -101,26 +104,56 @@ export default function VehiculosClient({
 
   function openNewVeh() {
     setVehForm(VEH_EMPTY)
+    setAvisoPatente(null)
     setShowNewVeh(true)
   }
 
   function closeNewVeh() {
     setVehForm(VEH_EMPTY)
+    setAvisoPatente(null)
     setShowNewVeh(false)
   }
 
-  async function handleCrearVehiculo() {
+  /**
+   * `forzar` = la persona ya vio el aviso de patente repetida en otra empresa
+   * y decidió cargarla igual. El aviso NO bloquea: dos empresas del grupo
+   * pueden tener chapas que se escriben parecido, y quien carga sabe más que
+   * el sistema. Lo que no puede pasar es que no se entere, que es lo que llevó
+   * a tener la AG493RP dos veces durante una semana.
+   */
+  async function handleCrearVehiculo(forzar = false) {
     const patente = vehForm.patente.trim().toUpperCase()
     if (!patente) {
       toast.error('La patente es requerida.')
       return
     }
-    if (vehiculos.some((v) => v.patente.trim().toUpperCase() === patente)) {
+    // Dentro de la empresa sigue siendo un error, no un aviso: ya está a la vista.
+    if (vehiculos.some((v) => normalizarPatente(v.patente) === normalizarPatente(patente))) {
       toast.error('Ya existe un vehículo con esa patente.')
       return
     }
 
     setSavingVeh(true)
+
+    // En OTRA empresa es un aviso, y hay que preguntárselo al servidor: quien
+    // tiene una sola empresa asignada no ve las demás por RLS, así que desde
+    // acá la consulta volvería vacía siempre.
+    if (!forzar) {
+      try {
+        const res = await fetch(`/api/vehiculos/patente?patente=${encodeURIComponent(patente)}&empresa=${empresaId}`)
+        const json = (await res.json()) as { duplicados?: DuplicadoPatente[] }
+        const aviso = avisoPatenteDuplicada(json.duplicados ?? [])
+        if (aviso) {
+          setAvisoPatente(aviso)
+          setSavingVeh(false)
+          return
+        }
+      } catch {
+        // El aviso es una ayuda, no un control: si no se pudo averiguar, el
+        // alta sigue. La patente repetida se resuelve después; no poder dar de
+        // alta una camioneta, no.
+      }
+    }
 
     const { data, error: err } = await supabase
       .from('vehiculos')
@@ -331,7 +364,7 @@ export default function VehiculosClient({
       {/* Formulario de nuevo vehículo */}
       {showNewVeh && canEdit && (
         <form
-          onSubmit={(e) => { e.preventDefault(); handleCrearVehiculo() }}
+          onSubmit={(e) => { e.preventDefault(); handleCrearVehiculo(avisoPatente !== null) }}
           onKeyDown={escCancela(closeNewVeh)}
           className="mb-3 rounded-xl border border-primary/30 bg-primary/5 p-4"
         >
@@ -342,7 +375,7 @@ export default function VehiculosClient({
               <input
                 type="text"
                 value={vehForm.patente}
-                onChange={(e) => setVehForm((f) => ({ ...f, patente: e.target.value.toUpperCase() }))}
+                onChange={(e) => { setAvisoPatente(null); setVehForm((f) => ({ ...f, patente: e.target.value.toUpperCase() })) }}
                 className={clsx(inputCls, 'font-mono')}
                 placeholder="Ej: AD113UY"
                 autoFocus
@@ -359,13 +392,18 @@ export default function VehiculosClient({
               />
             </div>
           </div>
+          {avisoPatente && (
+            <div className="mb-3 rounded-[10px] border border-warning/30 bg-warning-subtle px-3 py-2.5 text-xs leading-relaxed text-warning-text">
+              {avisoPatente}
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <button
               type="submit"
               disabled={savingVeh}
               className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-foreground text-xs font-medium px-4 py-2 rounded-[10px] transition-[background-color,transform] active:scale-[0.97]"
             >
-              {savingVeh ? 'Guardando...' : 'Agregar vehículo'}
+              {savingVeh ? 'Guardando...' : avisoPatente ? 'Cargarla igual' : 'Agregar vehículo'}
             </button>
             <button
               type="button"

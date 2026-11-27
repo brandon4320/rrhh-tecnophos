@@ -3,8 +3,8 @@ import { filtroEmpresas } from '@/lib/empresas-vistas'
 import { getEstadoVencimiento, diasHastaVencimiento } from '@/types'
 import { traerTodo } from '@/lib/paginar'
 import {
-  ALERTA_DIAS_MAX, VENTANA_ALERTA_HABITUAL, empresaDeCertificado, fechaMasDias, hrefCertificado, titularCertificado,
-  unirPorId,
+  ALERTA_DIAS_MAX, VENTANA_ALERTA_HABITUAL, duenoDeBaja, empresaDeCertificado, fechaMasDias, hrefCertificado,
+  titularCertificado, unirPorId,
 } from '@/lib/vencimientos'
 import VencimientosClient, { type FilaVencimiento, type VistaVencimientos } from './VencimientosClient'
 
@@ -16,8 +16,8 @@ const CERT_COLUMNAS = `
   id, fecha_vencimiento, alerta_dias, tipo_nombre_custom,
   tipo:tipos_certificado(id, nombre),
   empleado:empleados(id, nombre, apellido, activo, empresa:empresas(nombre, slug)),
-  vehiculo:vehiculos(id, patente, empresa:empresas(nombre, slug)),
-  equipo:equipos(id, nombre, categoria, empresa:empresas(nombre, slug)),
+  vehiculo:vehiculos(id, patente, activo, empresa:empresas(nombre, slug)),
+  equipo:equipos(id, nombre, categoria, activo, empresa:empresas(nombre, slug)),
   empresa:empresas(nombre, slug),
   archivos(count)
 `
@@ -77,8 +77,9 @@ export default async function VencimientosPage({
 
   const filas: FilaVencimiento[] = []
   for (const c of certs) {
-    // Borrado lógico: certificados de empleados dados de baja no se listan
-    if (c.empleado && c.empleado.activo === false) continue
+    // Borrado lógico: lo de un dueño dado de baja no se lista — persona,
+    // camioneta o ítem (ver duenoDeBaja).
+    if (duenoDeBaja(c)) continue
     const emp = empresaDeCertificado(c)
     if (filtro && !filtro.includes(emp.slug ?? '')) continue
     if (tipo && (c.tipo?.id ?? '') !== tipo) continue

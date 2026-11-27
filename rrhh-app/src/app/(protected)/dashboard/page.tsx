@@ -13,8 +13,8 @@ import type { AlertaInicio, DatosInicio, SistemaInicio } from './tipos'
 import { filtroEmpresas, slugsDe } from '@/lib/empresas-vistas'
 import { traerTodo } from '@/lib/paginar'
 import {
-  ALERTA_DIAS_MAX, VENTANA_ALERTA_HABITUAL, empresaDeCertificado, fechaMasDias, hrefCertificado, titularCertificado,
-  unirPorId,
+  ALERTA_DIAS_MAX, VENTANA_ALERTA_HABITUAL, duenoDeBaja, empresaDeCertificado, fechaMasDias, hrefCertificado,
+  titularCertificado, unirPorId,
 } from '@/lib/vencimientos'
 
 
@@ -22,8 +22,8 @@ const CERT_COLUMNAS = `
   id, fecha_vencimiento, alerta_dias, tipo_nombre_custom,
   tipo:tipos_certificado(nombre),
   empleado:empleados(id, nombre, apellido, activo, empresa_id, empresa:empresas(id, nombre, slug)),
-  vehiculo:vehiculos(id, patente, empresa_id, empresa:empresas(id, nombre, slug)),
-  equipo:equipos(id, nombre, categoria, empresa_id, empresa:empresas(id, nombre, slug)),
+  vehiculo:vehiculos(id, patente, activo, empresa_id, empresa:empresas(id, nombre, slug)),
+  equipo:equipos(id, nombre, categoria, activo, empresa_id, empresa:empresas(id, nombre, slug)),
   empresa:empresas(id, nombre, slug)
 `
 
@@ -81,7 +81,7 @@ export default async function DashboardPage({
       ? traerTodo((d, h) =>
           supabase
             .from('certificados')
-            .select('id, empresa_id, empleado:empleados(activo, empresa_id), vehiculo:vehiculos(empresa_id), equipo:equipos(empresa_id)')
+            .select('id, empresa_id, empleado:empleados(activo, empresa_id), vehiculo:vehiculos(activo, empresa_id), equipo:equipos(activo, empresa_id)')
             .not('fecha_vencimiento', 'is', null)
             .order('id')
             .range(d, h)
@@ -103,9 +103,9 @@ export default async function DashboardPage({
   )
 
   const conEstado = certs
-    // El borrado de empleados es lógico (activo=false): sus certificados
-    // quedan en la base pero no deben contar ni listarse acá.
-    .filter((c) => !c.empleado || c.empleado.activo !== false)
+    // El borrado es lógico (activo=false) para personas, camionetas e ítems:
+    // sus certificados quedan en la base pero no deben contar ni listarse acá.
+    .filter((c) => !duenoDeBaja(c))
     .filter((c) => enFiltro(c.empleado?.empresa_id ?? c.vehiculo?.empresa_id ?? c.equipo?.empresa_id ?? c.empresa?.id))
     .map((c) => ({
       ...c,
@@ -119,7 +119,7 @@ export default async function DashboardPage({
         const empleado = Array.isArray(c.empleado) ? c.empleado[0] : c.empleado
         const vehiculo = Array.isArray(c.vehiculo) ? c.vehiculo[0] : c.vehiculo
         const equipo = Array.isArray(c.equipo) ? c.equipo[0] : c.equipo
-        if (empleado && empleado.activo === false) return false
+        if (duenoDeBaja({ empleado, vehiculo, equipo })) return false
         return enFiltro(empleado?.empresa_id ?? vehiculo?.empresa_id ?? equipo?.empresa_id ?? c.empresa_id)
       }).length
     : (certsSinEmpleado ?? 0) + (certsEmpleadosActivos ?? 0)
