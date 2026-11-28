@@ -189,6 +189,13 @@ export async function guardarFirma(
 
 export interface Firmado {
   firmadoPath: string
+  /**
+   * Cuándo se firmó (ISO). Lo pasa quien llama y no se arma acá para que la
+   * fecha que queda en la base sea EXACTAMENTE la que va en el mail de la
+   * copia firmada: dos `new Date()` distintos dan dos horas distintas, y una
+   * constancia que no coincide con el sistema es una constancia discutible.
+   */
+  firmadoAt: string
   ip: string | null
   agente: string | null
 }
@@ -206,7 +213,7 @@ export async function marcarFirmado(admin: Admin, reciboId: string, f: Firmado):
     .from('recibos_sueldo')
     .update({
       estado: 'firmado',
-      firmado_at: new Date().toISOString(),
+      firmado_at: f.firmadoAt,
       firmado_path: f.firmadoPath,
       firma_ip: f.ip,
       firma_agente: f.agente,

@@ -31,11 +31,23 @@ export const REMITENTE = 'Gestión de Recursos'
 
 export type ResultadoMail = { ok: true } | { ok: false; error: string }
 
+/**
+ * Un archivo que viaja en el mail. Los bytes van en el mensaje, no un link:
+ * la copia del recibo firmado tiene que seguir estando dentro de un año,
+ * cuando el link ya venció y el token no existe más.
+ */
+export interface Adjunto {
+  nombre: string
+  contenido: Uint8Array
+  tipo: string
+}
+
 export interface Mail {
   para: string
   asunto: string
   texto: string
   html: string
+  adjuntos?: Adjunto[]
 }
 
 export function hayCanalMail(): boolean {
@@ -71,6 +83,13 @@ function obtenerTransporte(usuario: string, clave: string): Transporter {
       pool: true,
       maxConnections: 1,
       maxMessages: 50,
+      // Topes explícitos. Sin esto, nodemailer espera MINUTOS a un socket que
+      // no contesta, y eso ya no es solo una tanda lenta: el mail de la copia
+      // firmada sale DENTRO de la request de firmar, así que un Gmail que se
+      // cuelga dejaría a la persona mirando la rueda después de haber firmado.
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
     })
   }
   return transporte
@@ -93,6 +112,11 @@ export async function enviarMail(m: Mail): Promise<ResultadoMail> {
       subject: m.asunto,
       text: m.texto,
       html: m.html,
+      attachments: m.adjuntos?.map((a) => ({
+        filename: a.nombre,
+        content: Buffer.from(a.contenido),
+        contentType: a.tipo,
+      })),
       // Quien conteste el mail le escribe a la casilla de sueldos, que es
       // donde alguien lee. Sin esto contestarían a una casilla que nadie abre.
       replyTo: usuario,

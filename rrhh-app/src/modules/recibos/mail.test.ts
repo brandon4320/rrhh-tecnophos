@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DIAS_VIGENCIA } from './reglas'
-import { escaparHtml, linkDeFirma, mailOnboarding } from './mail'
+import { escaparHtml, linkDeFirma, mailCopiaFirmada, mailOnboarding } from './mail'
 
 describe('escaparHtml', () => {
   it('escapa lo que rompe el HTML', () => {
@@ -92,5 +92,68 @@ describe('mailOnboarding', () => {
     const m = mailOnboarding({ nombre: 'ANA', link })
     const palabras = m.texto.split(/\s+/).filter(Boolean).length
     expect(palabras).toBeLessThan(120)
+  })
+})
+
+describe('mailCopiaFirmada', () => {
+  // 2026-11-28T19:40:00Z = 16:40 del 28/11 en Argentina. La hora del mail sale
+  // de acá y no del TZ del servidor, que en Vercel es UTC (AGENTS.md §9).
+  const base = { nombre: 'ADRIAN', tipo: 'mensual', periodo: '2026-10-01', firmadoAt: '2026-11-28T19:40:00Z' }
+
+  it('dice qué recibo se firmó, en el asunto y en el cuerpo', () => {
+    const m = mailCopiaFirmada(base)
+    expect(m.asunto).toBe('Firmaste tu recibo: Sueldo mensual · Octubre 2026')
+    expect(m.texto).toContain('Sueldo mensual · Octubre 2026')
+    expect(m.html).toContain('Sueldo mensual · Octubre 2026')
+  })
+
+  it('la fecha va en hora argentina, no en UTC', () => {
+    const m = mailCopiaFirmada(base)
+    expect(m.texto).toContain('el 28/11/2026 a las 16:40')
+    expect(m.texto).not.toContain('19:40')
+    expect(m.html).toContain('16:40')
+  })
+
+  it('traduce el tipo de recibo', () => {
+    expect(mailCopiaFirmada({ ...base, tipo: 'sac' }).asunto).toContain('Aguinaldo')
+    expect(mailCopiaFirmada({ ...base, tipo: 'liquidacion_final' }).asunto).toContain('Liquidación final')
+  })
+
+  it('saluda con el nombre de pila', () => {
+    expect(mailCopiaFirmada({ ...base, nombre: 'LUCIANA MARILIN' }).texto).toContain('Hola Luciana,')
+    expect(mailCopiaFirmada({ ...base, nombre: null }).texto).toContain('Hola,')
+  })
+
+  it('deja cómo avisar si no fue la persona', () => {
+    // Es la única señal que recibe si alguien usó su link: sin esta línea el
+    // mail es un acuse y no una confirmación.
+    const m = mailCopiaFirmada(base)
+    expect(m.texto).toContain('Si no fuiste vos')
+    expect(m.html).toContain('Si no fuiste vos')
+  })
+
+  it('dice que el recibo va adjunto y que queda una copia para la empresa', () => {
+    const m = mailCopiaFirmada(base)
+    expect(m.texto).toContain('adjuntamos')
+    expect(m.texto).toContain('copia en el sistema')
+  })
+
+  it('no lleva ningún link: no hay nada que ir a buscar', () => {
+    const m = mailCopiaFirmada(base)
+    expect(m.texto).not.toContain('http')
+    expect(m.html).not.toContain('<a ')
+  })
+
+  it('con una fecha rota confirma igual, sin escribir "Invalid Date"', () => {
+    const m = mailCopiaFirmada({ ...base, firmadoAt: 'no-es-una-fecha' })
+    expect(m.texto).toContain('Firmaste tu recibo.')
+    expect(m.html).toContain('Firmaste tu recibo.')
+    expect(m.texto).not.toMatch(/Invalid|NaN|undefined/)
+    expect(m.html).not.toMatch(/Invalid|NaN|undefined/)
+  })
+
+  it('escapa el nombre: viene de la base y entra al HTML', () => {
+    const m = mailCopiaFirmada({ ...base, nombre: '<b>Ana' })
+    expect(m.html).not.toContain('<b>Ana')
   })
 })

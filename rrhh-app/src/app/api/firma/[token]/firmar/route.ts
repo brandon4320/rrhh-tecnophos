@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { downloadFromR2, getSignedDownloadUrl, uploadToR2 } from '@/lib/r2/operations'
 import { leerCajaFirma } from '@/modules/recibos/archivo'
 import { nombreFirmado, rutaFirmado } from '@/modules/recibos/estampa'
+import { enviarCopiaFirmada } from '@/modules/recibos/copia-servidor'
 import { guardarFirmaDibujada } from '@/modules/recibos/firma-servidor'
 import { ErrorEstampa, estamparFirma } from '@/modules/recibos/firma-pdf'
 import { confirmarIdentidad } from '@/modules/recibos/identidad'
@@ -26,8 +27,14 @@ import {
  * Orden: R2 primero, fila después. Un PDF firmado en R2 sin su fila es un
  * archivo de más que nadie mira; una fila que dice "firmado" sin su archivo es
  * una constancia que no existe.
+ *
+ * Al final sale el mail con la copia firmada (TRASPASO 3.4). Va último y no
+ * puede fallar la firma: ver `enviarCopiaFirmada`.
  */
 export const dynamic = 'force-dynamic'
+// Bajar el PDF, estamparlo, subirlo y mandar un mail con adjunto, todo en una
+// request desde un celular con mala señal. El default de 15 s se queda corto.
+export const maxDuration = 60
 
 const UUID = /^[0-9a-f-]{36}$/i
 const MAX_AGENTE = 300
@@ -155,9 +162,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     return noDisponible()
   }
 
+  // La misma marca de tiempo va a la base y al mail: ver `Firmado.firmadoAt`.
+  const firmadoAt = new Date().toISOString()
+  let marcado = false
   try {
-    const marcado = await marcarFirmado(admin, recibo.id, {
+    marcado = await marcarFirmado(admin, recibo.id, {
       firmadoPath: destino,
+      firmadoAt,
       ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
       agente: request.headers.get('user-agent')?.slice(0, MAX_AGENTE) || null,
     })
@@ -180,9 +191,39 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     return noDisponible()
   }
 
+  // ------------------------------------------------------------
+  // La copia por mail
+  // ------------------------------------------------------------
+  // Solo cuando ESTE pedido fue el que marcó el recibo. Si `marcado` es false
+  // llegamos acá porque otro pedido ganó la carrera (doble toque, reintento
+  // por señal) y ese ya mandó —o va a mandar— el mail: dos copias del mismo
+  // recibo en la casilla hacen dudar de si firmó dos veces.
+  //
+  // Se reusan los bytes que acabamos de estampar en vez de volver a bajarlos
+  // de R2: son los mismos y es un viaje menos con la persona esperando.
+  let copiaPorMail = false
+  if (marcado) {
+    const copia = await enviarCopiaFirmada(admin, {
+      empleadoId,
+      email: quien.fila.empleado.email,
+      nombre: quien.fila.empleado.nombre,
+      reciboId: recibo.id,
+      tipo: recibo.tipo,
+      periodo: recibo.periodo,
+      nombreArchivo: recibo.nombre_archivo,
+      pdf: firmado,
+      firmadoAt,
+    })
+    copiaPorMail = copia.mandado
+  }
+
   const nombre = nombreFirmado(recibo.nombre_archivo)
   return NextResponse.json({
     ok: true,
+    // Para que la pantalla diga "te lo mandamos por mail" solo cuando es
+    // cierto. Que no salga no es un error que haya que mostrarle a quien
+    // firmó: el recibo está firmado y lo puede descargar ahí mismo.
+    copiaPorMail,
     recibo: {
       id: recibo.id,
       estado: 'firmado',
