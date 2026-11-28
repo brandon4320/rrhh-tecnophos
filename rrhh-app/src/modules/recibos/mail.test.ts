@@ -152,6 +152,16 @@ describe('mailCopiaFirmada', () => {
     expect(m.html).not.toMatch(/Invalid|NaN|undefined/)
   })
 
+  it('sin adjunto no promete un archivo que no va', () => {
+    // Pasa si el PDF se pasa del tope del mail. El mail sale igual —la firma
+    // ya está hecha— pero no puede mandar a buscar un adjunto inexistente.
+    const m = mailCopiaFirmada({ ...base, adjunto: false })
+    expect(m.texto).not.toContain('adjuntamos')
+    expect(m.html).not.toContain('adjuntamos')
+    expect(m.texto).toContain('copia firmada en el sistema')
+    expect(m.texto).toContain('pedísela a administración')
+  })
+
   it('escapa el nombre: viene de la base y entra al HTML', () => {
     const m = mailCopiaFirmada({ ...base, nombre: '<b>Ana' })
     expect(m.html).not.toContain('<b>Ana')

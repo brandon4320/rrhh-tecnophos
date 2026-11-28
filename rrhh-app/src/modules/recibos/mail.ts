@@ -166,6 +166,12 @@ export function mailCopiaFirmada(opciones: {
   periodo: string
   /** Cuándo se firmó (ISO). Se muestra en hora argentina. */
   firmadoAt: string
+  /**
+   * ¿Va el PDF adjunto? Por defecto sí. Lo pasa en `false` quien no lo pudo
+   * adjuntar, para que el cuerpo no prometa un archivo que no está: un mail
+   * que dice "te lo adjuntamos" sin adjunto hace buscar algo que no existe.
+   */
+  adjunto?: boolean
 }): MailArmado {
   const pila = nombreDePila(opciones.nombre)
   const hola = pila ? `Hola ${pila},` : 'Hola,'
@@ -177,10 +183,11 @@ export function mailCopiaFirmada(opciones: {
 
   const asunto = `Firmaste tu recibo: ${que}`
   const confirma = cuando ? `Firmaste tu recibo ${cuando}.` : 'Firmaste tu recibo.'
-  const parrafos = [
-    confirma,
-    'Te lo adjuntamos firmado para que lo guardes. Queda también una copia en el sistema, a la que accede la empresa.',
-  ]
+  const cuerpo =
+    opciones.adjunto === false
+      ? 'Queda una copia firmada en el sistema, a la que accede la empresa. Si la querés para vos, pedísela a administración.'
+      : 'Te lo adjuntamos firmado para que lo guardes. Queda también una copia en el sistema, a la que accede la empresa.'
+  const parrafos = [confirma, cuerpo]
   const aviso = 'Si no fuiste vos, avisale a administración.'
 
   const texto = [hola, '', que, '', ...parrafos, '', aviso, '', 'Gestión de Recursos'].join('\n')

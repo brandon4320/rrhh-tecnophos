@@ -73,11 +73,18 @@ export type ResultadoCopia =
  * Manda la copia firmada. NUNCA lanza: el peor caso es `{ mandado: false }`.
  */
 export async function enviarCopiaFirmada(admin: Admin, d: DatosCopia): Promise<ResultadoCopia> {
+  // Antes que un mail que el servidor rechaza entero, se manda sin adjunto: la
+  // confirmación de que firmó vale igual y la copia está en el sistema. El
+  // cuerpo cambia solo, así no promete un archivo que no va.
+  const adjunto = d.pdf.byteLength <= MAX_ADJUNTO
+  if (!adjunto) console.error('[copia-firmada] PDF demasiado grande, va sin adjunto:', d.reciboId, d.pdf.byteLength)
+
   const armado = mailCopiaFirmada({
     nombre: d.nombre,
     tipo: d.tipo,
     periodo: d.periodo,
     firmadoAt: d.firmadoAt,
+    adjunto,
   })
 
   try {
@@ -92,21 +99,14 @@ export async function enviarCopiaFirmada(admin: Admin, d: DatosCopia): Promise<R
       await registrar(admin, d, { asunto: armado.asunto, estado: 'error', error: 'Sin casilla de mail configurada' })
       return { mandado: false, motivo: 'sin casilla' }
     }
-    if (d.pdf.byteLength > MAX_ADJUNTO) {
-      // Antes que un mail que Gmail rechaza entero, se manda sin adjunto: la
-      // confirmación de que firmó vale igual y la copia está en el sistema.
-      console.error('[copia-firmada] PDF demasiado grande:', d.reciboId, d.pdf.byteLength)
-    }
-
     const envio = await enviarMail({
       para: email,
       asunto: armado.asunto,
       texto: armado.texto,
       html: armado.html,
-      adjuntos:
-        d.pdf.byteLength > MAX_ADJUNTO
-          ? undefined
-          : [{ nombre: nombreFirmado(d.nombreArchivo), contenido: d.pdf, tipo: 'application/pdf' }],
+      adjuntos: adjunto
+        ? [{ nombre: nombreFirmado(d.nombreArchivo), contenido: d.pdf, tipo: 'application/pdf' }]
+        : undefined,
     })
 
     if (!envio.ok) {
