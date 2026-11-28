@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Check, FileText, Loader2, PenLine, ShieldCheck, X } from 'lucide-react'
+import { Check, FileText, Loader2, Mail, PenLine, ShieldCheck, X } from 'lucide-react'
 import PadFirma, { type PadFirmaHandle } from './PadFirma'
 
 interface ReciboVisible {
@@ -42,6 +42,11 @@ export default function FormularioFirma({ token }: { token: string }) {
   const [hayTrazo, setHayTrazo] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorFirma, setErrorFirma] = useState<string | null>(null)
+  // Si la copia salió por mail. Solo se avisa cuando SALIÓ: que el mail falle
+  // no es problema de quien firmó —el recibo está firmado y lo puede bajar de
+  // esta misma pantalla— y asustarlo con un error que no puede arreglar sería
+  // peor que no decir nada. El fallo queda registrado en `recibo_mails`.
+  const [copiaPorMail, setCopiaPorMail] = useState(false)
   const pad = useRef<PadFirmaHandle>(null)
 
   // El onboarding: dejar la firma cargada cuando todavía no hay ningún recibo.
@@ -152,6 +157,7 @@ export default function FormularioFirma({ token }: { token: string }) {
         setErrorFirma(payload?.error ?? 'No se pudo firmar. Probá de nuevo.')
         return
       }
+      if (payload.copiaPorMail) setCopiaPorMail(true)
       const firmado = payload.recibo as ReciboVisible
       setDatos((d) =>
         d
@@ -348,6 +354,12 @@ export default function FormularioFirma({ token }: { token: string }) {
       {firmados.length > 0 && (
         <div className="space-y-3">
           <p className="text-sm font-medium">Ya firmaste</p>
+          {copiaPorMail && (
+            <p className="flex items-start gap-2 text-sm text-muted-foreground">
+              <Mail className="mt-0.5 size-4 shrink-0" strokeWidth={1.75} />
+              Te mandamos la copia firmada a tu mail.
+            </p>
+          )}
           <ul className="space-y-3">
             {firmados.map((r) => (
               <li
